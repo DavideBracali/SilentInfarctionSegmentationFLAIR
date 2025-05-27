@@ -1,4 +1,6 @@
 data/
+.hypothesis/
+.pytest_cache/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
