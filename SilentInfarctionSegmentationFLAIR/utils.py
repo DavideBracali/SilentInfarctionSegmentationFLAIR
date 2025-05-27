@@ -12,12 +12,14 @@ import SimpleITK as sitk
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+
 class DimensionError(Exception):
     pass
 
+
 def check_3d(image):
     """
-    Checks is the SimpleITK image is 3-dimensional, otherwise raises a ValueError.
+    Checks is the SimpleITK image is 3-dimensional, otherwise raises a DimensionError.
     
     Args
     ----
@@ -26,13 +28,14 @@ def check_3d(image):
     if image.GetDimension() != 3:
         raise DimensionError("Image must be 3-dimensional.")
 
+
 def get_info(image):
     """
     Extracts size, spacing, origin and direction matrix from a SimpleITK 3D image.
     
     Args
     ----
-        image (SimpleITK.Image): SimpleITK image object.
+        image (SimpleITK.Image): The image to get information from.
         
     Returns
     -------
@@ -45,6 +48,7 @@ def get_info(image):
        "direction": image.GetDirection()} 
     
     return info
+
 
 def get_array_from_image(image):
     
@@ -64,6 +68,7 @@ def get_array_from_image(image):
         image_array (np.array): NumPy array of the image
         
     """
+
     check_3d(image)
     
     image_array = sitk.GetArrayFromImage(image)
@@ -80,8 +85,8 @@ def plot_image(image, xyz=None):
     
     Args
     ----
-        image (SimpleITK.Image): SimpleITK image object
-        xyz (tuple): Intersection between the three planes of the 3D image
+        image (SimpleITK.Image): The image to be plotted.
+        xyz (tuple): Intersection between the three planes of the 3D image.
     
     Returns
     -------
@@ -152,6 +157,7 @@ def orient_image(image, orientation):
     
     return oriented_image
 
+
 def resample_to_reference(image, reference, interpolator=sitk.sitkLinear, default_value=0):
     
     """
@@ -176,3 +182,38 @@ def resample_to_reference(image, reference, interpolator=sitk.sitkLinear, defaul
     image_rs = resampler.Execute(image)
     return image_rs
 
+def plot_histogram(image, bins=None, title="Gray level histogram",
+                   save_path=None, no_bkg=False):
+    """
+    Plots histogram of a gray-scale SimpleITK 3D image.
+    
+    Args
+    ----
+        image (SimpleITK.Image): The image to compute the histogram.
+        bins (int): Number of bins.
+        title (str): Title of the figure.
+        save_path (str): Saves the histogram to the desired path.
+        no_bkg (boolean): If True, removes gray level 0 (background) from the histogram.
+    
+    Returns
+    -------
+        histogram (): The gray level histogram.
+    """
+    image_array = get_array_from_image(image)
+    flattened = image_array.flatten()
+    
+    if no_bkg == True:
+        flattened = flattened[flattened != 0]
+    
+    if bins == None:
+        bins = range(int(min(flattened)), int(max(flattened)) + 2)
+        
+    plt.hist(flattened, bins=bins)
+    plt.xlabel("Gray level")
+    plt.ylabel("Counts")
+    plt.title(title)
+    
+    if save_path != None:
+        plt.savefig(save_path)
+        
+    return flattened

@@ -12,7 +12,7 @@ from hypothesis import given, settings
 
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Silent_Infarction_FLAIR_Segmentation')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'SilentInfarctionSegmentationFLAIR')))
 
 import numpy as np
 import SimpleITK as sitk
@@ -24,6 +24,8 @@ from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image
 from SilentInfarctionSegmentationFLAIR.utils import plot_image
 from SilentInfarctionSegmentationFLAIR.utils import orient_image
 from SilentInfarctionSegmentationFLAIR.utils import resample_to_reference
+from SilentInfarctionSegmentationFLAIR.utils import plot_histogram
+
 
 
 ####################
@@ -266,4 +268,23 @@ def test_resample_to_reference(image, reference, default_value):
     
     for k, i in get_info(image_rs).items():
         assert get_info(image_rs)[k] == get_info(reference)[k], "{k} of resampled image is not equal to reference"
+        
+        
+@given(gauss_noise_strategy_3D())
+@settings(max_examples=5, deadline=None)
+def test_plot_histogram(image):
+    """
+    Given:
+        - a gaussian noise SimpleITK 3D image
+    Then:
+        - apply plot_histogram
+    Assert that:
+        - a flattened numpy array is returned
+        - if no_bkg = True the returned array doesn't contain 0s
+    """
+    flattened = plot_histogram(image, no_bkg=True)
+    
+    assert len(flattened.shape) == 1
+    assert np.all(flattened != 0) == True
+    
     
