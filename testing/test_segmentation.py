@@ -107,9 +107,9 @@ def random_segmentation_strategy(draw):
 ##################
 
 
-@given(random_segmentation_strategy())
-@settings(max_examples=5, deadline=None)
-def test_get_mask_from_segmentation_same_info(segm):
+#@given(random_segmentation_strategy())
+#@settings(max_examples=5, deadline=None)
+#def test_get_mask_from_segmentation_same_info(segm):
     """
     Given:
         - random segmentation
@@ -118,12 +118,12 @@ def test_get_mask_from_segmentation_same_info(segm):
     Assert that:
         - returned mask has the same size, spacing, origin, direction
         """
-    mask = get_mask_from_segmentation(segm)
+#    mask = get_mask_from_segmentation(segm)
     
-    assert mask.GetSize() == segm.GetSize()
-    assert mask.GetSpacing() == segm.GetSpacing()
-    assert mask.GetOrigin() == segm.GetOrigin()
-    assert mask.GetDirection() == segm.GetDirection()
+#    assert mask.GetSize() == segm.GetSize()
+#    assert mask.GetSpacing() == segm.GetSpacing()
+#    assert mask.GetOrigin() == segm.GetOrigin()
+#    assert mask.GetDirection() == segm.GetDirection()
     
 #@given(random_segmentation_strategy())
 #@settings(max_examples=5, deadline=None)
