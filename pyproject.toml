@@ -1,1 +1,49 @@
-#°_°
+[project]
+name = 'SilentInfarctionSegmentationFLAIR'
+version = '0.0.1'
+authors = [
+  { name='Davide Bracali', email='davide.bracali@studio.unibo.it' },
+]
+description = '3D segmentation of silent infarctions in FLAIR MRI images.'
+readme = 'README.md'
+requires-python = '>=3.5'
+license = {text = "MIT"}
+keywords = [
+  'python',
+  'FLAIR',
+  'MRI',
+  'segmentation',
+  'threshold',
+  'image-processing'
+]
+maintainers = [
+  { name='Davide Bracali', email='davide.bracali@studio.unibo.it' },
+]
+classifiers = [
+  'Natural Language :: English',
+  'Operating System :: MacOS :: MacOS X',
+  'Operating System :: POSIX',
+  'Operating System :: POSIX :: Linux',
+  'Operating System :: Microsoft :: Windows',
+  'Programming Language :: Python',
+  'Programming Language :: Python :: 3',
+  'Programming Language :: Python :: 3.11',
+  'Programming Language :: Python :: 3.12',
+  'Programming Language :: Python :: 3.13',
+  'Programming Language :: Python :: Implementation :: CPython',
+  'Programming Language :: Python :: Implementation :: PyPy'
+]
+
+[project.urls]
+'Homepage' = 'https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR'
+'Bug Tracker' = 'https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/issues'
+
+[build-system]
+requires = [
+  'setuptools>=42',
+  'numpy',
+  'SimpleITK',
+  'matplotlib',
+  'seaborn'
+]
+build-backend = 'setuptools.build_meta'
