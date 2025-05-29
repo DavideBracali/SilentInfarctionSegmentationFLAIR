@@ -1,149 +1,100 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-try:
-    from setuptools import setup
-    from setuptools import find_packages
-except ImportError:
-    from distutils.core import setup
-    from distutils.core import find_packages
-
 import os
+from setuptools import setup
 
-__author__ = ['Davide Bracali']
-__email__ = ['davide.bracali@studio.unibo.it']
+def dump_version_file (
+    author : str,
+    email : str,
+    version : str
+  ):
+  '''
+  Dump the __version__.py file as python script
 
-def get_requires(requirements_filename):
-    '''
-    What packages are required for this module to be executed?
+  Parameters
+  ----------
+    author: str
+      List of author/maintainer names comma separated
 
-    Parameters
-    ----------
-    requirements_filename : str
-        filename of requirements (e.g requirements.txt)
+    email: str
+      List of author/maintainer emails comma separated
 
-    Returns
-    -------
-    requirements : list
-        list of required packages
-    '''
-    with open(requirements_filename, 'r') as fp:
-        requirements = fp.read()
+    version: str
+      String of the version code as major.minor.revision
+  '''
 
-    return list(filter(lambda x: x != '', requirements.split()))
+  script = f'''#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-def format_requires(requirement):
-    '''
-    Check if the specified requirements is a package or a link to github report.
-    If it is a link to a github repo, it will format it according to the specification 
-    Of install requirements. 
-    The git hub repo url is assumed to be in the form:
-    git+https://github.com/UserName/RepoName
+__author__  = '{author}'
+__email__ = '{email}'
 
-    and will be formatted as 
-    RepoName @ git+https://github.com/UserName/RepoName
+__version__ = '{version}'
+'''
 
-    Parameters
-    ----------
-    requirement : str
-        str with the reuirement to be analyzed
-    
-    Returns
-    -------
-    foramt_requirement: str
-        requirement formatted according to install_requires specs
-    '''
+  filename = os.path.abspath(os.path.dirname(__file__))
+  filename = f'{filename}/pyhide/__version__.py'
 
-    if "http" not in requirement:
-        return requirement
-
-    package_name = requirement.split('/')[-1]
-    return f'{package_name} @ {requirement}'
-
-def read_description(readme_filename):
-    '''
-    Description package from filename
-
-    Parameters
-    ----------
-    readme_filename : str
-        filename with readme information (e.g README.md)
-
-    Returns
-    -------
-    description : str
-        str with description
-    '''
-
-    try:
-
-        with open(readme_filename, 'r') as fp:
-            description = '\n'
-            description += fp.read()
-
-        return description
-
-    except IOError:
-        return ''
+  with open(filename, 'w') as fp:
+    fp.write(script)
 
 
-
-here = os.path.abspath(os.path.dirname(__file__))
-
+PACKAGE_NAME = 'SilentInfarctionSegmentationFLAIR'
 AUTHOR = 'Davide Bracali'
 EMAIL = 'davide.bracali@studio.unibo.it'
-
-NAME = 'SilentInfarctionSegmentationFLAIR'
-DESCRIPTION = ''
-REQUIRES_PYTHON = '>=3'
-VERSION = None
-VERSION_FILENAME = os.path.join(here, 'SilentInfarctionSegmentationFLAIR', '__version__.py')
-README_FILENAME = os.path.join(here, 'README.md')
-REQUIREMENTS_FILENAME = os.path.join(here, 'requirements.txt')
+REQUIRES_PYTHON = '>=3.5'
+PACKAGE_VERSION = '0.0.1'
+DESCRIPTION = '°_°'
 URL = 'https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR'
-KEYWORDS = ['MRI','FLAIR', 'segmentation', 'thresholding', 'medical-imaging', 'brain']
+MAINTAINER = AUTHOR
+MAINTAINER_EMAIL = EMAIL
+DOWNLOAD_URL = URL
 
-# Import the README and use it as the long-description.
-# Note: this will only work if 'README.md' is present in your MANIFEST.in file!
-try:
-    LONG_DESCRIPTION = read_description(README_FILENAME)
-except IOError:
-    LONG_DESCRIPTION = DESCRIPTION
-
-# Load the package's __version__.py module as a dictionary.
-about = {}
-if not VERSION:
-  with open(VERSION_FILENAME) as fp:
-    exec(fp.read(), about)
-else:
-    about['__version__'] = VERSION
-
-# parse version variables and add them to command line as definitions
-Version = about['__version__'].split('.')
+# dump the version file
+dump_version_file(
+  author=MAINTAINER,
+  email=MAINTAINER_EMAIL,
+  version=PACKAGE_VERSION
+)
 
 setup(
-    name                          = NAME,
-    version                       = about['__version__'],
-    description                   = DESCRIPTION,
-    long_description              = LONG_DESCRIPTION,
-    long_description_content_type = 'text/markdown',
-    author                        = AUTHOR,
-    author_email                  = EMAIL,
-    maintainer                    = AUTHOR,
-    maintainer_email              = EMAIL,
-    python_requires               = REQUIRES_PYTHON,
-    install_requires              = get_requires(REQUIREMENTS_FILENAME),  #°_° fare file requirements
-    url                           = URL,
-    download_url                  = URL,
-    keywords                      = KEYWORDS,             
-    packages                      = find_packages(include=[
-                                        'SilentInfarctionSegmentationFLAIR',
-                                        'SilentInfarctionSegmentationFLAIR.*'],
-                                        exclude=('test', 'testing')),
-    include_package_data          = True, # no absolute paths are allowed
-    platforms                     = 'any',
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "Operating System :: OS Independent"],
-    license                       = 'MIT'
+  name=PACKAGE_NAME,
+  version=PACKAGE_VERSION,
+  description=DESCRIPTION,
+  author=AUTHOR,
+  author_email=EMAIL,
+  python_requires=REQUIRES_PYTHON,
+  install_requires=[],
+  url=URL,
+  download_url=DOWNLOAD_URL,
+  setup_requires=[],
+  packages=[
+    PACKAGE_NAME,
+  ],
+  package_data={
+    PACKAGE_NAME: [],
+  },
+  include_package_data=True,
+  platforms='any',
+  classifiers=[
+    'Natural Language :: English',
+    'Operating System :: MacOS :: MacOS X',
+    'Operating System :: POSIX',
+    'Operating System :: POSIX :: Linux',
+    'Operating System :: Microsoft :: Windows',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11'
+  ],
+  entry_points={'console_scripts': [
+    'SilentInfarctionSegmentationFLAIR = SilentInfarctionSegmentationFLAIR.__main__:main',
+    ],
+  },
 )
