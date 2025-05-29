@@ -12,8 +12,6 @@ import SimpleITK as sitk
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-a="ciao"
-
 class DimensionError(Exception):
     pass
 

@@ -19,7 +19,6 @@ from utils import orient_image
 from utils import resample_to_reference
 
 gm_labels = [3, 8, 10, 11, 12, 13, 17, 18, 19, 42, 47, 49, 50, 51, 52, 53, 54, 55]
-#segm = sitk.ReadImage("SilentInfarctionSegmentationFLAIR/Examples/aseg.auto_noCCseg.nii") #°_° to remove
 
 
 def get_mask_from_segmentation(segm, labels=gm_labels):
