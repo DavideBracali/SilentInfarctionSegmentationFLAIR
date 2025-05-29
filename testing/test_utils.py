@@ -12,8 +12,9 @@ from hypothesis import given, settings
 
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'SilentInfarctionSegmentationFLAIR')))
-
+sys.path.insert(0,
+                os.path.abspath(os.path.join(os.path.dirname(__file__),
+                            '..', 'SilentInfarctionSegmentationFLAIR')))
 import numpy as np
 import SimpleITK as sitk
 
@@ -104,31 +105,41 @@ def gauss_noise_strategy_2D(draw):
 ##################
 
 
-@given(gauss_noise_strategy_2D(), gauss_noise_strategy_3D())
+@given(gauss_noise_strategy_2D())
 @settings(max_examples=5, deadline=None)
-def test_check_3d_raise_dimensionerror(image2d, image3d):
+def test_check_3d_raise_dimensionerror(image2d):
     """
     Given:
         - gaussian noise SimpleITK 2D image
+    Then:
+        - apply check_3d 
+    Assert that:
+        - image2d raises DimensionError
+        """
+    with pytest.raises(DimensionError):
+        check_3d(image2d)
+        
+        
+@given(gauss_noise_strategy_3D())
+@settings(max_examples=5, deadline=None)
+def test_check_3d_doesnt_raise_exception(image3d):
+    """
+    Given:
         - gaussian noise SimpleITK 3D image
     Then:
         - apply check_3d 
     Assert that:
-        - image2d raises ValueError
-        - image3d doesn't raise any errors
+        - image3d doesn't raise any exception
         """
-    with pytest.raises(DimensionError):
-        check_3d(image2d)
-    
     try:
         check_3d(image3d)
-    except Exception as e:
-        assert False, f"check_3d raised an exception on a 3D image, {type(e).__name__}: {e}"
+    except Exception:
+        assert False        
         
 
 @given(gauss_noise_strategy_3D())
 @settings(max_examples=5, deadline=None)
-def test_get_info(image):
+def test_get_info_valid_return(image):
     """
     Given:
         - gaussian noise SimpleITK 3D image
@@ -155,7 +166,7 @@ def test_get_info(image):
     
 @given(gauss_noise_strategy_3D())
 @settings(max_examples=5, deadline=None)
-def test_get_array_from_image(image):
+def test_get_array_from_image_not_uniform(image):
     """
     Given:
         - gaussian noise SimpleITK 3D image
@@ -163,18 +174,33 @@ def test_get_array_from_image(image):
         - apply get_array_from_image 
     Assert that:
         - array is not uniform (gaussian noise)
-        - array size is consistent with image size 
     """
     
     array = get_array_from_image(image)
     
-    assert not np.all(array == array[0,0,0]),   "array from a gaussian image shouldn't be uniform"
-    assert array.shape == image.GetSize(),      "array size is not consistent with image size"
+    assert not np.all(array == array[0,0,0])
+    
+    
+@given(gauss_noise_strategy_3D())
+@settings(max_examples=5, deadline=None)
+def test_get_array_from_image_same_size(image):
+    """
+    Given:
+        - gaussian noise SimpleITK 3D image
+    Then:
+        - apply get_array_from_image 
+    Assert that:
+        - array size is consistent with image size
+    """
+    
+    array = get_array_from_image(image)
+    
+    assert array.shape == image.GetSize()
 
 
 @given(gauss_noise_strategy_3D())
 @settings(max_examples=5, deadline=None)
-def test_plot_image(image):
+def test_plot_image_valid_return(image):
     """
     Given:
         - gaussian noise SimpleITK 3D image
@@ -183,8 +209,6 @@ def test_plot_image(image):
     Assert that:
         - a 3-items dict is returned
         - returned size, spacing, aspects are 3-elements tuple each
-        - if all spacings are the same then all aspects are the same, and viceversa
-
     """
     plot_info = plot_image(image)
     
@@ -198,6 +222,22 @@ def test_plot_image(image):
     assert len(plot_info["spacing"]) == 3,           "spacing is a tuple with length different than 3"
     assert len(plot_info["aspects"]) == 3,           "origin is a tuple with length different than 3"
     
+    
+    
+@given(gauss_noise_strategy_3D())
+@settings(max_examples=5, deadline=None)
+def test_plot_image_spacings_aspects(image):
+    """
+    Given:
+        - gaussian noise SimpleITK 3D image
+    Then:
+        - plot the image with plot_image
+    Assert that:
+        - if all spacings are the same then all aspects are the same
+        - if all spacings are not the same then all aspects are not the same
+    """
+    plot_info = plot_image(image)
+        
     if len(set(plot_info["spacing"])) == 1:
         assert len(set(plot_info["aspects"])) == 1,  "spacings are equal but aspects are different"
     else:
@@ -229,7 +269,7 @@ def test_plot_image_raise_indexerror(image):
             
 @given(gauss_noise_strategy_3D(), random_orientation_strategy())
 @settings(max_examples=5, deadline=None)
-def test_orient_image(image, new_orientation):
+def test_orient_image_valid_return(image, new_orientation):
     """
     Given:
         - gaussian noise SimpleITK 3D image
@@ -238,21 +278,23 @@ def test_orient_image(image, new_orientation):
         - orient the image with orient_image
     Assert that:
         - a SimpleITK.Image is returned
-        - if the new orientation was equal to the old then nothing changes, and viceversa
+        - if the new orientation is equal to the old then nothing changes
+        - if the new orientation is not equal to the old one then a different
+        image is returned
     """
     old_orientation = sitk.DICOMOrientImageFilter().GetOrientationFromDirectionCosines(image.GetDirection())
     oriented_image_old = orient_image(image, old_orientation)
     oriented_image_new = orient_image(image, new_orientation)
 
-    assert isinstance(oriented_image_old, sitk.Image),      "returned type is not SimpleITK.Image"
-    assert get_info(oriented_image_old) == get_info(image), "orient_image with the old orientation does not return the same image"
+    assert isinstance(oriented_image_old, sitk.Image)  
+    assert get_info(oriented_image_old) == get_info(image)
     if new_orientation != old_orientation:
-        assert get_info(oriented_image_new) != get_info(image),  "orient_image with a new orientation returned the same image"
+        assert get_info(oriented_image_new) != get_info(image)
            
         
 @given(gauss_noise_strategy_3D(), gauss_noise_strategy_3D(), st.integers(0,255))
 @settings(max_examples=5, deadline=None)
-def test_resample_to_reference(image, reference, default_value):
+def test_resample_to_reference_valid_return(image, reference, default_value):
     """
     Given:
         - 2 gaussian noise SimpleITK images
@@ -260,19 +302,18 @@ def test_resample_to_reference(image, reference, default_value):
         - resample image to reference
     Assert that:
         - a SimpleITK.Image is returned
-        - size, spacing, origin, direction of the resampled image are the same as the reference
+        - size, spacing, origin, direction of the resampled image are the same
+        as the reference
     """
     image_rs = resample_to_reference(image, reference)
     
-    assert isinstance(image_rs, sitk.Image),                    "returned type is not SimpleITK.Image"
-    
-    for k, i in get_info(image_rs).items():
-        assert get_info(image_rs)[k] == get_info(reference)[k], "{k} of resampled image is not equal to reference"
+    assert isinstance(image_rs, sitk.Image)
+    assert get_info(image_rs) == get_info(reference)
         
         
 @given(gauss_noise_strategy_3D())
 @settings(max_examples=5, deadline=None)
-def test_plot_histogram(image):
+def test_plot_histogram_valid_return(image):
     """
     Given:
         - a gaussian noise SimpleITK 3D image

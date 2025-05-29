@@ -12,6 +12,7 @@ import SimpleITK as sitk
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+a="ciao"
 
 class DimensionError(Exception):
     pass
@@ -21,8 +22,8 @@ def check_3d(image):
     """
     Checks is the SimpleITK image is 3-dimensional, otherwise raises a DimensionError.
     
-    Args
-    ----
+    Parameters
+    ----------
         image (SimpleITK.Image): SimpleITK image object.
     """
     if image.GetDimension() != 3:
@@ -33,8 +34,8 @@ def get_info(image):
     """
     Extracts size, spacing, origin and direction matrix from a SimpleITK 3D image.
     
-    Args
-    ----
+    Parameters
+    ----------
         image (SimpleITK.Image): The image to get information from.
         
     Returns
@@ -59,8 +60,8 @@ def get_array_from_image(image):
         Sagittal plane is yz plane;
         Coronal plane is xz plane;
     
-    Args
-    ----
+    Parameters
+    ----------
         image (SimpleITK.Image): SimpleITK image object
         
     Returns
@@ -83,8 +84,8 @@ def plot_image(image, xyz=None):
     You can specify the intersection between the three planes. By default it is
     set to the center of the image.
     
-    Args
-    ----
+    Parameters
+    ----------
         image (SimpleITK.Image): The image to be plotted.
         xyz (tuple): Intersection between the three planes of the 3D image.
     
@@ -141,8 +142,8 @@ def orient_image(image, orientation):
     """
     Orients a SimpleITK image to a specified coordinate orientation system.
     
-    Args
-    ----
+    Parameters
+    ----------
         image (SimpleITK.Image): The input image to be reoriented.
         orientation (str): The desired coordinate orientation, such as 'RAS' or 'LPS'.
     
@@ -163,8 +164,8 @@ def resample_to_reference(image, reference, interpolator=sitk.sitkLinear, defaul
     """
     Resamples moving_image onto the space of reference_image.
 
-    Args
-    ----
+    Parameters
+    ----------
         moving_image (SimpleITK.Image): The image to be resampled.
         reference_image (SimpleITK.Image): The target space.
         interpolator (SimpleITK interpolator): e.g., sitk.sitkLinear, sitk.sitkNearestNeighbor.
@@ -187,8 +188,8 @@ def plot_histogram(image, bins=None, title="Gray level histogram",
     """
     Plots histogram of a gray-scale SimpleITK 3D image.
     
-    Args
-    ----
+    Parameters
+    ----------
         image (SimpleITK.Image): The image to compute the histogram.
         bins (int): Number of bins.
         title (str): Title of the figure.

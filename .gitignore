@@ -1,6 +1,7 @@
 data/
 .hypothesis/
 .pytest_cache/
+SilentInfarctionSegmentationFLAIR/Examples/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

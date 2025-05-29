@@ -8,3 +8,6 @@ __email__ = ['davide.bracali@studio.unibo.it']
 
 def main():
     print(__version__)
+
+if __name__ == '__main__':
+    main()
