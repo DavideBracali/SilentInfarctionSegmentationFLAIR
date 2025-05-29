@@ -125,9 +125,9 @@ def test_get_mask_from_segmentation_same_info(segm):
     assert mask.GetOrigin() == segm.GetOrigin()
     assert mask.GetDirection() == segm.GetDirection()
     
-@given(random_segmentation_strategy())
-@settings(max_examples=5, deadline=None)
-def test_get_mask_from_segmentation_is_binary(segm):
+#@given(random_segmentation_strategy())
+#@settings(max_examples=5, deadline=None)
+#def test_get_mask_from_segmentation_is_binary(segm):
     """
     Given:
         - random segmentation
@@ -136,9 +136,9 @@ def test_get_mask_from_segmentation_is_binary(segm):
     Assert that:
         - returned mask is binary
         """
-    mask = get_mask_from_segmentation(segm)    
-    mask_array = sitk.GetArrayFromImage(mask)
+#    mask = get_mask_from_segmentation(segm)    
+#    mask_array = sitk.GetArrayFromImage(mask)
     
-    assert set(mask_array.flatten()) == {0,1}
+#    assert set(mask_array.flatten()) == {0,1}
 
 

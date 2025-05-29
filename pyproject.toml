@@ -38,6 +38,9 @@ classifiers = [
 'Homepage' = 'https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR'
 'Bug Tracker' = 'https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/issues'
 
+[project.scripts]
+SilentInfarctionSegmentationFLAIR = "SilentInfarctionSegmentationFLAIR.__main__:main"
+
 [build-system]
 requires = [
   'setuptools>=42',
