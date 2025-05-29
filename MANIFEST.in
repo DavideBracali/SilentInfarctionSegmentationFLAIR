@@ -2,3 +2,4 @@ include SOURCES.txt
 include LICENSE
 include pyproject.toml
 include README.md
+recursive-include SilentInfarctionSegmentationFLAIR *.py
