@@ -125,6 +125,9 @@ def plot_image(image, xyz=None):
         _ = ax0.set_title('Axial')
         _ = ax1.set_title('Sagittal')
         _ = ax2.set_title('Coronal')
+
+    plt.show()
+    plt.close()
         
     # plot info
     plot_info = {
@@ -188,7 +191,7 @@ def plot_histogram(image, bins=None, title="Gray level histogram",
     
     Parameters
     ----------
-        image (SimpleITK.Image): The image to compute the histogram.
+        image (SimpleITK.Image): Image to compute the histogram.
         bins (int): Number of bins.
         title (str): Title of the figure.
         save_path (str): Saves the histogram to the desired path.
@@ -196,7 +199,7 @@ def plot_histogram(image, bins=None, title="Gray level histogram",
     
     Returns
     -------
-        histogram (): The gray level histogram.
+        histogram (np.array): Flattened array of gray levels.
     """
     image_array = get_array_from_image(image)
     flattened = image_array.flatten()
@@ -206,7 +209,7 @@ def plot_histogram(image, bins=None, title="Gray level histogram",
     
     if bins == None:
         bins = range(int(min(flattened)), int(max(flattened)) + 2)
-        
+    
     plt.hist(flattened, bins=bins)
     plt.xlabel("Gray level")
     plt.ylabel("Counts")
@@ -214,5 +217,8 @@ def plot_histogram(image, bins=None, title="Gray level histogram",
     
     if save_path != None:
         plt.savefig(save_path)
-        
+
+    plt.show()    
+    plt.close()
+
     return flattened
