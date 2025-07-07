@@ -211,7 +211,10 @@ def plot_histogram(image, bins=None, title="Gray level histogram",
         bins = range(int(min(flattened)), int(max(flattened)) + 2)
     
     plt.hist(flattened, bins=bins)
-    plt.xlabel("Gray level")
+    if no_bkg == True:
+        plt.xlabel("Gray level (excluding black)")
+    else:
+        plt.xlabel("Gray level")
     plt.ylabel("Counts")
     plt.title(title)
     
