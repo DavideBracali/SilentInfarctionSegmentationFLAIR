@@ -19,8 +19,11 @@ sys.path.insert(0,
 
 import numpy as np
 import SimpleITK as sitk
+import matplotlib
+matplotlib.use('Agg')
 
 from SilentInfarctionSegmentationFLAIR.segmentation import get_mask_from_segmentation
+from SilentInfarctionSegmentationFLAIR.segmentation import get_mask_from_pve
 
 
 
@@ -101,6 +104,33 @@ def random_segmentation_strategy(draw):
     return segm
 
 
+@st.composite
+def random_pve_strategy(draw):    
+    """
+    Creates random 3D pve (image filled with floats in [0,1]) for testing.
+    """
+    origin = draw(st.tuples(*[st.floats(0., 100.)] * 3))
+    spacing = draw(st.tuples(*[st.floats(.1, 1.)] * 3))
+    direction = tuple([0., 0., 1., 1., 0., 0., 0., 1., 0.])
+    size = (draw(st.integers(10, 100)), draw(st.integers(10, 100)),
+            draw(st.integers(10, 100)))
+    image_array=draw(stnp.arrays(dtype=np.float32, shape=size,
+                     elements=st.floats(0,1)))
+    
+    #draw image    
+    segm = sitk.GetImageFromArray(image_array)
+    segm.SetOrigin(origin)
+    segm.SetSpacing(spacing)
+    segm.SetDirection(direction)
+
+    # random orientation
+    orientation = draw(random_orientation_strategy())
+    orienter = sitk.DICOMOrientImageFilter()
+    orienter.SetDesiredCoordinateOrientation(orientation)
+    segm = orienter.Execute(segm)
+
+    return segm
+
 
 ##################
 ###  TESTING   ###
@@ -147,22 +177,58 @@ def test_get_mask_from_segmentation_is_binary(segm, labels):
     assert set(mask_array.flatten()) <= {0,1}
 
 
-
-@given(random_segmentation_strategy(), st.lists(st.integers(min_value=101),
-                                                min_size=1, max_size=5))
+@given(random_pve_strategy(), st.floats(min_value=0.0, max_value=1.0))
 @settings(max_examples=5, deadline=None)
-def test_get_mask_from_segmentation_crazy_labels(segm, crazy_labels):
+def test_get_mask_from_pve_valid_return(pve, thr):
     """
     Given:
-        - random segmentation (labels between 1 and 100)
-        - crazy random labels (labels >100)
+        - random pve image
+        - random threshold in [0,1]
     Then:
         - get mask
     Assert that:
-        - returned mask is empty
-        """
-    
-    mask = get_mask_from_segmentation(segm, crazy_labels)    
+        - returned mask has the same size, spacing, origin, direction
+    """
+    mask = get_mask_from_pve(pve, thr)
+
+    assert mask.GetSize() == pve.GetSize()
+    assert mask.GetSpacing() == pve.GetSpacing()
+    assert mask.GetOrigin() == pve.GetOrigin()
+    assert mask.GetDirection() == pve.GetDirection()
+
+
+@given(random_pve_strategy(), st.floats(min_value=0.0, max_value=1.0))
+@settings(max_examples=5, deadline=None)
+def test_get_mask_from_pve_is_binary(pve, thr):
+    """
+    Given:
+        - random pve image
+        - random threshold in [0,1]
+    Then:
+        - get mask
+    Assert that:
+        - returned mask is binary
+    """
+    mask = get_mask_from_pve(pve, thr)
     mask_array = sitk.GetArrayFromImage(mask)
     
-    assert set(mask_array.flatten()) == {0}
+    assert set(mask_array.flatten()) <= {0,1}
+
+
+@given(random_pve_strategy())
+@settings(max_examples=5, deadline=None)
+def test_get_mask_from_pve_thr_zero(pve):
+    """
+    Given:
+        - random pve image
+        - threshold = 0
+    Then:
+        - get mask
+    Assert that:
+        - all voxels >= 0 are set to 1
+    """
+    mask = get_mask_from_pve(pve, thr=0.0)
+    mask_array = sitk.GetArrayFromImage(mask)
+    
+    assert set(mask_array.flatten()) == {1}
+    

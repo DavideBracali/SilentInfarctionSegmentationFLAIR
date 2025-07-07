@@ -8,6 +8,7 @@ Created on Tue May 27 19:49:24 2025
 
 import numpy as np
 import SimpleITK as sitk
+import os
 
 
 from utils import DimensionError
@@ -43,4 +44,22 @@ def get_mask_from_segmentation(segm, labels):
         for i in range(1,len(labels)):   # other labels (if present)
             mask = sitk.Or(mask, segm == labels[i])     # union
     
+    return mask
+
+def get_mask_from_pve(pve, thr=1e-12):
+    """
+    Returns a binary mask from a partial volume estimation (PVE) map.
+
+    Parameters
+    ----------
+        pve (SimpleITK.Image): The partial volume estimation map.
+        thr (float): Voxels >= thr will be set to 1, otherwise to 0.
+    
+    Returns
+    -------
+        mask (SimpleITK.Image): Binary mask.
+    """
+
+    mask = pve >= thr
+
     return mask

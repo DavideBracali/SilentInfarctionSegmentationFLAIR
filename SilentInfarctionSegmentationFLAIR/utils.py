@@ -184,6 +184,7 @@ def resample_to_reference(image, reference, interpolator=sitk.sitkLinear, defaul
     image_rs = resampler.Execute(image)
     return image_rs
 
+
 def plot_histogram(image, bins=None, title="Gray level histogram",
                    save_path=None, no_bkg=False):
     """
@@ -225,3 +226,58 @@ def plot_histogram(image, bins=None, title="Gray level histogram",
     plt.close()
 
     return flattened
+
+
+def plot_multiple_histograms(images, labels=None, bins=None, title="Gray level histograms",
+                              save_path=None, no_bkg=False, alpha=0.5, normalize=False):
+    """
+    Plots histograms for multiple SimpleITK 3D gray-scale images.
+
+    Parameters
+    ----------
+        images (list): List of SimpleITK.Image objects.
+        labels (list): List of labels for each histogram (for the legend).
+        bins (int or list): Number of bins or shared bin edges.
+        title (str): Title of the plot.
+        save_path (str): Path to save the figure.
+        no_bkg (bool): If True, exclude gray level 0 from histograms.
+        alpha (float): Transparency level for overlapping histograms.
+
+    Returns
+    -------
+        histograms (list): List of flattened gray-level arrays for each image.
+    """
+
+    if labels == None:
+        labels = [f"Image {i+1}" for i in range(len(images))]
+
+    histograms = []
+    all_values = []
+
+    for image in images:
+        flattened = get_array_from_image(image).flatten()
+        if no_bkg:
+            flattened = flattened[flattened != 0]
+        histograms.append(flattened)
+        all_values.extend(flattened)
+
+    if bins == None:
+        bins = range(int(min(all_values)),
+                     int(max(all_values)) + 2)
+
+    for hist, label in zip(histograms, labels):
+        plt.hist(hist, bins=bins, alpha=alpha, label=label,
+                  density=normalize)
+
+    plt.xlabel("Gray level (excluding 0)" if no_bkg else "Gray level")
+    plt.ylabel("Density" if normalize else "Counts")
+    plt.title(title)
+    plt.legend()
+    
+    if save_path:
+        plt.savefig(save_path)
+
+    plt.show()
+    plt.close()
+
+    return histograms

@@ -17,6 +17,8 @@ sys.path.insert(0,
                             '..', 'SilentInfarctionSegmentationFLAIR')))
 import numpy as np
 import SimpleITK as sitk
+import matplotlib
+matplotlib.use('Agg')
 
 from SilentInfarctionSegmentationFLAIR.utils import DimensionError
 from SilentInfarctionSegmentationFLAIR.utils import check_3d
