@@ -18,20 +18,29 @@ from utils import plot_image
 from utils import orient_image
 from utils import resample_to_reference
 
-gm_labels = [3, 8, 10, 11, 12, 13, 17, 18, 19, 42, 47, 49, 50, 51, 52, 53, 54, 55]
 
 
-def get_mask_from_segmentation(segm, labels=gm_labels):
+def get_mask_from_segmentation(segm, labels):
     """
     Returns a binary mask from a FreeSurfer segmentation image.
     
     Parameters
     ----------
     segm (SimpleITK.Image): FreeSurfer segmentation image.
-    labels (list): List of integer labels to include in the mask.
+    labels (numeric or iterable): Iterable of labels to include in the mask.
     
     Returns
     -------
     mask (SimpleITK.Image): Binary mask.
     """
-    segm_array = get_array_from_image(segm)
+    # if labels is not a list, make it a list
+    if isinstance(labels, (int,float)):      
+        labels = [labels]            
+    elif isinstance(labels, dict):
+        labels = list(labels.values())
+    else:
+        mask = segm == labels[0]         # first label
+        for i in range(1,len(labels)):   # other labels (if present)
+            mask = sitk.Or(mask, segm == labels[i])     # union
+    
+    return mask

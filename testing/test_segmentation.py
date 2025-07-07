@@ -107,38 +107,62 @@ def random_segmentation_strategy(draw):
 ##################
 
 
-#@given(random_segmentation_strategy())
-#@settings(max_examples=5, deadline=None)
-#def test_get_mask_from_segmentation_same_info(segm):
+@given(random_segmentation_strategy(), st.lists(st.integers(1,100),
+                                                min_size=1, max_size=5))
+@settings(max_examples=5, deadline=None)
+def test_get_mask_from_segmentation_valid_return(segm, labels):
     """
     Given:
         - random segmentation
+        - random labels
     Then:
         - get mask
     Assert that:
         - returned mask has the same size, spacing, origin, direction
         """
-#    mask = get_mask_from_segmentation(segm)
+    mask = get_mask_from_segmentation(segm, labels)
     
-#    assert mask.GetSize() == segm.GetSize()
-#    assert mask.GetSpacing() == segm.GetSpacing()
-#    assert mask.GetOrigin() == segm.GetOrigin()
-#    assert mask.GetDirection() == segm.GetDirection()
+    assert mask.GetSize() == segm.GetSize()
+    assert mask.GetSpacing() == segm.GetSpacing()
+    assert mask.GetOrigin() == segm.GetOrigin()
+    assert mask.GetDirection() == segm.GetDirection()
     
-#@given(random_segmentation_strategy())
-#@settings(max_examples=5, deadline=None)
-#def test_get_mask_from_segmentation_is_binary(segm):
+
+@given(random_segmentation_strategy(), st.lists(st.integers(1,100),
+                                                min_size=1, max_size=5))
+@settings(max_examples=5, deadline=None)
+def test_get_mask_from_segmentation_is_binary(segm, labels):
     """
     Given:
         - random segmentation
+        - random labels
     Then:
         - get mask
     Assert that:
         - returned mask is binary
         """
-#    mask = get_mask_from_segmentation(segm)    
-#    mask_array = sitk.GetArrayFromImage(mask)
+    mask = get_mask_from_segmentation(segm, labels)    
+    mask_array = sitk.GetArrayFromImage(mask)
     
-#    assert set(mask_array.flatten()) == {0,1}
+    assert set(mask_array.flatten()) <= {0,1}
 
 
+
+@given(random_segmentation_strategy(), st.lists(st.integers(min_value=101),
+                                                min_size=1, max_size=5))
+@settings(max_examples=5, deadline=None)
+def test_get_mask_from_segmentation_crazy_labels(segm, crazy_labels):
+    """
+    Given:
+        - random segmentation (labels between 1 and 100)
+        - crazy random labels (labels >100)
+    Then:
+        - get mask
+    Assert that:
+        - returned mask is empty
+        """
+    
+    mask = get_mask_from_segmentation(segm, crazy_labels)    
+    mask_array = sitk.GetArrayFromImage(mask)
+    
+    assert set(mask_array.flatten()) == {0}

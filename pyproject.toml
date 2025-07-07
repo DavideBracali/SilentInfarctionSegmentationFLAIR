@@ -37,7 +37,9 @@ dependencies = [
   'numpy',
   'SimpleITK',
   'matplotlib',
-  'seaborn'
+  'seaborn',
+  'os',
+  'pandas'
 ]
 
 [project.urls]
