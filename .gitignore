@@ -3,6 +3,8 @@ data/
 .pytest_cache/
 SilentInfarctionSegmentationFLAIR/Examples/
 SilentInfarctionSegmentationFLAIR/prove.py
+SilentInfarctionSegmentationFLAIR/prove.ipynb
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
