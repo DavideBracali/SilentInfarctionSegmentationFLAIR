@@ -28,6 +28,7 @@ from SilentInfarctionSegmentationFLAIR.utils import plot_image
 from SilentInfarctionSegmentationFLAIR.utils import orient_image
 from SilentInfarctionSegmentationFLAIR.utils import resample_to_reference
 from SilentInfarctionSegmentationFLAIR.utils import plot_histogram
+from SilentInfarctionSegmentationFLAIR.utils import plot_multiple_histograms
 
 
 
@@ -294,9 +295,9 @@ def test_orient_image_valid_return(image, new_orientation):
         assert get_info(oriented_image_new) != get_info(image)
            
         
-@given(gauss_noise_strategy_3D(), gauss_noise_strategy_3D(), st.integers(0,255))
+@given(gauss_noise_strategy_3D(), gauss_noise_strategy_3D())
 @settings(max_examples=5, deadline=None)
-def test_resample_to_reference_valid_return(image, reference, default_value):
+def test_resample_to_reference_valid_return(image, reference):
     """
     Given:
         - 2 gaussian noise SimpleITK images
@@ -311,23 +312,105 @@ def test_resample_to_reference_valid_return(image, reference, default_value):
     
     assert isinstance(image_rs, sitk.Image)
     assert get_info(image_rs) == get_info(reference)
-        
-        
-@given(gauss_noise_strategy_3D())
+
+
+@given(gauss_noise_strategy_3D(), st.integers(1,256))
 @settings(max_examples=5, deadline=None)
-def test_plot_histogram_valid_return(image):
+def test_plot_histogram_valid_return(image, bins):
     """
     Given:
-        - a gaussian noise SimpleITK 3D image
+        - gaussian noise SimpleITK image
+        - a random number of bins
     Then:
-        - apply plot_histogram
+        - plot histogram with the specified number of bins
     Assert that:
-        - a flattened numpy array is returned
-        - if no_bkg = True the returned array doesn't contain 0s
+        - a 2-dimensional tuple is returned
+        - the retured counts is an array with length equal to the number of bins
+        - the returned bin edges is an array with lenght equal to the number of bins + 1
+        - the sum of the returned counts is equal to the number of voxels
     """
-    flattened = plot_histogram(image, no_bkg=True)
+    hist = plot_histogram(image, bins)
+    counts, edges = hist
+    n_voxels = len(get_array_from_image(image).flatten())
+
+    assert isinstance(hist, tuple)
+    assert len(hist) == 2
+    assert isinstance(counts, np.ndarray)
+    assert len(counts) == bins
+    assert isinstance(edges, np.ndarray)
+    assert len(edges) == bins + 1
+    assert np.sum(counts) == n_voxels
     
-    assert len(flattened.shape) == 1
-    assert np.all(flattened != 0) == True
+
+
+@given(gauss_noise_strategy_3D(), st.integers(1,256))
+@settings(max_examples=5, deadline=None)
+def test_plot_histogram_no_bkg(image, bins):
+    """
+    Given:
+        - gaussian noise SimpleITK image
+        - a random number of bins
+    Then:
+        - plot histogram excluding gray level 0 
+    Assert that:
+        - the returned histogram has 0 counts for gray level 0
+    """
+
+    counts_no_bkg, edges_no_bkg = plot_histogram(image, bins=bins, no_bkg=True)
+    counts, edges = plot_histogram(image, bins=bins, no_bkg=False)
+
+    assert 0 not in edges_no_bkg
+    if 0 in np.unique(get_array_from_image(image).flatten()):
+        assert 0 in edges
+
     
+
+
+@given(st.lists(gauss_noise_strategy_3D(), min_size=1, max_size=5))
+@settings(max_examples=5, deadline=None)
+def test_plot_multiple_histograms_valid_return(images):
+    """
+    Given:
+        - a list of gaussian noise SimpleITK images
+        - a list of random number of bins
+    Then:
+        - plot all histograms with the corresponding number of bins
+    Assert that:
+        - a list of 2-dimensional tuples is returned
+        - (for all histograms) the retured counts is an array with length equal to the number of bins
+        - (for all histograms) the returned bin edges is an array with lenght equal to the number of bins + 1
+        - (for all histograms) the sum of the returned counts is equal to the number of voxels
+    """
+    bins = [np.random.randint(1, 100) for _ in images]
+    hists = plot_multiple_histograms(images, bins)
+    n_voxels = [len(get_array_from_image(image).flatten()) for image in images]
+
+    assert isinstance(hists, list)
+    for i, hist in enumerate(hists):
+        counts, edges = hist
+        assert isinstance(hist, tuple)
+        assert len(hist) == 2
+        assert isinstance(counts, np.ndarray)
+        assert len(counts) == bins[i]
+        assert isinstance(edges, np.ndarray)
+        assert len(edges) == bins[i] + 1
+        assert np.sum(counts) == n_voxels[i]
+
+
+@given(st.lists(gauss_noise_strategy_3D(), min_size=1, max_size=5))
+@settings(max_examples=5, deadline=None)
+def test_plot_multiple_histograms_no_bkg(images):
+    """
+    Given:
+        - a list of gaussian noise SimpleITK images
+        - a list of random number of bins
+    Then:
+        - plot all histograms with the corresponding number of bins
+    Assert that:
+        - each of the returned histograms has 0 counts for gray level 0
+    """
     
+    bins = [np.random.randint(1, 100) for _ in images]
+    for image in images:
+        counts, edges = plot_histogram(image, bins=bins, no_bkg=True)
+        assert 0 not in edges

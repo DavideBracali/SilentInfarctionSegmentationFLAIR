@@ -7,10 +7,12 @@ Created on Fri May 23 20:16:28 2025
 """
 
 
+from typing import Iterable
 import numpy as np
 import SimpleITK as sitk
 import seaborn as sns
 import matplotlib.pyplot as plt
+import pandas as pd
 
 class DimensionError(Exception):
     pass
@@ -160,7 +162,7 @@ def orient_image(image, orientation):
     return oriented_image
 
 
-def resample_to_reference(image, reference, interpolator=sitk.sitkLinear, default_value=0):
+def resample_to_reference(image, reference, interpolator=sitk.sitkNearestNeighbor, default_value=0):
     
     """
     Resamples moving_image onto the space of reference_image.
@@ -185,99 +187,137 @@ def resample_to_reference(image, reference, interpolator=sitk.sitkLinear, defaul
     return image_rs
 
 
-def plot_histogram(image, bins=None, title="Gray level histogram",
-                   save_path=None, no_bkg=False):
+def downsample_array(arr, perc=0.01):
+    """
+    Returns an evenly spaced subsample of a 1D array.
+    Useful to reduce memory and computational complexity on very large arrays.
+
+    Parameters
+    ----------
+        arr (np.ndarray): Input 1D array.
+        perc (float): Percentage of elements to keep (as a decimal, e.g. 0.01 = 1%).
+
+    Returns
+    -------
+        arr_ds (np.ndarray): Evenly spaced downsampled array.
+    """
+    if arr.size == 0 or perc >= 1.0:
+        return arr
+    if perc <= 0:
+        raise ValueError("Invalid downsample percentage.")
+    step = max(1, int(1/perc))
+    return arr[::step]
+
+
+def plot_histogram(image, bins='auto', title="Gray level histogram",
+                   save_path=None, no_bkg=False, show=True, downsampling=None, ax=None):
     """
     Plots histogram of a gray-scale SimpleITK 3D image.
     
     Parameters
     ----------
         image (SimpleITK.Image): Image to compute the histogram.
-        bins (int): Number of bins.
+        bins (int or str): Number of bins or binning strategy.
         title (str): Title of the figure.
         save_path (str): Saves the histogram to the desired path.
-        no_bkg (boolean): If True, removes gray level 0 (background) from the histogram.
+        no_bkg (bool): If True, removes gray level 0 (background) from the histogram.
+        show (bool): Whether to show the plot (ignored if ax is provided).
+        downsampling (float or None): Percentage of voxels to use for histogram calculation.
+        ax (matplotlib.axes.Axes): Axis on which to plot. If None, uses current axis.
     
     Returns
     -------
-        histogram (np.array): Flattened array of gray levels.
+        histogram (tuple): NumPy histogram of the image array in the format (counts, bin_edges).
     """
+
     image_array = get_array_from_image(image)
-    flattened = image_array.flatten()
-    
-    if no_bkg == True:
-        flattened = flattened[flattened != 0]
-    
-    if bins == None:
-        bins = range(int(min(flattened)), int(max(flattened)) + 2)
-    
-    plt.hist(flattened, bins=bins)
-    if no_bkg == True:
-        plt.xlabel("Gray level (excluding black)")
-    else:
-        plt.xlabel("Gray level")
-    plt.ylabel("Counts")
-    plt.title(title)
-    
-    if save_path != None:
+    arr = image_array.flatten()
+    if no_bkg:
+        arr = arr[arr != 0]
+    if downsampling is not None:
+        arr = downsample_array(arr, perc=downsampling)
+
+    # usa ax se fornito
+    if ax is None:
+        ax = plt.gca()
+
+    if arr.size != 0:
+        ax.hist(arr, bins=bins)
+
+    xlabel = "Gray level (excluding black)" if no_bkg else "Gray level"
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Counts")
+    ax.set_title(title)
+
+    if save_path is not None:
         plt.savefig(save_path)
+    if show and ax is plt.gca():
+        plt.show()
 
-    plt.show()    
-    plt.close()
-
-    return flattened
+    return np.histogram(arr, bins=bins)
 
 
-def plot_multiple_histograms(images, labels=None, bins=None, title="Gray level histograms",
-                              save_path=None, no_bkg=False, alpha=0.5, normalize=False):
+
+def plot_multiple_histograms(images, bins='auto', labels=None, title="Gray level histograms",
+                              legend_title="", save_path=None, no_bkg=False, alpha=0.5,
+                              normalize=False, downsampling=None, show=True, ax=None):
     """
     Plots histograms for multiple SimpleITK 3D gray-scale images.
 
     Parameters
     ----------
         images (list): List of SimpleITK.Image objects.
+        bins (list or int): List or integer containing the number of bins.
         labels (list): List of labels for each histogram (for the legend).
-        bins (int or list): Number of bins or shared bin edges.
         title (str): Title of the plot.
+        legend_title (str): Title of the legend.
         save_path (str): Path to save the figure.
         no_bkg (bool): If True, exclude gray level 0 from histograms.
         alpha (float): Transparency level for overlapping histograms.
+        normalize (bool): Whether to normalize the histograms to show densities.
+        downsampling (float or None): Percentage of voxels to use for histogram calculation.
+        show (bool): Whether to display the plot.
+        ax (matplotlib.axes.Axes): Matplotlib Axes object where to draw. If None, uses current axis.
 
     Returns
     -------
-        histograms (list): List of flattened gray-level arrays for each image.
+        histograms (list): List of NumPy histograms in the format (counts, bin_edges).
     """
 
-    if labels == None:
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    if labels is None:
         labels = [f"Image {i+1}" for i in range(len(images))]
 
-    histograms = []
-    all_values = []
+    if ax is None:
+        ax = plt.gca()
 
-    for image in images:
-        flattened = get_array_from_image(image).flatten()
+    hist_tables = []
+    for idx, (image, label) in enumerate(zip(images, labels)):
+        arr = get_array_from_image(image).flatten()
         if no_bkg:
-            flattened = flattened[flattened != 0]
-        histograms.append(flattened)
-        all_values.extend(flattened)
+            arr = arr[arr != 0]
+        if downsampling is not None:
+            arr = downsample_array(arr, perc=downsampling)
+        if isinstance(bins, list):
+            my_bins = bins[idx]
+        else:
+            my_bins = bins
 
-    if bins == None:
-        bins = range(int(min(all_values)),
-                     int(max(all_values)) + 2)
+        if arr.size != 0:
+            ax.hist(arr, bins=my_bins, alpha=alpha, label=label, density=normalize)
 
-    for hist, label in zip(histograms, labels):
-        plt.hist(hist, bins=bins, alpha=alpha, label=label,
-                  density=normalize)
+        hist_tables.append(np.histogram(arr, bins=my_bins))
 
-    plt.xlabel("Gray level (excluding 0)" if no_bkg else "Gray level")
-    plt.ylabel("Density" if normalize else "Counts")
-    plt.title(title)
-    plt.legend()
-    
+    ax.set_xlabel("Gray level (excluding black)" if no_bkg else "Gray level")
+    ax.set_ylabel("Density" if normalize else "Counts")
+    ax.set_title(title)
+    ax.legend(title=legend_title)
+
     if save_path:
         plt.savefig(save_path)
+    if show and ax is plt.gca():
+        plt.show()
 
-    plt.show()
-    plt.close()
-
-    return histograms
+    return hist_tables
