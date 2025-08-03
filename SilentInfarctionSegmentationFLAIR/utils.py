@@ -7,12 +7,13 @@ Created on Fri May 23 20:16:28 2025
 """
 
 
-from typing import Iterable
 import numpy as np
 import SimpleITK as sitk
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+from scipy.stats import skew, kurtosis
+
 
 class DimensionError(Exception):
     pass
@@ -73,7 +74,7 @@ def get_array_from_image(image):
     check_3d(image)
     
     image_array = sitk.GetArrayFromImage(image)
-    image_array = np.transpose(image_array, (2,1,0))   # SimpleITK returns zyx
+    image_array = np.transpose(image_array, (2,1,0))       # SimpleITK returns zyx
         
     return image_array
 
@@ -95,6 +96,7 @@ def plot_image(image, xyz=None):
 
     """
     image_array = get_array_from_image(image)
+
     
     # default values: center of the image
     if xyz == None:
@@ -284,9 +286,6 @@ def plot_multiple_histograms(images, bins='auto', labels=None, title="Gray level
         histograms (list): List of NumPy histograms in the format (counts, bin_edges).
     """
 
-    import numpy as np
-    import matplotlib.pyplot as plt
-
     if labels is None:
         labels = [f"Image {i+1}" for i in range(len(images))]
 
@@ -304,8 +303,7 @@ def plot_multiple_histograms(images, bins='auto', labels=None, title="Gray level
             my_bins = bins[idx]
         else:
             my_bins = bins
-
-        if arr.size != 0:
+        if arr.size != 0 and show:
             ax.hist(arr, bins=my_bins, alpha=alpha, label=label, density=normalize)
 
         hist_tables.append(np.histogram(arr, bins=my_bins))
@@ -321,3 +319,35 @@ def plot_multiple_histograms(images, bins='auto', labels=None, title="Gray level
         plt.show()
 
     return hist_tables
+
+
+def histogram_stats(hist, q1=25, q2=75):
+    """
+    Estimate the mean and two percentiles from a histogram.
+
+    Args:
+        hist (tuple): Tuple (counts, bin_edges) as returned by np.histogram().
+        q1 (float): First percentile to compute (default is 25).
+        q2 (float): Second percentile to compute (default is 75).
+
+    Returns:
+        tuple: (mean, percentile_q1, percentile_q2, variance, skwness, kurtosis)
+    """
+    counts, bin_edges = hist
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+    mean = np.average(bin_centers, weights=counts)
+
+    # compute cdf
+    cdf = np.cumsum(counts).astype(float)
+    cdf /= cdf[-1]  # normalize
+
+    # percentiles from the cdf
+    p1 = np.interp(q1 / 100, cdf, bin_centers)
+    p2 = np.interp(q2 / 100, cdf, bin_centers)
+
+    # statistical moments
+    variance = np.average((bin_centers - mean) ** 2, weights=counts)
+    skewness = skew(np.repeat(bin_centers, counts.astype(int)))
+    kurt = kurtosis(np.repeat(bin_centers, counts.astype(int)))
+
+    return mean, p1, p2, variance, skewness, kurt

@@ -29,6 +29,7 @@ from SilentInfarctionSegmentationFLAIR.utils import orient_image
 from SilentInfarctionSegmentationFLAIR.utils import resample_to_reference
 from SilentInfarctionSegmentationFLAIR.utils import plot_histogram
 from SilentInfarctionSegmentationFLAIR.utils import plot_multiple_histograms
+from SilentInfarctionSegmentationFLAIR.utils import histogram_stats
 
 
 
@@ -155,16 +156,16 @@ def test_get_info_valid_return(image):
     """
     info = get_info(image)
     
-    assert isinstance(info, dict),       "return type is not dict"
-    assert len(info) == 4,               "returned dict doesn't have 4 items"
+    assert isinstance(info, dict)
+    assert len(info) == 4
     
     for k, i in info.items():
-        assert isinstance(i, tuple),     f"{k} is not a tuple"
+        assert isinstance(i, tuple)
     
-    assert len(info["size"]) == 3,       "size is a tuple with length different than 3"
-    assert len(info["spacing"]) == 3,    "spacing is a tuple with length different than 3"
-    assert len(info["origin"]) == 3,     "origin is a tuple with length different than 3"
-    assert len(info["direction"]) == 9,  "direction is a tuple with length different than 9"
+    assert len(info["size"]) == 3
+    assert len(info["spacing"]) == 3
+    assert len(info["origin"]) == 3
+    assert len(info["direction"]) == 9
     
     
 @given(gauss_noise_strategy_3D())
@@ -215,15 +216,15 @@ def test_plot_image_valid_return(image):
     """
     plot_info = plot_image(image)
     
-    assert isinstance(plot_info, dict),              "return type is not dict"
-    assert len(plot_info) == 3,                      "returned dict doesn't have 3 items"
+    assert isinstance(plot_info, dict)
+    assert len(plot_info) == 3
     
     for k, i in plot_info.items():
-        assert isinstance(i, tuple),                 f"{k} is not a tuple"
+        assert isinstance(i, tuple)
     
-    assert len(plot_info["size"]) == 3,              "size is a tuple with length different than 3"
-    assert len(plot_info["spacing"]) == 3,           "spacing is a tuple with length different than 3"
-    assert len(plot_info["aspects"]) == 3,           "origin is a tuple with length different than 3"
+    assert len(plot_info["size"]) == 3
+    assert len(plot_info["spacing"]) == 3
+    assert len(plot_info["aspects"]) == 3
     
     
     
@@ -242,9 +243,9 @@ def test_plot_image_spacings_aspects(image):
     plot_info = plot_image(image)
         
     if len(set(plot_info["spacing"])) == 1:
-        assert len(set(plot_info["aspects"])) == 1,  "spacings are equal but aspects are different"
+        assert len(set(plot_info["aspects"])) == 1
     else:
-        assert len(set(plot_info["aspects"])) != 1,  "spacings are different but aspects are equal"
+        assert len(set(plot_info["aspects"])) != 1
           
         
 @given(gauss_noise_strategy_3D())
@@ -414,3 +415,38 @@ def test_plot_multiple_histograms_no_bkg(images):
     for image in images:
         counts, edges = plot_histogram(image, bins=bins, no_bkg=True)
         assert 0 not in edges
+
+
+@given(gauss_noise_strategy_3D(), st.integers(10, 256))
+@settings(max_examples=5, deadline=None)
+def test_histogram_stats_valid_return(image, bins):
+    """
+    Given:
+        - gaussian noise SimpleITK image
+        - a random number of histogram bins
+    Then:
+        - compute histogram and pass it to histogram_stats
+    Assert that:
+        - returned value is a 6-tuple of floats
+        - mean is between min and max of the histogram bin centers
+        - percentiles are ordered: q1 <= q2
+        - variance is non-negative
+        - skewness and kurtosis are finite numbers
+    """
+    hist = plot_histogram(image, bins)
+    stats = histogram_stats(hist)
+
+    counts, edges = hist
+    bin_centers = 0.5 * (edges[:-1] + edges[1:])
+
+    assert isinstance(stats, tuple)               
+    assert len(stats) == 6                 
+    for val in stats:
+        assert isinstance(val, np.floating)             
+
+    mean, p1, p2, var, skew, kurt = stats
+    assert edges[0] <= mean <= edges[-1]          
+    assert p1 <= p2                               
+    assert var >= 0                               
+    assert np.isfinite(skew)                      
+    assert np.isfinite(kurt)                      

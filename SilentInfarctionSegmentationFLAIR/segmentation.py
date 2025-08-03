@@ -12,13 +12,13 @@ import os
 import warnings
 
 
-from utils import DimensionError
-from utils import check_3d
-from utils import get_info
-from utils import get_array_from_image
-from utils import plot_image
-from utils import orient_image
-from utils import resample_to_reference
+from SilentInfarctionSegmentationFLAIR.utils import DimensionError
+from SilentInfarctionSegmentationFLAIR.utils import check_3d
+from SilentInfarctionSegmentationFLAIR.utils import get_info
+from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image
+from SilentInfarctionSegmentationFLAIR.utils import plot_image
+from SilentInfarctionSegmentationFLAIR.utils import orient_image
+from SilentInfarctionSegmentationFLAIR.utils import resample_to_reference
 
 
 
