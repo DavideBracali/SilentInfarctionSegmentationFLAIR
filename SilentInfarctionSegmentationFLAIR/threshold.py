@@ -13,9 +13,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 from scipy.ndimage import gaussian_filter1d
 
-from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image
-from SilentInfarctionSegmentationFLAIR.utils import plot_histogram
-from SilentInfarctionSegmentationFLAIR.utils import gaussian_smooth_histogram
+from SilentInfarctionSegmentationFLAIR.histograms import plot_histogram
+from SilentInfarctionSegmentationFLAIR.histograms import gaussian_smooth_histogram
 
 def main(image, gm):
 
