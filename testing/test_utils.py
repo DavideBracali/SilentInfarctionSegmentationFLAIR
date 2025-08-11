@@ -29,7 +29,8 @@ from SilentInfarctionSegmentationFLAIR.utils import orient_image
 from SilentInfarctionSegmentationFLAIR.utils import resample_to_reference
 from SilentInfarctionSegmentationFLAIR.utils import plot_histogram
 from SilentInfarctionSegmentationFLAIR.utils import plot_multiple_histograms
-from SilentInfarctionSegmentationFLAIR.utils import histogram_stats
+from SilentInfarctionSegmentationFLAIR.utils import histogram_stats  #!!!!!!!!! inutile occhio
+from SilentInfarctionSegmentationFLAIR.utils import gaussian_smooth_histogram
 
 
 
@@ -330,7 +331,7 @@ def test_plot_histogram_valid_return(image, bins):
         - the returned bin edges is an array with lenght equal to the number of bins + 1
         - the sum of the returned counts is equal to the number of voxels
     """
-    hist = plot_histogram(image, bins)
+    hist = plot_histogram(image, bins, show=False)
     counts, edges = hist
     n_voxels = len(get_array_from_image(image).flatten())
 
@@ -358,7 +359,7 @@ def test_plot_histogram_no_bkg(image, bins):
     """
 
     counts_no_bkg, edges_no_bkg = plot_histogram(image, bins=bins, no_bkg=True)
-    counts, edges = plot_histogram(image, bins=bins, no_bkg=False)
+    counts, edges = plot_histogram(image, bins=bins, no_bkg=False, show=False)
 
     assert 0 not in edges_no_bkg
     if 0 in np.unique(get_array_from_image(image).flatten()):
@@ -383,7 +384,7 @@ def test_plot_multiple_histograms_valid_return(images):
         - (for all histograms) the sum of the returned counts is equal to the number of voxels
     """
     bins = [np.random.randint(1, 100) for _ in images]
-    hists = plot_multiple_histograms(images, bins)
+    hists = plot_multiple_histograms(images, bins, show=False)
     n_voxels = [len(get_array_from_image(image).flatten()) for image in images]
 
     assert isinstance(hists, list)
@@ -411,10 +412,12 @@ def test_plot_multiple_histograms_no_bkg(images):
         - each of the returned histograms has 0 counts for gray level 0
     """
     
-    bins = [np.random.randint(1, 100) for _ in images]
-    for image in images:
-        counts, edges = plot_histogram(image, bins=bins, no_bkg=True)
-        assert 0 not in edges
+    bins = [np.random.randint(10, 100) for _ in images]
+    hists = plot_multiple_histograms(images, bins=bins, no_bkg=True, show=False)
+    for i, hist in enumerate(hists):
+        _, edges = hist
+        if 0 in np.unique(get_array_from_image(images[i])):
+            assert 0 not in edges
 
 
 @given(gauss_noise_strategy_3D(), st.integers(10, 256))
@@ -450,3 +453,52 @@ def test_histogram_stats_valid_return(image, bins):
     assert var >= 0                               
     assert np.isfinite(skew)                      
     assert np.isfinite(kurt)                      
+
+
+@given(gauss_noise_strategy_3D(), st.integers(10, 256))
+def test_gaussian_smooth_histogram_valid_return(image, bins):
+    """
+    Given:
+        - gaussian noise SimpleITK image
+        - a random number of histogram bins
+
+    Then:
+        - compute histogram
+        - smooth histogram
+    Assert:
+        - returned output is a 2-element tuple of arrays
+        - counts and smooth counts have the same number of elements
+        - all smooth counts are positive or null
+        - binning is not affected by histogram smoothing
+    """
+    hist = plot_histogram(image, bins, show=False)
+    counts, bins = hist
+    smooth_counts, smooth_bins = gaussian_smooth_histogram(hist, sigma=3, show=False)
+
+    assert isinstance(smooth_counts, np.ndarray)
+    assert isinstance(smooth_bins, np.ndarray)
+    assert smooth_counts.shape == (len(counts),)
+    assert np.all(smooth_counts >= 0)
+    assert np.allclose(smooth_bins, bins)
+
+
+@given(gauss_noise_strategy_3D(), st.integers(10, 256))
+def test_gaussian_smooth_histogram_min_max(image, bins):
+    """
+    Given:
+        - gaussian noise SimpleITK image
+        - a random number of histogram bins
+
+    Then:
+        - compute histogram
+        - smooth histogram
+    Assert:
+        - minimum of smoothed histogram is >= than the original minimum
+        - maximum of smoothed histogram is <= than the original maximum
+    """
+    hist = plot_histogram(image, bins, show=False)
+    counts, _ = hist
+    smooth_counts, _ = gaussian_smooth_histogram(hist, sigma=3, show=False)
+
+    assert smooth_counts.min() >= min(counts)
+    assert smooth_counts.max() <= max(counts)

@@ -13,6 +13,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.stats import skew, kurtosis
+from scipy.ndimage import gaussian_filter1d
 
 
 class DimensionError(Exception):
@@ -211,8 +212,9 @@ def downsample_array(arr, perc=0.01):
     return arr[::step]
 
 
-def plot_histogram(image, bins='auto', title="Gray level histogram",
-                   save_path=None, no_bkg=False, show=True, downsampling=None, ax=None):
+def plot_histogram(image, bins=None, title="Gray level histogram",
+                   save_path=None, no_bkg=False, show=True, normalize=False,
+                   alpha=1, downsampling=None, ax=None):
     """
     Plots histogram of a gray-scale SimpleITK 3D image.
     
@@ -220,47 +222,57 @@ def plot_histogram(image, bins='auto', title="Gray level histogram",
     ----------
         image (SimpleITK.Image): Image to compute the histogram.
         bins (int or str): Number of bins or binning strategy.
+            If None, uses the maximum gray level (recommended for integer gray levels).
         title (str): Title of the figure.
         save_path (str): Saves the histogram to the desired path.
         no_bkg (bool): If True, removes gray level 0 (background) from the histogram.
+        alpha (float): Transparency level for overlapping histograms.
+        normalize (bool): Whether to normalize the histograms to show densities.
         show (bool): Whether to show the plot (ignored if ax is provided).
         downsampling (float or None): Percentage of voxels to use for histogram calculation.
-        ax (matplotlib.axes.Axes): Axis on which to plot. If None, uses current axis.
+        ax (matplotlib.axes.Axes): Axis on which to plot.
+            If not specified, uses current axis.
     
     Returns
     -------
-        histogram (tuple): NumPy histogram of the image array in the format (counts, bin_edges).
+        hist (tuple): (counts: np.ndarray, bin_edges: np.ndarray)
     """
 
     image_array = get_array_from_image(image)
     arr = image_array.flatten()
+
     if no_bkg:
         arr = arr[arr != 0]
+
     if downsampling is not None:
         arr = downsample_array(arr, perc=downsampling)
 
-    # usa ax se fornito
-    if ax is None:
-        ax = plt.gca()
+    if bins is None:
+        bins = int(max(np.unique(arr)))
+    
+    hist = np.histogram(arr, bins=bins, density=normalize)
+    counts, bins_edges = hist
+    bins_width = bins_edges[1] - bins_edges[0]
+    bins_center = (bins_edges[:-1] + bins_edges[1:]) / 2
 
-    if arr.size != 0:
-        ax.hist(arr, bins=bins)
+    if arr.size != 0 and show:
+        if ax is None:
+            ax=plt.gca()
+        ax.bar(bins_center, counts, alpha=alpha, width=bins_width, align='center')
+        xlabel = "Gray level (excluding black)" if no_bkg else "Gray level"
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel("Counts")
+        ax.set_title(title)
 
-    xlabel = "Gray level (excluding black)" if no_bkg else "Gray level"
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel("Counts")
-    ax.set_title(title)
 
     if save_path is not None:
         plt.savefig(save_path)
-    if show and ax is plt.gca():
-        plt.show()
 
-    return np.histogram(arr, bins=bins)
+    return hist
 
 
 
-def plot_multiple_histograms(images, bins='auto', labels=None, title="Gray level histograms",
+def plot_multiple_histograms(images, bins=None, labels=None, title="Gray level histograms",
                               legend_title="", save_path=None, no_bkg=False, alpha=0.5,
                               normalize=False, downsampling=None, show=True, ax=None):
     """
@@ -269,7 +281,9 @@ def plot_multiple_histograms(images, bins='auto', labels=None, title="Gray level
     Parameters
     ----------
         images (list): List of SimpleITK.Image objects.
-        bins (list or int): List or integer containing the number of bins.
+        bins (int, list or None): 
+            If int, number of bins for all images. If list, must match length of images.
+            If None, uses maximum gray level per image (recommended for integer gray levels).
         labels (list): List of labels for each histogram (for the legend).
         title (str): Title of the plot.
         legend_title (str): Title of the legend.
@@ -279,34 +293,47 @@ def plot_multiple_histograms(images, bins='auto', labels=None, title="Gray level
         normalize (bool): Whether to normalize the histograms to show densities.
         downsampling (float or None): Percentage of voxels to use for histogram calculation.
         show (bool): Whether to display the plot.
-        ax (matplotlib.axes.Axes): Matplotlib Axes object where to draw. If None, uses current axis.
+        ax (matplotlib.axes.Axes): Matplotlib Axes object where to draw.
+            If not specified, uses current axis.
 
     Returns
     -------
-        histograms (list): List of NumPy histograms in the format (counts, bin_edges).
+        histograms (list): List of NumPy histograms in the format (counts: np.ndarray, bin_edges: np.ndarray).
     """
 
     if labels is None:
         labels = [f"Image {i+1}" for i in range(len(images))]
 
-    if ax is None:
-        ax = plt.gca()
-
     hist_tables = []
-    for idx, (image, label) in enumerate(zip(images, labels)):
+    for idx, (image, label) in enumerate(zip(images, labels)):    
+        
         arr = get_array_from_image(image).flatten()
+
         if no_bkg:
             arr = arr[arr != 0]
+        
         if downsampling is not None:
             arr = downsample_array(arr, perc=downsampling)
+        
         if isinstance(bins, list):
             my_bins = bins[idx]
         else:
             my_bins = bins
-        if arr.size != 0 and show:
-            ax.hist(arr, bins=my_bins, alpha=alpha, label=label, density=normalize)
+        if my_bins is None:
+            my_bins = int(max(np.unique(arr)))
+        
+        hist = np.histogram(arr, bins=my_bins, density=normalize)
+        counts, bins_edges = hist
+        bins_width = bins_edges[1] - bins_edges[0]
+        bins_center = (bins_edges[:-1] + bins_edges[1:]) / 2
 
-        hist_tables.append(np.histogram(arr, bins=my_bins))
+        if arr.size != 0 and show:
+            if ax is None:
+                ax=plt.gca()
+            ax.bar(bins_center, counts, alpha=alpha, label=label,
+                   width=bins_width, align='center')
+
+        hist_tables.append(hist)
 
     ax.set_xlabel("Gray level (excluding black)" if no_bkg else "Gray level")
     ax.set_ylabel("Density" if normalize else "Counts")
@@ -315,22 +342,23 @@ def plot_multiple_histograms(images, bins='auto', labels=None, title="Gray level
 
     if save_path:
         plt.savefig(save_path)
-    if show and ax is plt.gca():
-        plt.show()
+
 
     return hist_tables
 
-
+# !!!! per ora inutile...
 def histogram_stats(hist, q1=25, q2=75):
     """
     Estimate the mean and two percentiles from a histogram.
 
-    Args:
+    Parameters
+    ----------
         hist (tuple): Tuple (counts, bin_edges) as returned by np.histogram().
         q1 (float): First percentile to compute (default is 25).
         q2 (float): Second percentile to compute (default is 75).
 
-    Returns:
+    Returns
+    -------
         tuple: (mean, percentile_q1, percentile_q2, variance, skwness, kurtosis)
     """
     counts, bin_edges = hist
@@ -351,3 +379,33 @@ def histogram_stats(hist, q1=25, q2=75):
     kurt = kurtosis(np.repeat(bin_centers, counts.astype(int)))
 
     return mean, p1, p2, variance, skewness, kurt
+
+
+def gaussian_smooth_histogram(hist, sigma=3, show=True, ax=None):
+    """
+    Smoothens an histogram convoluting with a gaussian kernel.
+
+    Parameters
+    ----------
+        hist (tuple): Tuple (counts, bin_edges) as returned by np.histogram().
+        sigma (float): Standard deviation of the gaussian kernel.
+        show (bool): Whether to display the plot.
+        ax (matplotlib.axes.Axes): Matplotlib Axes object where to draw.
+            If not specified, uses current axis.
+
+    Returns
+    -------
+        smooth_hist (tuple):  Tuple (counts, bin_edges) of the smoothed histogram.
+    """
+
+    counts, bins = hist
+    bins_center = (bins[:-1] + bins[1:]) / 2
+    smooth_counts = gaussian_filter1d(counts, sigma=sigma)
+    if show:
+        if ax is None:
+            ax = plt.gca()
+        ax.plot(bins_center, smooth_counts, 'r-', linewidth=2, 
+            alpha=0.7, label=f'Gaussian smoothing (σ={sigma})')
+        ax.legend()
+    smooth_hist = (smooth_counts, bins)
+    return smooth_hist
