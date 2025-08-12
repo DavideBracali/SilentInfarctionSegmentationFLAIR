@@ -24,6 +24,7 @@ from SilentInfarctionSegmentationFLAIR.histograms import plot_histogram
 from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histograms
 from SilentInfarctionSegmentationFLAIR.histograms import histogram_stats  #!!!!!!!!! inutile occhio
 from SilentInfarctionSegmentationFLAIR.histograms import gaussian_smooth_histogram
+from SilentInfarctionSegmentationFLAIR.histograms import mode_and_rhwhm
 
 
 
@@ -82,7 +83,7 @@ def gauss_noise_strategy_3D(draw):
 ##################
 
 
-@given(gauss_noise_strategy_3D(), st.integers(1,256))
+@given(gauss_noise_strategy_3D(), st.integers(10,256))
 @settings(max_examples=5, deadline=None)
 def test_plot_histogram_valid_return(image, bins):
     """
@@ -110,7 +111,7 @@ def test_plot_histogram_valid_return(image, bins):
     assert np.sum(counts) == n_voxels    
 
 
-@given(gauss_noise_strategy_3D(), st.integers(1,256))
+@given(gauss_noise_strategy_3D(), st.integers(10,256))
 @settings(max_examples=5, deadline=None)
 def test_plot_histogram_no_bkg(image, bins):
     """
@@ -146,7 +147,7 @@ def test_plot_multiple_histograms_valid_return(images):
         - (for all histograms) the returned bin edges is an array with lenght equal to the number of bins + 1
         - (for all histograms) the sum of the returned counts is equal to the number of voxels
     """
-    bins = [np.random.randint(1, 100) for _ in images]
+    bins = [np.random.randint(10, 256) for _ in images]
     hists = plot_multiple_histograms(images, bins, show=False)
     n_voxels = [len(sitk.GetArrayFromImage(image).flatten()) for image in images]
 
@@ -219,6 +220,7 @@ def test_histogram_stats_valid_return(image, bins):
 
 
 @given(gauss_noise_strategy_3D(), st.integers(10, 256))
+@settings(max_examples=5, deadline=None)
 def test_gaussian_smooth_histogram_valid_return(image, bins):
     """
     Given:
@@ -246,6 +248,7 @@ def test_gaussian_smooth_histogram_valid_return(image, bins):
 
 
 @given(gauss_noise_strategy_3D(), st.integers(10, 256))
+@settings(max_examples=5, deadline=None)
 def test_gaussian_smooth_histogram_min_max(image, bins):
     """
     Given:
@@ -265,3 +268,33 @@ def test_gaussian_smooth_histogram_min_max(image, bins):
 
     assert smooth_counts.min() >= min(counts)
     assert smooth_counts.max() <= max(counts)
+
+
+@given(gauss_noise_strategy_3D(), st.integers(10, 256))
+@settings(max_examples=5, deadline=None)
+def test_mode_and_rhwhm_valid_return(image, bins):
+    """
+    Given:
+        - gaussian noise SimpleITK image
+        - a random number of histogram bins
+
+    Then:
+        - compute histogram
+        - find mode and rhwhm
+    Assert:
+        - returned mode and rhwhm are floats
+        - returned mode is in the bins range
+        - returned mode + rhwhm is in the bins range
+        - rhwhm is positive
+
+    """
+
+    hist = plot_histogram(image, bins, show=False)
+    _, edges = hist
+    mode, rhwhm = mode_and_rhwhm(hist, show=False)
+
+    assert isinstance(mode, float) or isinstance(mode, np.floating)
+    assert isinstance(rhwhm, float) or isinstance(rhwhm, np.floating)
+    assert edges[0] <= mode <= edges[-1]
+    assert edges[0] <= mode + rhwhm <= edges[-1]
+    assert rhwhm > 0

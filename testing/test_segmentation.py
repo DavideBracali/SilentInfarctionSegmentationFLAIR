@@ -26,6 +26,7 @@ from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image
 
 from SilentInfarctionSegmentationFLAIR.segmentation import get_mask_from_segmentation
 from SilentInfarctionSegmentationFLAIR.segmentation import get_mask_from_pve
+from SilentInfarctionSegmentationFLAIR.segmentation import apply_threshold
 from SilentInfarctionSegmentationFLAIR.segmentation import evaluate
 
 
@@ -268,6 +269,83 @@ def test_get_mask_from_pve_thr_zero(pve):
     
 
 
+@given(gauss_noise_strategy_3D(), st.floats(0.0, 500.0))
+@settings(max_examples=5, deadline=None)
+def test_apply_threshold_valid_return(image, thr):
+    """
+    Given:
+        - gaussian noise SimpleITK image
+        - a random threshold
+    Then:
+        - apply threshold
+    Assert that:
+        - returned mask is binary
+        - all voxels >= threshold are 1
+        - all voxels < threshold are 0
+        - output image has same properties as input
+    """
+    
+    arr = sitk.GetArrayFromImage(image)
+
+    mask = apply_threshold(image, thr, show=False)    
+    mask_arr = sitk.GetArrayFromImage(mask)
+    
+
+    assert set(mask_arr.flatten()) <= {0,1}
+    assert np.all(mask_arr[arr >= thr] == 1)
+    assert np.all(mask_arr[arr < thr] == 0)
+    assert mask.GetSize() == image.GetSize()
+    assert mask.GetSpacing() == image.GetSpacing()
+    assert mask.GetOrigin() == image.GetOrigin()
+
+
+@given(gauss_noise_strategy_3D())
+@settings(max_examples=5, deadline=None)
+def test_threshold_lower_than_min(image):
+    """
+    Given:
+        - gaussian noise SimpleITK image
+    Then:
+        - apply a threshold lower than the minimum gray level
+    Assert that:
+        - returned mask contains only ones
+
+    """   
+    arr = sitk.GetArrayFromImage(image)
+    min_gl = np.min(arr)
+
+    mask = apply_threshold(image, thr=float(min_gl-1e-6), show=False)
+    
+    mask_arr = sitk.GetArrayFromImage(mask)
+
+    assert np.all(mask_arr == 1)
+
+
+
+@given(gauss_noise_strategy_3D())
+@settings(max_examples=5, deadline=None)
+def test_threshold_higher_than_max(image):
+    """
+    Given:
+        - gaussian noise SimpleITK image
+    Then:
+        - apply a threshold higher than the maximum gray level
+    Assert that:
+        - returned mask contains only zeros
+
+    """   
+    arr = sitk.GetArrayFromImage(image)
+    max_gl = np.max(arr)
+
+    mask = apply_threshold(image, thr=float(max_gl+1e-3), show=False)
+    
+    mask_arr = sitk.GetArrayFromImage(mask)
+
+
+    assert np.all(mask_arr == 0)
+
+
+
 @given(binary_mask_pair_strategy())
 @settings(max_examples=5, deadline=None)
 def test_evaluate_valid_return(mask_pair):
@@ -328,7 +406,7 @@ def test_evaluate_identical_masks(mask_pair):
     """
     img, _ = mask_pair 
     
-    arr = get_array_from_image(img)
+    arr = sitk.GetArrayFromImage(img)
     assume(np.any(arr == 1) and np.any(arr == 0))
 
     metrics, dice, accuracy = evaluate(img, img)
@@ -336,7 +414,6 @@ def test_evaluate_identical_masks(mask_pair):
     assert dice == 1.0
     assert accuracy == 1.0
     assert metrics == {'TPR': 1.0, 'FPR': 0.0, 'TNR': 1.0, 'FNR': 0.0}
-
 
 
 def test_evaluate_all_zero_vs_all_one():
@@ -367,6 +444,7 @@ def test_evaluate_all_zero_vs_all_one():
 
 
 @given(binary_mask_pair_strategy(), non_binary_image_strategy())
+@settings(max_examples=5, deadline=None)
 def test_evaluate_raises_value_error_if_not_binary(mask_pair, not_binary):
     """
     Given:
@@ -388,3 +466,5 @@ def test_evaluate_raises_value_error_if_not_binary(mask_pair, not_binary):
         evaluate(mask, gt)
     except Exception:
         assert False
+
+

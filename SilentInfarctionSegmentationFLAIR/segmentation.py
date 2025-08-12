@@ -8,7 +8,7 @@ Created on Tue May 27 19:49:24 2025
 
 import numpy as np
 import SimpleITK as sitk
-import os
+import matplotlib.pyplot as plt
 import warnings
 
 
@@ -70,6 +70,42 @@ def get_mask_from_pve(pve, thr=1e-12):
     return mask
 
 
+def apply_threshold(image, thr, show=True, ax=None):
+    """
+    Applies a binary lower threshold to a SimpleITK image.
+    Voxels with gray level >= thr will be set to 1, otherwise to 0.
+    Optionally plots a vertical green dashed line.
+
+    Parameters
+    ----------
+        - image (SimpleITK.image): The image to threshold.
+        - thr (float): The gray level threshold to apply. 
+    
+    Returns
+    -------
+        - thr_image (SimpleITK.image): The thresholded binary image.
+    """
+    max_gl = get_array_from_image(image).max()
+    # set upper threshold higher than maximum gl because default value is 255
+    if thr >= max_gl:
+        upper_thr = float(thr + 1)
+        warnings.warn(f"Lower threshold ({thr}) is higher than maximum gray level ({max_gl}).")
+    else:
+        upper_thr = float(get_array_from_image(image).max() + 1)
+
+    thr_image = sitk.BinaryThreshold(image, lowerThreshold=thr,
+                        upperThreshold=upper_thr)
+
+    if show:
+        if ax is None:
+            ax = plt.gca()
+        ax.axvline(thr, linestyle='--', color='lime',
+                linewidth=2, label=f"Threshold ({thr:.1f})")
+
+    return thr_image
+
+
+
 def evaluate(mask, gt):
     """
     Returns evaluation parameters from two binary images.
@@ -85,7 +121,6 @@ def evaluate(mask, gt):
         dice (float): DICE coefficient.
         accuracy (float): Fraction of correctly classified voxels.
     """
-
     if get_info(mask) != get_info(gt):
         mask = resample_to_reference(mask, gt)
     

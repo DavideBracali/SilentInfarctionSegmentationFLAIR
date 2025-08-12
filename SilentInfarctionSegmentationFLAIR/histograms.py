@@ -189,7 +189,7 @@ def histogram_stats(hist, q1=25, q2=75):
 
 def gaussian_smooth_histogram(hist, sigma=3, show=True, ax=None):
     """
-    Smoothens an histogram convoluting with a gaussian kernel.
+    Smoothens an histogram convoluting with a gaussian kernel, and optionally plots it.
 
     Parameters
     ----------
@@ -212,6 +212,64 @@ def gaussian_smooth_histogram(hist, sigma=3, show=True, ax=None):
             ax = plt.gca()
         ax.plot(bins_center, smooth_counts, 'r-', linewidth=2, 
             alpha=0.7, label=f'Gaussian smoothing (σ={sigma})')
-        ax.legend()
     smooth_hist = (smooth_counts, bins)
     return smooth_hist
+
+
+def mode_and_rhwhm(hist, show=True, ax=None):
+    """
+    Computes mode (most frequent gray level) and Right-side Half Width at Half Maximum,
+    and optionally plots them.
+    
+    Parameters
+    ----------
+        hist (tuple): Tuple (counts, bin_edges) as returned by np.histogram().
+        show (bool): Whether to display the plot.
+        ax (matplotlib.axes.Axes): Matplotlib Axes object where to draw.
+            If not specified, uses current axis.
+
+    Returns
+    -------
+        mode (float): Most frequent gray level.
+        rfwhm (float): Right-side FWHM.
+    """
+    counts, bins = hist
+    bins_center = (bins[:-1] + bins[1:]) / 2
+
+    mode = bins_center[np.argmax(counts)]
+
+    hm = np.max(counts) / 2     # half maximum
+    less_than_hm_gl = bins_center[counts < hm]      # gl where counts < hm
+    right_less_than_hm_gl = less_than_hm_gl[less_than_hm_gl > mode]     # only right side
+    right_hm_gl = np.min(right_less_than_hm_gl)     # first time hist crosses the hm line
+    rhwhm = right_hm_gl - mode
+
+    if show:
+        if ax is None:
+            ax = plt.gca()
+        ax.axvline(mode, linestyle='--', color='red',
+                linewidth=2,label=f"Mode ({mode:.1f})")
+        ax.annotate('',
+            xy=(mode, hm),  
+            xytext=(right_hm_gl, hm),
+            arrowprops=dict(
+                arrowstyle='<->',
+                color='red',
+                lw=2,
+                shrinkA=0, 
+                shrinkB=0,
+                ),
+            )
+        x_text = (mode + right_hm_gl) / 2
+        y_text = hm - 0.05 * (ax.get_ylim()[1] - ax.get_ylim()[0])
+        ax.text(
+            x_text, y_text,
+            f'Right-side HWHM\n({rhwhm:.1f})',
+            color='black',
+            ha='center',
+            va='top',
+        )
+        
+    return mode, rhwhm
+
+
