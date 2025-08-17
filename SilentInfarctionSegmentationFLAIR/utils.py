@@ -77,6 +77,37 @@ def get_array_from_image(image):
     return image_array
 
 
+def get_image_from_array(image_array, reference_image=None):
+    """
+    Converts a NumPy array back to a SimpleITK image.
+    Assumes the input array has axes:
+        Axial plane = xy plane
+        Sagittal plane = yz plane
+        Coronal plane = xz plane
+    
+    Parameters
+    ----------
+        image_array (np.array): NumPy array with shape (x, y, z)
+        reference_image (SimpleITK.Image, optional): 
+            If provided, copy spacing, origin, and direction from this image.
+    
+    Returns
+    -------
+        image (SimpleITK.Image): SimpleITK image
+    """
+    
+    sitk_array = np.transpose(image_array, (2, 1, 0))       # SimpleITK expects zyx
+    
+    image = sitk.GetImageFromArray(sitk_array)
+    
+    if reference_image is not None:
+        image.SetSpacing(reference_image.GetSpacing())
+        image.SetOrigin(reference_image.GetOrigin())
+        image.SetDirection(reference_image.GetDirection())
+    
+    return image
+
+
 def plot_image(image, xyz=None):
     """
     Plots a 3D image using SimpleITK, Matplotlib.pyplot, Seaborn.

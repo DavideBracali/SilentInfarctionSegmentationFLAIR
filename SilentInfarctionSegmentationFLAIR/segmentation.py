@@ -22,7 +22,7 @@ from SilentInfarctionSegmentationFLAIR.utils import resample_to_reference
 
 
 
-def get_mask_from_segmentation(segm, labels):
+def get_mask_from_segmentation(segm, labels=1):
     """
     Returns a binary mask from a FreeSurfer segmentation image.
     

@@ -26,6 +26,7 @@ from SilentInfarctionSegmentationFLAIR.utils import DimensionError
 from SilentInfarctionSegmentationFLAIR.utils import check_3d
 from SilentInfarctionSegmentationFLAIR.utils import get_info
 from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image
+from SilentInfarctionSegmentationFLAIR.utils import get_image_from_array
 from SilentInfarctionSegmentationFLAIR.utils import plot_image
 from SilentInfarctionSegmentationFLAIR.utils import orient_image
 from SilentInfarctionSegmentationFLAIR.utils import resample_to_reference
@@ -200,6 +201,21 @@ def test_get_array_from_image_same_size(image):
     array = get_array_from_image(image)
     
     assert array.shape == image.GetSize()
+
+
+@given(gauss_noise_strategy_3D())
+@settings(max_examples=5, deadline=None)
+def test_get_image_from_array_valid_return(image):
+    """
+    Given:
+        - gaussian noise SimpleITK image
+    Then:
+        - get array from image
+        - get image from array
+    Assert:
+        - the combined effect of the two functions, with image as reference, returns exactly image
+    """
+    assert get_image_from_array(get_array_from_image(image))
 
 
 @given(gauss_noise_strategy_3D())
