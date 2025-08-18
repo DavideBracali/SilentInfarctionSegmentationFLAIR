@@ -15,6 +15,8 @@ import os
 import numpy as np
 import SimpleITK as sitk
 import matplotlib
+from pathlib import Path
+import tempfile
 
 matplotlib.use('Agg')
 sys.path.insert(0,
@@ -30,6 +32,8 @@ from SilentInfarctionSegmentationFLAIR.utils import get_image_from_array
 from SilentInfarctionSegmentationFLAIR.utils import plot_image
 from SilentInfarctionSegmentationFLAIR.utils import orient_image
 from SilentInfarctionSegmentationFLAIR.utils import resample_to_reference
+from SilentInfarctionSegmentationFLAIR.utils import label_names
+
 
 
 
@@ -330,3 +334,37 @@ def test_resample_to_reference_valid_return(image, reference):
     assert isinstance(image_rs, sitk.Image)
     assert get_info(image_rs) == get_info(reference)
 
+
+def test_label_names_expected_result():
+    """
+    Given:
+        - a temporary text file
+    Then:
+        - read the labels from the file
+    Assert that:
+        - a dict is returned
+        - the returned dict matches the expected results
+    """
+    test_content = """1 Left-Thalamus
+2 Left Thalamus
+# comment line
+3 Right-Hippocampus
+invalid line
+"""
+
+    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as tmp:
+        tmp.write(test_content)
+        tmp_path = tmp.name
+
+    result = label_names(tmp_path)
+
+    expected = {
+        1: "Left-Thalamus",
+        2: "Left",
+        3: "Right-Hippocampus"
+    }
+
+    assert isinstance(result, dict)
+    assert result == expected
+
+    Path(tmp_path).unlink()

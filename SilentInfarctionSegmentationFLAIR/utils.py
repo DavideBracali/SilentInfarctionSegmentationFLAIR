@@ -239,3 +239,35 @@ def downsample_array(arr, perc=0.01):
     step = max(1, int(1/perc))
     return arr[::step]
 
+
+
+def label_names(label_name_file_path):
+    """
+    Reads a .txt file and assigns a string label to each numeric label.
+
+    File format:
+        - Each line should start with a number followed by the label name.
+        - Lines not starting with a number are ignored.
+        - Only the first word after the number is used as the label name.
+          For example:
+            '1 Left-Thalamus' -> label 1 is 'Left-Thalamus'
+            '2 Left Thalamus' -> label 2 is 'Left' (only the first word is taken)
+
+    Parameters:
+        label_name_file_path (str): Path to the label .txt file.
+
+    Returns:
+        label_dict (dict): Mapping from integer label numbers to string names.
+    """
+    label_dict = {}
+    with open(label_name_file_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or not line[0].isdigit():
+                continue
+            parts = line.split()
+            num = int(parts[0])
+            name = parts[1]
+            label_dict[num] = name
+    
+    return label_dict

@@ -10,6 +10,7 @@ import pytest
 import hypothesis.strategies as st
 from hypothesis import given, settings
 
+
 import sys
 import os
 import numpy as np
@@ -25,6 +26,8 @@ from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image
 from SilentInfarctionSegmentationFLAIR.refinement import connected_components
 from SilentInfarctionSegmentationFLAIR.refinement import find_diameters
 from SilentInfarctionSegmentationFLAIR.refinement import diameter_filter
+from SilentInfarctionSegmentationFLAIR.refinement import label_filter
+
 
 
 
@@ -228,7 +231,7 @@ def test_diameter_filter_valid_return(ccs, lower_thr, upper_thr):
 
 @given(labeled_image_strategy())
 @settings(max_examples=5, deadline=None)
-def test_diameter_filter_expected_results(image):
+def test_diameter_filter_expected_results(ccs):
     """
     Given:
         - a labeled image (see labeled_image_strategy for details)
@@ -247,16 +250,75 @@ def test_diameter_filter_expected_results(image):
         - nothing is removed in cases 4,5,6
         - everything is removed in cases 7,8,9
     """
-    _,_,removed1 = diameter_filter(image, lower_thr=1.5)
-    _,_,removed2 = diameter_filter(image, upper_thr=2.5)
-    _,_,removed3 = diameter_filter(image, lower_thr=1.5, upper_thr=2.5)
-    _,_,removed4 = diameter_filter(image, lower_thr=1)
-    _,_,removed5 = diameter_filter(image, upper_thr=3)
-    _,_,removed6 = diameter_filter(image, lower_thr=1, upper_thr=3)
-    _,_,removed7 = diameter_filter(image, lower_thr=3)
-    _,_,removed8 = diameter_filter(image, upper_thr=1)
-    _,_,removed9 = diameter_filter(image, lower_thr=3, upper_thr=1)
+    _,_,removed1 = diameter_filter(ccs, lower_thr=1.5)
+    _,_,removed2 = diameter_filter(ccs, upper_thr=2.5)
+    _,_,removed3 = diameter_filter(ccs, lower_thr=1.5, upper_thr=2.5)
+    _,_,removed4 = diameter_filter(ccs, lower_thr=1)
+    _,_,removed5 = diameter_filter(ccs, upper_thr=3)
+    _,_,removed6 = diameter_filter(ccs, lower_thr=1, upper_thr=3)
+    _,_,removed7 = diameter_filter(ccs, lower_thr=3)
+    _,_,removed8 = diameter_filter(ccs, upper_thr=1)
+    _,_,removed9 = diameter_filter(ccs, lower_thr=3, upper_thr=1)
 
     assert removed1 == removed2 == removed3 == {2 : (1,3)}
     assert removed4 == removed5 == removed6 == {}
     assert removed7 == removed8 == removed9 == {1 : (2,2), 2 : (1,3)}
+
+
+
+@given(labeled_image_strategy(),
+    st.lists(st.integers(min_value=1, max_value=2), unique=True))
+@settings(max_examples=5, deadline=None)
+def test_label_filter_valid_return(segm, labels_to_remove):
+    """
+    Given:
+        - a labeled image (see labeled_image_strategy for details)
+        - a random subset of labels to remove
+    Then:
+        - filter labels
+    Assert:
+        - segm_filtered is a SimpleITK image
+        - removed is a dict with int keys and values
+    """
+    segm_filtered, removed = label_filter(segm, labels_to_remove=labels_to_remove)
+
+    assert isinstance(segm_filtered, sitk.Image)
+    assert isinstance(removed, dict)
+    assert all(isinstance(k, int) for k in removed.keys())
+    assert all(isinstance(v, int) and v >= 0 for v in removed.values())
+
+
+@given(labeled_image_strategy(),
+    st.lists(st.integers(min_value=1, max_value=2), unique=True))
+@settings(max_examples=5, deadline=None)
+def test_labels_filter_properties(segm, labels_to_remove):
+    """
+    Given:
+        - a labeled image (see labeled_image_strategy for details)
+        - a random subset of labels to remove
+    Then:
+        - filter labels
+    Assert:
+        - specified labels are set to 0 in the filtered image
+        - only specified labels are removed, others unchanged
+        - removed counts are consistent with the original image
+        - applying filter twice does not change the result
+    """
+    segm_filtered, removed = label_filter(segm, labels_to_remove=labels_to_remove)
+    arr = get_array_from_image(segm)
+    arr_filtered = get_array_from_image(segm_filtered)
+
+    segm_filtered2, removed2 = label_filter(segm_filtered, labels_to_remove=labels_to_remove)
+
+    labels_to_keep = set(np.unique(arr)) - set(labels_to_remove) - {0}
+    
+    for label in labels_to_remove:
+        assert np.all(arr_filtered[arr == label] == 0)
+    for label in labels_to_keep:
+        assert np.array_equal(arr_filtered[arr == label], arr[arr == label])
+    for label, count in removed.items():
+        assert count == np.sum(arr == label)
+    assert np.array_equal(get_array_from_image(segm_filtered), get_array_from_image(segm_filtered2))
+    assert removed2 == {}
+
+

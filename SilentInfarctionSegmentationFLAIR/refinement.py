@@ -21,13 +21,17 @@ def connected_components(image, connectivity=26):
 
     Parameters
     ----------
-        - image (SimpleITK.image): Binary input image (0=background, 1=foreground).
-        - connectivity (bool): Connectivity type (6=face, 18=face+edge, 26=face+edge+corner).
+        - image (SimpleITK.image): Binary input image
+            (0=background, 1=foreground).
+        - connectivity (bool): Connectivity type
+            (6=face, 18=face+edge, 26=face+edge+corner).
 
     Returns
     -------
-        - ccs (SimpleITK.image): Labeled image where each connected component has a unique integer value.
-        - n_components (int): Number of connected components found (excluding background).
+        - ccs (SimpleITK.image): Labeled image where each connected
+            component has a unique integer value.
+        - n_components (int): Number of connected components found
+            (excluding background).
     """
     if connectivity not in (6, 18, 26):
         raise ValueError("'connectivity' must be 6, 18 or 26")
@@ -51,7 +55,8 @@ def connected_components(image, connectivity=26):
 
 def find_diameters(ccs):
     """
-    Computes the minimum and maximum length among any axis (diameter) of the connected components.
+    Computes the minimum and maximum length among any axis (diameter)
+    of the connected components.
 
     Parameters
     ----------
@@ -59,8 +64,9 @@ def find_diameters(ccs):
 
     Returns
     -------
-        - diameters (dict): Dictionary of minimum and maximum diameters, where each key is a label (int)
-            and the value is a tuple (min_diameter, max_diameter) (float).
+        - diameters (dict): Dictionary of minimum and maximum diameters,
+            where each key is a label (int) and the value is a tuple
+            of floats of the type (min_diameter, max_diameter).
     """
     ccs_arr = get_array_from_image(ccs)
     spacing = get_info(ccs)["spacing"]
@@ -81,7 +87,8 @@ def find_diameters(ccs):
 
 def diameter_filter(ccs, lower_thr=None, upper_thr=None):
     """
-    Filters out connected components whose length among any axis (diameter) is outside of the specified range.
+    Filters out connected components whose length among any axis (diameter)
+    is outside of the specified range.
 
     Parameters
     ----------
@@ -91,10 +98,11 @@ def diameter_filter(ccs, lower_thr=None, upper_thr=None):
 
     Returns
     -------
-        - ccs_filtered (SimpleITK.image): Labeled image of connected components after filtering.
+        - ccs_filtered (SimpleITK.image): Labeled image of connected components
+            after filtering.
         - n_components (int): Number of connected components after filtering.
         - removed (dict): Dictionary of removed labels, where each key is a label (int)
-            and the value is a tuple (min_diameter, max_diameter) (float).
+            and each value is a tuple (min_diameter, max_diameter) (float).
     """
     ccs_arr = get_array_from_image(ccs)
     spacing = get_info(ccs)["spacing"]
@@ -124,3 +132,51 @@ def diameter_filter(ccs, lower_thr=None, upper_thr=None):
     n_components = len(diameters) - len(removed)
 
     return ccs_filtered, n_components, removed
+
+
+def label_filter(segm, labels_to_remove=[], keywords_to_remove=[], labels_dict=None):
+    """
+    Sets the specified labels to 0 in a segmentation image.
+    The labels to remove can be specified by number or by keyword.
+
+    Parameters
+    ----------
+        - segm (SimpleITK.Image): Labeled segmentation image where each
+            voxel is an integer label.
+        - labels_to_remove (list): List of the integer labels to remove.
+        - keywords_to_remove (list): List of strings containing the keywords
+            of the labels to remove. Every label containing any of the specified
+            keywords will be set to 0.
+        - labels_dict (dict): Dictionary containing the relationship between the
+            numeric labels and their description. Must be provided if
+            keywords_to_remove is not an empty list, otherwise it will be ignored.
+    Returns
+    -------
+        - segm_filtered (SimpleITK.Image): Labeled segmentation image after filtering.
+        - removed (dict): Dictionary of removed voxels, where each key is a numeric
+            label (int), and each value contains the number of removed voxels
+    """
+    if not keywords_to_remove == []:
+        if labels_dict is None:
+            raise ValueError("If 'keywords_to_remove' is specified then 'labels_dict' must be specified as well")
+        else:
+            # add to the list of labels to remove
+            labels_to_remove.extend([k for k, v in labels_dict.items()
+                                if any(kw.lower() in v.lower() for kw in keywords_to_remove)]) 
+    
+    segm_arr = get_array_from_image(segm)
+    segm_arr_filtered = segm_arr.copy()
+    
+    if not labels_to_remove == []:
+        segm_arr_filtered[np.isin(segm_arr, labels_to_remove)] = 0      # set to 0
+    
+    segm_filtered = get_image_from_array(segm_arr_filtered, segm)
+
+    removed = {}
+    for label in labels_to_remove:      # build dictionary
+        count = np.sum(segm_arr == label)
+        if count > 0:
+            removed[label] = int(count)
+    
+    return segm_filtered, removed
+    
