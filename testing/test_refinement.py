@@ -8,8 +8,8 @@ Created on 2025-08-13 15:33:12
 
 import pytest
 import hypothesis.strategies as st
-from hypothesis import given, settings
-
+from hypothesis import given, settings, assume
+import hypothesis.extra.numpy as stnp
 
 import sys
 import os
@@ -27,6 +27,7 @@ from SilentInfarctionSegmentationFLAIR.refinement import connected_components
 from SilentInfarctionSegmentationFLAIR.refinement import find_diameters
 from SilentInfarctionSegmentationFLAIR.refinement import diameter_filter
 from SilentInfarctionSegmentationFLAIR.refinement import label_filter
+from SilentInfarctionSegmentationFLAIR.refinement import evaluate_region_wise
 
 
 
@@ -111,6 +112,35 @@ def labeled_image_strategy(draw):
     image.SetSpacing((1.0, 1.0, 1.0))
 
     return image
+
+
+@st.composite
+def binary_mask_pair_strategy(draw, size=(32, 32, 32)):
+    """
+    Generate a pair of binary masks (SimpleITK images) of given size.
+    """
+    shape = size
+    arr1 = draw(stnp.arrays(dtype=np.uint8, shape=shape, elements=st.integers(0, 1)))
+    arr2 = draw(stnp.arrays(dtype=np.uint8, shape=shape, elements=st.integers(0, 1)))
+
+    img1 = sitk.GetImageFromArray(arr1)
+    img2 = sitk.GetImageFromArray(arr2)
+
+    img1.CopyInformation(img2)
+
+    return img1, img2
+
+
+@st.composite
+def non_binary_image_strategy(draw):
+    """
+    Generate a non-binary SimpleITK image with gray levels from 10 to 15.
+    """
+    shape = draw(st.tuples(st.integers(5, 20), st.integers(5, 20), st.integers(5, 20)))
+    arr = draw(stnp.arrays(dtype=np.int32, shape=shape, elements=st.integers(10, 15)))
+    img = sitk.GetImageFromArray(arr)
+
+    return img
 
 ##################
 ###  TESTING   ###
@@ -320,5 +350,121 @@ def test_labels_filter_properties(segm, labels_to_remove):
         assert count == np.sum(arr == label)
     assert np.array_equal(get_array_from_image(segm_filtered), get_array_from_image(segm_filtered2))
     assert removed2 == {}
+
+
+
+@given(binary_mask_pair_strategy())
+@settings(max_examples=5, deadline=None)
+def test_evaluate_region_wise_valid_return(mask_pair):
+    """
+    Given:
+        - two random binary masks
+    Then:
+        - evaluate them region-wise
+    Assert that:
+        - output is a dict that contains TPF, FPF and DSC as keys
+        - all returned values are floats
+    """
+    mask, gt = mask_pair
+    metrics = evaluate_region_wise(mask, gt)
+
+    assert isinstance(metrics, dict)
+    assert set(metrics.keys()) == {'TPF', 'FPF', 'DSC'}
+    for _, v in metrics.items():
+        assert isinstance(v, float)
+
+
+
+@given(binary_mask_pair_strategy())
+@settings(max_examples=5, deadline=None)
+def test_evaluate_region_wise_output_range(mask_pair):
+    """
+    Given:
+        - two random binary masks
+    Then:
+        - evaluate them region-wise
+    Assert that:
+        - all returned values are between 0 and 1
+    """
+    mask, gt = mask_pair
+    metrics = evaluate_region_wise(mask, gt)
+
+    for _, v in metrics.items():
+        assert 0.0 <= v <= 1.0
+
+
+
+
+@given(binary_mask_pair_strategy())
+@settings(max_examples=5, deadline=None)
+def test_evaluate_region_wise_identical_masks(mask_pair):
+    """
+    Given:
+        - mask and gt are identical and binary
+    Then:
+        - evaluate them region-wise
+    Assert that:
+        - TPF = 1.0
+        - FPF = 0.0
+        - DSC = 1.0
+    """
+    img, _ = mask_pair 
+    
+    arr = sitk.GetArrayFromImage(img)
+    assume(np.any(arr == 1) and np.any(arr == 0))
+
+    metrics = evaluate_region_wise(img, img)
+
+    assert metrics == {'TPF': 1.0, 'FPF': 0.0, 'DSC': 1.0}
+
+
+def test_evaluate_region_wise_all_zero_vs_all_one():
+    """
+    Given:
+        - mask is all zeros
+        - gt is all ones
+    Then:
+        - evaluate them region-wise
+    Assert that:
+        - TPF = 0.0
+        - FPF = 0.0
+        - DSC = 0.0
+    """
+    shape = (16, 16, 16)
+    mask_arr = np.zeros(shape, dtype=np.uint8)
+    gt_arr = np.ones(shape, dtype=np.uint8)
+
+    mask = sitk.GetImageFromArray(mask_arr)
+    gt = sitk.GetImageFromArray(gt_arr)
+
+    metrics = evaluate_region_wise(mask, gt)
+
+    assert metrics == {'TPF': 0.0, 'FPF': 0.0, 'DSC': 0.0}
+
+
+
+@given(binary_mask_pair_strategy(), non_binary_image_strategy())
+@settings(max_examples=5, deadline=None)
+def test_evaluate_region_wise_raises_value_error_if_not_binary(mask_pair, not_binary):
+    """
+    Given:
+        - binary mask and gt
+        - non-binary mask
+    Then:
+        - call evaluate(mask, gt)
+    Assert that:
+        - a ValueError is raised when mask is not binary
+        - no exceptions are raised when both mask and gt are binary
+    """
+    mask, gt = mask_pair
+    
+    with pytest.raises(ValueError):
+        evaluate_region_wise(not_binary, gt)
+        evaluate_region_wise(mask, not_binary)
+
+    try:
+        evaluate_region_wise(mask, gt)
+    except Exception:
+        assert False
 
 

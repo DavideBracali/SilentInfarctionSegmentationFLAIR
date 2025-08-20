@@ -180,3 +180,54 @@ def label_filter(segm, labels_to_remove=[], keywords_to_remove=[], labels_dict=N
     
     return segm_filtered, removed
     
+
+def evaluate_region_wise(mask, gt):
+    """
+    Returns region-wise evaluation parameters from two binary images.
+    The definitions of True Positive Fraction, False Positive Fraction
+    and DICE coefficient are taken from Cabezas et al. 'Automatic multiple
+    sclerosis lesion detection inbrain MRI by FLAIR thresholding' (2014).
+            
+    Parameters
+    ----------
+        mask (SimpleITK.image): The binary image to evaluate.
+        gt (SimpleITK.image): The binary image containing the ground truth.
+    
+    Returns
+    -------
+        metrics (dict): A dict containing true/false positive fractions
+            and the DICE coefficient (floats).
+    """
+
+    mask_arr = get_array_from_image(mask)
+    gt_arr = get_array_from_image(gt)
+
+    if not (set(np.unique(mask_arr)).issubset({0,1})
+         and set(np.unique(gt_arr)).issubset({0,1})):
+        raise ValueError(f"Mask and ground truth must be binary images containing only 0 and 1")
+
+    ccs_mask, n_mask = connected_components(mask)
+    ccs_gt, n_gt = connected_components(gt)
+    
+    tp = 0
+    for label_idx in range(1, n_gt+1): 
+        gt_lesion = get_array_from_image(ccs_gt) == label_idx
+        if np.any(np.logical_and(gt_lesion, mask_arr)):
+            tp += 1         # gt lesion is detected by mask
+
+
+    fp = 0
+    for label_idx in range(1, n_mask+1): 
+        mask_lesion = get_array_from_image(ccs_mask) == label_idx
+        if not np.any(np.logical_and(mask_lesion, gt_arr)):
+            fp += 1         # mask lesion is not positive in gt
+
+
+    metrics = {
+        "TPF": tp / n_gt if n_gt > 0 else 0,
+        "FPF": fp / n_mask if n_mask > 0 else 0,
+        "DSC": (2 * tp) / (n_mask + n_gt) if (n_mask + n_gt) > 0 else 0,
+    }
+    metrics = {k: float(v) for k,v in metrics.items()}
+
+    return metrics

@@ -27,7 +27,7 @@ from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image
 from SilentInfarctionSegmentationFLAIR.segmentation import get_mask_from_segmentation
 from SilentInfarctionSegmentationFLAIR.segmentation import get_mask_from_pve
 from SilentInfarctionSegmentationFLAIR.segmentation import apply_threshold
-from SilentInfarctionSegmentationFLAIR.segmentation import evaluate
+from SilentInfarctionSegmentationFLAIR.segmentation import evaluate_voxel_wise
 
 
 
@@ -348,85 +348,80 @@ def test_threshold_higher_than_max(image):
 
 @given(binary_mask_pair_strategy())
 @settings(max_examples=5, deadline=None)
-def test_evaluate_valid_return(mask_pair):
+def test_evaluate_voxel_wise_valid_return(mask_pair):
     """
     Given:
         - two random binary masks
     Then:
-        - evaluate them
+        - evaluate them voxel-wise
     Assert that:
-        - output is a dict that contains required keys
-        - dice and accuracy are floats
+        - output is a dict that contains TPF, FPF and DSC as keys
+        - all returned values are floats
     """
     mask, gt = mask_pair
-    metrics, dice, accuracy = evaluate(mask, gt)
+    metrics = evaluate_voxel_wise(mask, gt)
 
     assert isinstance(metrics, dict)
-    assert set(metrics.keys()) == {'TPR', 'FPR', 'TNR', 'FNR'}
-    assert isinstance(dice, float)
-    assert isinstance(accuracy, float)
+    assert set(metrics.keys()) == {'TPF', 'FPF', 'DSC'}
+    for _, v in metrics.items():
+        assert isinstance(v, float)
 
 
 
 @given(binary_mask_pair_strategy())
 @settings(max_examples=5, deadline=None)
-def test_evaluate_output_range(mask_pair):
+def test_evaluate_voxel_wise_output_range(mask_pair):
     """
     Given:
         - two random binary masks
     Then:
-        - evaluate them
+        - evaluate them voxel-wise
     Assert that:
-        - all true/false positive/negative fractions are in [0,1]
-        - DICE coefficient is in [0,1]
-        - accuracy is in [0,1]
+        - all returned values are between 0 and 1
     """
     mask, gt = mask_pair
-    metrics, dice, accuracy = evaluate(mask, gt)
+    metrics = evaluate_voxel_wise(mask, gt)
 
-    for _, metric in metrics.items():
-        assert 0.0 <= metric <= 1.0
-    assert 0.0 <= dice <= 1.0
-    assert 0.0 <= accuracy <= 1.0
+    for _, v in metrics.items():
+        assert 0.0 <= v <= 1.0
+
 
 
 
 @given(binary_mask_pair_strategy())
 @settings(max_examples=5, deadline=None)
-def test_evaluate_identical_masks(mask_pair):
+def test_evaluate_voxel_wise_identical_masks(mask_pair):
     """
     Given:
         - mask and gt are identical and binary
     Then:
-        - evaluate them
+        - evaluate them voxel-wise
     Assert that:
-        - DICE = 1.0
-        - Accuracy = 1.0
-        - TPR = 1.0, FPR = 0.0, TNR = 1.0, FNR = 0.0
+        - TPF = 1.0
+        - FPF = 0.0
+        - DSC = 1.0
     """
     img, _ = mask_pair 
     
     arr = sitk.GetArrayFromImage(img)
     assume(np.any(arr == 1) and np.any(arr == 0))
 
-    metrics, dice, accuracy = evaluate(img, img)
+    metrics = evaluate_voxel_wise(img, img)
 
-    assert dice == 1.0
-    assert accuracy == 1.0
-    assert metrics == {'TPR': 1.0, 'FPR': 0.0, 'TNR': 1.0, 'FNR': 0.0}
+    assert metrics == {'TPF': 1.0, 'FPF': 0.0, 'DSC': 1.0}
 
 
-def test_evaluate_all_zero_vs_all_one():
+def test_evaluate_voxel_wise_all_zero_vs_all_one():
     """
     Given:
         - mask is all zeros
         - gt is all ones
     Then:
-        - evaluate them
+        - evaluate them voxel-wise
     Assert that:
-        - DICE = 0.0
-        - Accuracy = 0.0
-        - TPR = 0.0, FPR = 0.0, TNR = 0.0, FNR = 1.0
+        - TPF = 0.0
+        - FPF = 0.0
+        - DSC = 0.0
     """
     shape = (16, 16, 16)
     mask_arr = np.zeros(shape, dtype=np.uint8)
@@ -435,17 +430,15 @@ def test_evaluate_all_zero_vs_all_one():
     mask = sitk.GetImageFromArray(mask_arr)
     gt = sitk.GetImageFromArray(gt_arr)
 
-    metrics, dice, accuracy = evaluate(mask, gt)
+    metrics = evaluate_voxel_wise(mask, gt)
 
-    assert dice == 0.0
-    assert accuracy == 0.0
-    assert metrics == {'TPR': 0.0, 'FPR': 0.0, 'TNR': 0.0, 'FNR': 1.0}
+    assert metrics == {'TPF': 0.0, 'FPF': 0.0, 'DSC': 0.0}
 
 
 
 @given(binary_mask_pair_strategy(), non_binary_image_strategy())
 @settings(max_examples=5, deadline=None)
-def test_evaluate_raises_value_error_if_not_binary(mask_pair, not_binary):
+def test_evaluate_voxel_wise_raises_value_error_if_not_binary(mask_pair, not_binary):
     """
     Given:
         - binary mask and gt
@@ -459,11 +452,11 @@ def test_evaluate_raises_value_error_if_not_binary(mask_pair, not_binary):
     mask, gt = mask_pair
     
     with pytest.raises(ValueError):
-        evaluate(not_binary, gt)
-        evaluate(mask, not_binary)
+        evaluate_voxel_wise(not_binary, gt)
+        evaluate_voxel_wise(mask, not_binary)
 
     try:
-        evaluate(mask, gt)
+        evaluate_voxel_wise(mask, gt)
     except Exception:
         assert False
 

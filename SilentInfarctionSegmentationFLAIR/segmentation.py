@@ -106,9 +106,9 @@ def apply_threshold(image, thr, show=True, ax=None):
 
 
 
-def evaluate(mask, gt):
+def evaluate_voxel_wise(mask, gt):
     """
-    Returns evaluation parameters from two binary images.
+    Returns voxel-wise evaluation parameters from two binary images.
 
     Parameters
     ----------
@@ -117,12 +117,9 @@ def evaluate(mask, gt):
     
     Returns
     -------
-        metrics (dict): A dict containing true/false positive/negative fractions as floats.
-        dice (float): DICE coefficient.
-        accuracy (float): Fraction of correctly classified voxels.
+        metrics (dict): A dict containing true/false positive fractions
+            and the DICE coefficient (floats).
     """
-    if get_info(mask) != get_info(gt):
-        mask = resample_to_reference(mask, gt)
     
     mask_arr = get_array_from_image(mask)
     gt_arr = get_array_from_image(gt)
@@ -130,29 +127,28 @@ def evaluate(mask, gt):
     if not (set(np.unique(mask_arr)).issubset({0,1})
          and set(np.unique(gt_arr)).issubset({0,1})):
         raise ValueError(f"Mask and ground truth must be binary images containing only 0 and 1")
-    
+
+    # true/false positives/negatives    
     tp = np.sum((mask_arr == 1) & (gt_arr == 1))
     tn = np.sum((mask_arr == 0) & (gt_arr == 0))
     fp = np.sum((mask_arr == 1) & (gt_arr == 0))
     fn = np.sum((mask_arr == 0) & (gt_arr == 1)) 
 
-    pos = tp + fn
-    neg = tn + fp
-
-    metrics = {
-        "TPR": tp / pos if pos > 0 else 0.0,
-        "TNR": tn / neg if neg > 0 else 0.0,
-        "FPR": fp / neg if neg > 0 else 0.0,
-        "FNR": fn / pos if pos > 0 else 0.0,
-    }
-    metrics = {k: float(v) for k,v in metrics.items()}
-
-        
-    accuracy = (tp + tn) / (pos + neg)
-
-    if tp + fp + fn == 0:
+    # DICE
+    if 2*tp + fp + fn == 0:   # do not divide by 0
         dice = 1.0 if np.array_equal(mask_arr, gt_arr) else 0.0
     else:
         dice = 2*tp / (2*tp + fp + fn)
 
-    return metrics, dice, accuracy
+    pos = tp + fn
+    neg = tn + fp
+
+    metrics = {
+        "TPF": tp / pos if pos > 0 else 0.0,
+        "FPF": fp / neg if neg > 0 else 0.0,
+        "DSC": dice
+    }
+    metrics = {k: float(v) for k,v in metrics.items()}
+
+
+    return metrics

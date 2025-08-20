@@ -11,24 +11,16 @@ import SimpleITK as sitk
 from SilentInfarctionSegmentationFLAIR.refinement import connected_components
 from SilentInfarctionSegmentationFLAIR.refinement import diameter_filter
 from SilentInfarctionSegmentationFLAIR.refinement import label_filter
-from SilentInfarctionSegmentationFLAIR.segmentation import evaluate
+from SilentInfarctionSegmentationFLAIR.refinement import evaluate_region_wise
+from SilentInfarctionSegmentationFLAIR.segmentation import evaluate_voxel_wise
 
-def main(thr_mask, dilation_kernel=None, min_diameter=None,
+def main(thr_mask, verbose=True, min_diameter=None,
           segm=None, labels_to_remove=[], labels_dict=None,
           keywords_to_remove=[], gt=None):
 
-
-    # dilation
-    if dilation_kernel is not None:    
-
-        thr_mask = sitk.BinaryDilate(thr_mask, kernelType=sitk.sitkBox,
-                                     kernelRadius=dilation_kernel)
-        
-        print(f"Dilated mask with kernel {dilation_kernel}")
-
-        if gt is not None:
-            _, dice, _ = evaluate(thr_mask, gt)
-            print(f"DICE coefficient after dilation: {dice:.4f}")
+    # evaluations parameters after each refinement step
+    metrics_rw = []
+    metrics_vw = []
 
     # filter out small components
     if min_diameter is not None:        
@@ -37,13 +29,19 @@ def main(thr_mask, dilation_kernel=None, min_diameter=None,
         ccs_filtered, n_filtered, _ = diameter_filter(ccs, lower_thr=min_diameter)
         thr_mask = thr_mask * (ccs_filtered != 0)
 
-        print(f"Filtered out components with diameter <= {min_diameter} mm")
-        print(f"Before filtering: {n} connected components")
-        print(f"After filtering: {n_filtered} connected components")
+        if verbose:
+            print(f"Filtered out components with diameter <= {min_diameter} mm")
+            print(f"Before filtering: {n} connected components")
+            print(f"After filtering: {n_filtered} connected components")
 
         if gt is not None:
-            _, dice, _ = evaluate(thr_mask, gt)
-            print(f"DICE coefficient after filtering out small components: {dice:.4f}")
+            metrics_rw.append(evaluate_region_wise(thr_mask, gt))
+            metrics_vw.append(evaluate_voxel_wise(thr_mask, gt))
+
+            if verbose:
+                print(f"Region-wise DICE coefficient after filtering out small components: {metrics_rw[-1]['DSC']:.4f}")
+                print(f"Voxel-wise DICE coefficient after filtering out small components: {metrics_vw[-1]['DSC']:.4f}")
+
 
     # remove non-lesionable voxels
     if keywords_to_remove:
@@ -55,9 +53,12 @@ def main(thr_mask, dilation_kernel=None, min_diameter=None,
 
         print(f"Filtered out voxels with labels {list(removed.keys())}")
 
-
         if gt is not None:
-            _, dice, _ = evaluate(thr_mask, gt)
-            print(f"DICE coefficient after filtering out non-lesionable voxels: {dice:.4f}")
+            metrics_rw.append(evaluate_region_wise(thr_mask, gt))
+            metrics_vw.append(evaluate_voxel_wise(thr_mask, gt))
+            
+            if verbose:
+                print(f"Region-wise DICE coefficient after filtering out non-lesionable voxels: {metrics_rw[-1]['DSC']:.4f}")
+                print(f"Voxel-wise DICE coefficient after filtering out non-lesionable voxels: {metrics_vw[-1]['DSC']:.4f}")
 
-    return thr_mask
+    return thr_mask, metrics_rw, metrics_vw
