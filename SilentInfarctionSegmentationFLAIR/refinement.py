@@ -198,7 +198,6 @@ def evaluate_region_wise(mask, gt):
         metrics (dict): A dict containing true/false positive fractions
             and the DICE coefficient (floats).
     """
-
     mask_arr = get_array_from_image(mask)
     gt_arr = get_array_from_image(gt)
 
@@ -207,21 +206,19 @@ def evaluate_region_wise(mask, gt):
         raise ValueError(f"Mask and ground truth must be binary images containing only 0 and 1")
 
     ccs_mask, n_mask = connected_components(mask)
+    ccs_mask_arr = get_array_from_image(ccs_mask)
     ccs_gt, n_gt = connected_components(gt)
+    ccs_gt_arr = get_array_from_image(ccs_gt)
     
-    tp = 0
-    for label_idx in range(1, n_gt+1): 
-        gt_lesion = get_array_from_image(ccs_gt) == label_idx
-        if np.any(np.logical_and(gt_lesion, mask_arr)):
-            tp += 1         # gt lesion is detected by mask
+    # (labeled) gt voxels that are detected
+    gt_in_mask = ccs_gt_arr[mask_arr > 0]
+    # number of gt lesions that are detected  
+    tp = len(np.unique(gt_in_mask[gt_in_mask > 0]))               
 
-
-    fp = 0
-    for label_idx in range(1, n_mask+1): 
-        mask_lesion = get_array_from_image(ccs_mask) == label_idx
-        if not np.any(np.logical_and(mask_lesion, gt_arr)):
-            fp += 1         # mask lesion is not positive in gt
-
+    # (labeled) mask voxels that are negative in gt
+    mask_not_in_gt = ccs_mask_arr[gt_arr == 0]
+    # number of mask lesions negative in gt
+    fp = len(np.unique(mask_not_in_gt[mask_not_in_gt > 0]))         
 
     metrics = {
         "TPF": tp / n_gt if n_gt > 0 else 0,
