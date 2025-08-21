@@ -23,7 +23,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image
-
+from SilentInfarctionSegmentationFLAIR.utils import resample_to_reference
 from SilentInfarctionSegmentationFLAIR.segmentation import get_mask_from_segmentation
 from SilentInfarctionSegmentationFLAIR.segmentation import get_mask_from_pve
 from SilentInfarctionSegmentationFLAIR.segmentation import apply_threshold
@@ -441,23 +441,19 @@ def test_evaluate_voxel_wise_all_zero_vs_all_one():
 def test_evaluate_voxel_wise_raises_value_error_if_not_binary(mask_pair, not_binary):
     """
     Given:
-        - binary mask and gt
+        - binary gt
         - non-binary mask
     Then:
-        - call evaluate(mask, gt)
+        - evaluate non-binary mask with gt
+        - evaluate the same binarized mask with gt
     Assert that:
-        - a ValueError is raised when mask is not binary
-        - no exceptions are raised when both mask and gt are binary
+        - the same metrics are returned
     """
-    mask, gt = mask_pair
+    _, gt = mask_pair
+    binary = not_binary > 0
     
-    with pytest.raises(ValueError):
-        evaluate_voxel_wise(not_binary, gt)
-        evaluate_voxel_wise(mask, not_binary)
+    binary = resample_to_reference(binary, gt)
+    not_binary = resample_to_reference(not_binary, gt)
 
-    try:
-        evaluate_voxel_wise(mask, gt)
-    except Exception:
-        assert False
-
+    assert evaluate_voxel_wise(binary, gt) == evaluate_voxel_wise(not_binary, gt)
 

@@ -192,18 +192,15 @@ def evaluate_region_wise(mask, gt):
     ----------
         mask (SimpleITK.image): The binary image to evaluate.
         gt (SimpleITK.image): The binary image containing the ground truth.
+
     
     Returns
     -------
         metrics (dict): A dict containing true/false positive fractions
             and the DICE coefficient (floats).
     """
-    mask_arr = get_array_from_image(mask)
     gt_arr = get_array_from_image(gt)
-
-    if not (set(np.unique(mask_arr)).issubset({0,1})
-         and set(np.unique(gt_arr)).issubset({0,1})):
-        raise ValueError(f"Mask and ground truth must be binary images containing only 0 and 1")
+    mask_arr = get_array_from_image(mask)
 
     ccs_mask, n_mask = connected_components(mask)
     ccs_mask_arr = get_array_from_image(ccs_mask)
@@ -223,8 +220,8 @@ def evaluate_region_wise(mask, gt):
     metrics = {
         "TPF": tp / n_gt if n_gt > 0 else 0,
         "FPF": fp / n_mask if n_mask > 0 else 0,
-        "DSC": (2 * tp) / (n_mask + n_gt) if (n_mask + n_gt) > 0 else 0,
     }
+    
     metrics = {k: float(v) for k,v in metrics.items()}
 
     return metrics

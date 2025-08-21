@@ -61,4 +61,7 @@ def main(thr_mask, verbose=True, min_diameter=None,
                 print(f"Region-wise DICE coefficient after filtering out non-lesionable voxels: {metrics_rw[-1]['DSC']:.4f}")
                 print(f"Voxel-wise DICE coefficient after filtering out non-lesionable voxels: {metrics_vw[-1]['DSC']:.4f}")
 
-    return thr_mask, metrics_rw, metrics_vw
+    if gt is None:
+        return thr_mask
+    else:
+        return thr_mask, metrics_rw, metrics_vw

@@ -120,19 +120,14 @@ def evaluate_voxel_wise(mask, gt):
         metrics (dict): A dict containing true/false positive fractions
             and the DICE coefficient (floats).
     """
-    
     mask_arr = get_array_from_image(mask)
     gt_arr = get_array_from_image(gt)
 
-    if not (set(np.unique(mask_arr)).issubset({0,1})
-         and set(np.unique(gt_arr)).issubset({0,1})):
-        raise ValueError(f"Mask and ground truth must be binary images containing only 0 and 1")
-
     # true/false positives/negatives    
-    tp = np.sum((mask_arr == 1) & (gt_arr == 1))
+    tp = np.sum((mask_arr > 0) & (gt_arr > 0))
     tn = np.sum((mask_arr == 0) & (gt_arr == 0))
-    fp = np.sum((mask_arr == 1) & (gt_arr == 0))
-    fn = np.sum((mask_arr == 0) & (gt_arr == 1)) 
+    fp = np.sum((mask_arr > 0) & (gt_arr == 0))
+    fn = np.sum((mask_arr == 0) & (gt_arr > 0)) 
 
     # DICE
     if 2*tp + fp + fn == 0:   # do not divide by 0

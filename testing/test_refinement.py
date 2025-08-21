@@ -23,6 +23,7 @@ sys.path.insert(0,
                             '..', 'SilentInfarctionSegmentationFLAIR')))
 
 from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image
+from SilentInfarctionSegmentationFLAIR.utils import resample_to_reference
 from SilentInfarctionSegmentationFLAIR.refinement import connected_components
 from SilentInfarctionSegmentationFLAIR.refinement import find_diameters
 from SilentInfarctionSegmentationFLAIR.refinement import diameter_filter
@@ -362,16 +363,16 @@ def test_evaluate_region_wise_valid_return(mask_pair):
     Then:
         - evaluate them region-wise
     Assert that:
-        - output is a dict that contains TPF, FPF and DSC as keys
+        - output is a dict that contains TPF and FPF as keys
         - all returned values are floats
     """
     mask, gt = mask_pair
     metrics = evaluate_region_wise(mask, gt)
 
     assert isinstance(metrics, dict)
-    assert set(metrics.keys()) == {'TPF', 'FPF', 'DSC'}
-    for _, v in metrics.items():
-        assert isinstance(v, float)
+    assert set(metrics.keys()) == {'TPF', 'FPF'}
+    assert isinstance(metrics['TPF'], float)
+    assert isinstance(metrics['FPF'], float)
 
 
 
@@ -389,8 +390,8 @@ def test_evaluate_region_wise_output_range(mask_pair):
     mask, gt = mask_pair
     metrics = evaluate_region_wise(mask, gt)
 
-    for _, v in metrics.items():
-        assert 0.0 <= v <= 1.0
+    assert 0.0 <= metrics["TPF"] <= 1.0
+    assert 0.0 <= metrics["FPF"] <= 1.0
 
 
 
@@ -406,7 +407,6 @@ def test_evaluate_region_wise_identical_masks(mask_pair):
     Assert that:
         - TPF = 1.0
         - FPF = 0.0
-        - DSC = 1.0
     """
     img, _ = mask_pair 
     
@@ -415,7 +415,7 @@ def test_evaluate_region_wise_identical_masks(mask_pair):
 
     metrics = evaluate_region_wise(img, img)
 
-    assert metrics == {'TPF': 1.0, 'FPF': 0.0, 'DSC': 1.0}
+    assert metrics == {'TPF': 1.0, 'FPF': 0.0}
 
 
 def test_evaluate_region_wise_all_zero_vs_all_one():
@@ -428,7 +428,6 @@ def test_evaluate_region_wise_all_zero_vs_all_one():
     Assert that:
         - TPF = 0.0
         - FPF = 0.0
-        - DSC = 0.0
     """
     shape = (16, 16, 16)
     mask_arr = np.zeros(shape, dtype=np.uint8)
@@ -439,32 +438,30 @@ def test_evaluate_region_wise_all_zero_vs_all_one():
 
     metrics = evaluate_region_wise(mask, gt)
 
-    assert metrics == {'TPF': 0.0, 'FPF': 0.0, 'DSC': 0.0}
+    assert metrics == {'TPF': 0.0, 'FPF': 0.0}
 
 
 
 @given(binary_mask_pair_strategy(), non_binary_image_strategy())
 @settings(max_examples=5, deadline=None)
-def test_evaluate_region_wise_raises_value_error_if_not_binary(mask_pair, not_binary):
+def test_evaluate_region_wise_not_binary(mask_pair, not_binary):
     """
     Given:
-        - binary mask and gt
+        - binary gt
         - non-binary mask
     Then:
-        - call evaluate(mask, gt)
+        - evaluate non-binary mask with gt
+        - evaluate the same binarized mask with gt
     Assert that:
-        - a ValueError is raised when mask is not binary
-        - no exceptions are raised when both mask and gt are binary
+        - the same metrics are returned
     """
-    mask, gt = mask_pair
+    _, gt = mask_pair
+    binary = not_binary > 0
     
-    with pytest.raises(ValueError):
-        evaluate_region_wise(not_binary, gt)
-        evaluate_region_wise(mask, not_binary)
+    binary = resample_to_reference(binary, gt)
+    not_binary = resample_to_reference(not_binary, gt)
 
-    try:
-        evaluate_region_wise(mask, gt)
-    except Exception:
-        assert False
+    assert evaluate_region_wise(binary, gt) == evaluate_region_wise(not_binary, gt)
+
 
 

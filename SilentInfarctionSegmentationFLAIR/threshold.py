@@ -17,7 +17,8 @@ from SilentInfarctionSegmentationFLAIR.segmentation import apply_threshold
 from SilentInfarctionSegmentationFLAIR.segmentation import evaluate_voxel_wise
 from SilentInfarctionSegmentationFLAIR.refinement import evaluate_region_wise
 
-def main(image, gm, gamma, gt=None, show=True, verbose=True):
+def main(image, gm, gamma, gt=None, show=True, verbose=True,
+         save_hist_path=None, save_metrics_path=None):
 
     # evaluation parameters
     metrics_rw = []
@@ -65,4 +66,7 @@ def main(image, gm, gamma, gt=None, show=True, verbose=True):
             print(f"Region-wise DICE coefficient after thresholding: {metrics_rw['DSC']:.4f}")
             print(f"Voxel-wise DICE coefficient after thresholding: {metrics_vw['DSC']:.4f}")
 
-    return thr_mask, metrics_rw, metrics_vw
+    if gt is None:
+        return thr_mask
+    else:
+        return thr_mask, metrics_rw, metrics_vw
