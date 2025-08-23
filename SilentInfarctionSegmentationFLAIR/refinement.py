@@ -218,8 +218,8 @@ def evaluate_region_wise(mask, gt):
     fp = len(np.unique(mask_not_in_gt[mask_not_in_gt > 0]))         
 
     metrics = {
-        "TPF": tp / n_gt if n_gt > 0 else 0,
-        "FPF": fp / n_mask if n_mask > 0 else 0,
+        "rw-TPF": tp / n_gt if n_gt > 0 else 0,
+        "rw-FPF": fp / n_mask if n_mask > 0 else 0,
     }
     
     metrics = {k: float(v) for k,v in metrics.items()}

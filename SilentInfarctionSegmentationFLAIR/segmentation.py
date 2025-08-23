@@ -139,9 +139,9 @@ def evaluate_voxel_wise(mask, gt):
     neg = tn + fp
 
     metrics = {
-        "TPF": tp / pos if pos > 0 else 0.0,
-        "FPF": fp / neg if neg > 0 else 0.0,
-        "DSC": dice
+        "vw-TPF": tp / pos if pos > 0 else 0.0,
+        "vw-FPF": fp / neg if neg > 0 else 0.0,
+        "vw-DSC": dice
     }
     metrics = {k: float(v) for k,v in metrics.items()}
 

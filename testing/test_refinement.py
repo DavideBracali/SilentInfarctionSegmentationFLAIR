@@ -363,16 +363,16 @@ def test_evaluate_region_wise_valid_return(mask_pair):
     Then:
         - evaluate them region-wise
     Assert that:
-        - output is a dict that contains TPF and FPF as keys
+        - output is a dict that contains rw-TPF and rw-FPF as keys
         - all returned values are floats
     """
     mask, gt = mask_pair
     metrics = evaluate_region_wise(mask, gt)
 
     assert isinstance(metrics, dict)
-    assert set(metrics.keys()) == {'TPF', 'FPF'}
-    assert isinstance(metrics['TPF'], float)
-    assert isinstance(metrics['FPF'], float)
+    assert set(metrics.keys()) == {'rw-TPF', 'rw-FPF'}
+    assert isinstance(metrics['rw-TPF'], float)
+    assert isinstance(metrics['rw-FPF'], float)
 
 
 
@@ -390,8 +390,8 @@ def test_evaluate_region_wise_output_range(mask_pair):
     mask, gt = mask_pair
     metrics = evaluate_region_wise(mask, gt)
 
-    assert 0.0 <= metrics["TPF"] <= 1.0
-    assert 0.0 <= metrics["FPF"] <= 1.0
+    assert 0.0 <= metrics["rw-TPF"] <= 1.0
+    assert 0.0 <= metrics["rw-FPF"] <= 1.0
 
 
 
@@ -405,8 +405,8 @@ def test_evaluate_region_wise_identical_masks(mask_pair):
     Then:
         - evaluate them region-wise
     Assert that:
-        - TPF = 1.0
-        - FPF = 0.0
+        - rw-TPF = 1.0
+        - rw-FPF = 0.0
     """
     img, _ = mask_pair 
     
@@ -415,7 +415,7 @@ def test_evaluate_region_wise_identical_masks(mask_pair):
 
     metrics = evaluate_region_wise(img, img)
 
-    assert metrics == {'TPF': 1.0, 'FPF': 0.0}
+    assert metrics == {'rw-TPF': 1.0, 'rw-FPF': 0.0}
 
 
 def test_evaluate_region_wise_all_zero_vs_all_one():
@@ -426,8 +426,8 @@ def test_evaluate_region_wise_all_zero_vs_all_one():
     Then:
         - evaluate them region-wise
     Assert that:
-        - TPF = 0.0
-        - FPF = 0.0
+        - rw-TPF = 0.0
+        - rw-FPF = 0.0
     """
     shape = (16, 16, 16)
     mask_arr = np.zeros(shape, dtype=np.uint8)
@@ -438,7 +438,7 @@ def test_evaluate_region_wise_all_zero_vs_all_one():
 
     metrics = evaluate_region_wise(mask, gt)
 
-    assert metrics == {'TPF': 0.0, 'FPF': 0.0}
+    assert metrics == {'rw-TPF': 0.0, 'rw-FPF': 0.0}
 
 
 
