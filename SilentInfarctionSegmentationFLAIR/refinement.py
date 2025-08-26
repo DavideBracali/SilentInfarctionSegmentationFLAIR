@@ -212,10 +212,13 @@ def evaluate_region_wise(mask, gt):
     # number of gt lesions that are detected  
     tp = len(np.unique(gt_in_mask[gt_in_mask > 0]))               
 
-    # (labeled) mask voxels that are negative in gt
-    mask_not_in_gt = ccs_mask_arr[gt_arr == 0]
-    # number of mask lesions negative in gt
-    fp = len(np.unique(mask_not_in_gt[mask_not_in_gt > 0]))         
+    # (labeled) mask voxels that are positive in gt
+    mask_in_gt = ccs_mask_arr[gt_arr > 0]
+    # (labeled) mask voxels that do not intersect any gt voxel
+    mask_not_touching_gt = ccs_mask_arr[~np.isin(ccs_mask_arr, mask_in_gt)]
+    # number of mask lesions that do not intersect any gt voxel
+    fp = len(np.unique(mask_not_touching_gt[mask_not_touching_gt > 0]))
+    
 
     metrics = {
         "rw-TPF": tp / n_gt if n_gt > 0 else 0,

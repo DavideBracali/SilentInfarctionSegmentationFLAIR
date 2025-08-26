@@ -11,6 +11,7 @@ import numpy as np
 import SimpleITK as sitk
 import seaborn as sns
 import matplotlib.pyplot as plt
+import time
 
 
 class DimensionError(Exception):
@@ -271,3 +272,26 @@ def label_names(label_name_file_path):
             label_dict[num] = name
     
     return label_dict
+
+
+def progress_bar(iteration, total, start_time=None, prefix="", length=40):
+    percent = f"{100 * ((iteration + 1) / float(total)):.1f}"
+    filled_length = int(length * (iteration + 1) // total)
+    bar = "█" * filled_length + "-" * (length - filled_length)
+
+    eta_str = ""
+    if start_time is not None and iteration >= 0:
+        elapsed = time.time() - start_time
+        avg_time = elapsed / (iteration + 1)
+        remaining = int(round(avg_time * (total - (iteration + 1))))
+        h = remaining // 3600
+        m = (remaining % 3600) // 60
+        s = remaining % 60
+        eta_str = f" ETA: {h:d}:{m:02d}:{s:02d}"
+        line= f"\r{prefix} |{bar}| {percent}% ({iteration+1}/{total}){eta_str}"
+        print(f"\r{line.ljust(120)}", end="\r")
+
+
+
+    if iteration + 1 == total:
+        print()

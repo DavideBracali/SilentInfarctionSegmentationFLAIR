@@ -14,13 +14,26 @@ from SilentInfarctionSegmentationFLAIR.refinement import label_filter
 from SilentInfarctionSegmentationFLAIR.refinement import evaluate_region_wise
 from SilentInfarctionSegmentationFLAIR.segmentation import evaluate_voxel_wise
 
-def main(thr_mask, verbose=True, min_diameter=None,
+def main(thr_mask, closure_kernel=None, min_diameter=None,
           segm=None, labels_to_remove=[], labels_dict=None,
-          keywords_to_remove=[], gt=None):
+          keywords_to_remove=[], verbose=True):
 
-    # evaluations parameters after each refinement step
-    metrics_rw = []
-    metrics_vw = []
+    # binary masks after each refinement step
+    results = []
+
+    # closure
+    if closure_kernel is not None:        
+
+        _, n = connected_components(thr_mask)
+        thr_mask = sitk.BinaryMorphologicalClosing(thr_mask, kernelRadius=closure_kernel, kernelType=sitk.sitkBox)
+        _, n_closed = connected_components(thr_mask)
+
+        if verbose:
+            print(f"Morphological closing with box kernel {closure_kernel}")
+            print(f"Before closing: {n} connected components")
+            print(f"After closing: {n_closed} connected components")
+
+        results.append(thr_mask)
 
     # filter out small components
     if min_diameter is not None:        
@@ -34,13 +47,7 @@ def main(thr_mask, verbose=True, min_diameter=None,
             print(f"Before filtering: {n} connected components")
             print(f"After filtering: {n_filtered} connected components")
 
-        if gt is not None:
-            metrics_rw.append(evaluate_region_wise(thr_mask, gt))
-            metrics_vw.append(evaluate_voxel_wise(thr_mask, gt))
-
-            if verbose:
-                print(f"Region-wise DICE coefficient after filtering out small components: {metrics_rw[-1]['DSC']:.4f}")
-                print(f"Voxel-wise DICE coefficient after filtering out small components: {metrics_vw[-1]['DSC']:.4f}")
+        results.append(thr_mask)
 
 
     # remove non-lesionable voxels
@@ -51,17 +58,6 @@ def main(thr_mask, verbose=True, min_diameter=None,
                                          keywords_to_remove=keywords_to_remove, labels_dict=labels_dict)
         thr_mask = segm_thr_filtered != 0   # back to binary
 
-        print(f"Filtered out voxels with labels {list(removed.keys())}")
+        results.append(thr_mask)
 
-        if gt is not None:
-            metrics_rw.append(evaluate_region_wise(thr_mask, gt))
-            metrics_vw.append(evaluate_voxel_wise(thr_mask, gt))
-            
-            if verbose:
-                print(f"Region-wise DICE coefficient after filtering out non-lesionable voxels: {metrics_rw[-1]['DSC']:.4f}")
-                print(f"Voxel-wise DICE coefficient after filtering out non-lesionable voxels: {metrics_vw[-1]['DSC']:.4f}")
-
-    if gt is None:
-        return thr_mask
-    else:
-        return thr_mask, metrics_rw, metrics_vw
+    return results
