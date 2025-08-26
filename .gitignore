@@ -4,7 +4,7 @@ data/
 Examples/
 SilentInfarctionSegmentationFLAIR/prove.py
 prove.ipynb
-
+analysis/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
