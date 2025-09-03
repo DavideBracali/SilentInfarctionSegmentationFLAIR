@@ -241,6 +241,35 @@ def downsample_array(arr, perc=0.01):
     return arr[::step]
 
 
+def get_paths_df(folder, extensions=""):
+    """
+    Returns paths DataFrame containing all files paths in a folder.
+
+    Parameters
+    ----------
+        - folder (str): Path of the folder to collect file paths.
+    
+    Returns
+    -------
+        - paths_df (pandas.DataFrame): DataFrame containing folder paths as indexes
+            and file types as columns.
+    """
+    if not isinstance(extensions, list):
+        extensions = [extensions]
+
+    paths_list = []
+    for root, _, files in os.walk(folder):
+        for file in files:
+            for ext in extensions:
+                if file.endswith(ext):
+                    paths_list.append((root,file))
+
+    paths_df = pd.DataFrame()
+    for root, file in paths_list:
+        paths_df.loc[root,file] = os.path.join(root,file)
+
+    return paths_df
+
 
 def label_names(label_name_file_path):
     """
