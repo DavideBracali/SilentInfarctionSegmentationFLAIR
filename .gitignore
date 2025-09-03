@@ -5,6 +5,7 @@ Examples/
 SilentInfarctionSegmentationFLAIR/prove.py
 prove.ipynb
 analysis/
+prove/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
