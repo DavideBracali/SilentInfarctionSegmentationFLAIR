@@ -243,11 +243,11 @@ def test_diameter_filter_valid_return(ccs, lower_thr, upper_thr):
             or equal of the labels before filtering
         - number of components after filtering is an integer
         - number of components after filtering is <= than before filtering
-        - returned removed is a dictionary
-        - the cube is never removed
+        - returned points is a dictionary
+        - the cube is never removed (1 point for label 1)
     """
 
-    filtered_ccs, filtered_n, removed = diameter_filter(ccs, lower_thr, upper_thr)
+    filtered_ccs, filtered_n, points = diameter_filter(ccs, lower_thr, upper_thr)
     labels = set(np.unique(get_array_from_image(ccs)))
     n = len(labels) - 1         # no background
     filtered_labels = set(np.unique(get_array_from_image(filtered_ccs)))
@@ -256,8 +256,8 @@ def test_diameter_filter_valid_return(ccs, lower_thr, upper_thr):
     assert isinstance(filtered_ccs, sitk.Image)
     assert filtered_labels.issubset(labels)
     assert filtered_n <= n
-    assert isinstance(removed, dict)
-    assert 1 not in removed.keys()
+    assert isinstance(points, dict)
+    assert points[1] == 1
 
 
 @given(labeled_image_strategy())
@@ -281,19 +281,19 @@ def test_diameter_filter_expected_results(ccs):
         - nothing is removed in cases 4,5,6
         - everything is removed in cases 7,8,9
     """
-    _,_,removed1 = diameter_filter(ccs, lower_thr=1.5)
-    _,_,removed2 = diameter_filter(ccs, upper_thr=2.5)
-    _,_,removed3 = diameter_filter(ccs, lower_thr=1.5, upper_thr=2.5)
-    _,_,removed4 = diameter_filter(ccs, lower_thr=1)
-    _,_,removed5 = diameter_filter(ccs, upper_thr=3)
-    _,_,removed6 = diameter_filter(ccs, lower_thr=1, upper_thr=3)
-    _,_,removed7 = diameter_filter(ccs, lower_thr=3)
-    _,_,removed8 = diameter_filter(ccs, upper_thr=1)
-    _,_,removed9 = diameter_filter(ccs, lower_thr=3, upper_thr=1)
+    _,_,points1 = diameter_filter(ccs, lower_thr=1.5)
+    _,_,points2 = diameter_filter(ccs, upper_thr=2.5)
+    _,_,points3 = diameter_filter(ccs, lower_thr=1.5, upper_thr=2.5)
+    _,_,points4 = diameter_filter(ccs, lower_thr=1)
+    _,_,points5 = diameter_filter(ccs, upper_thr=3)
+    _,_,points6 = diameter_filter(ccs, lower_thr=1, upper_thr=3)
+    _,_,points7 = diameter_filter(ccs, lower_thr=3)
+    _,_,points8 = diameter_filter(ccs, upper_thr=1)
+    _,_,points9 = diameter_filter(ccs, lower_thr=3, upper_thr=1)
 
-    assert removed1 == removed2 == removed3 == {2 : (1,3)}
-    assert removed4 == removed5 == removed6 == {}
-    assert removed7 == removed8 == removed9 == {1 : (2,2), 2 : (1,3)}
+    assert points1 == points2 == points3 == {1:1, 2:0}
+    assert points4 == points5 == points6 == {1:1, 2:1}
+    assert points7 == points8 == points9 == {1:0, 2:0}
 
 
 

@@ -8,8 +8,7 @@ Created on 2025-08-13 13:41:50
 
 import numpy as np
 import SimpleITK as sitk
-import scipy.ndimage as ndi
-import pandas as pd
+from scipy.ndimage import generate_binary_structure, label, find_objects
 
 from SilentInfarctionSegmentationFLAIR.utils import get_info
 from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image
@@ -40,13 +39,13 @@ def connected_components(image, connectivity=26):
     arr = get_array_from_image(image)
 
     if connectivity == 6:
-        structure = ndi.generate_binary_structure(3, 1)  # faces
+        structure = generate_binary_structure(3, 1)  # faces
     elif connectivity == 18:
-        structure = ndi.generate_binary_structure(3, 2)  # faces + edges
+        structure = generate_binary_structure(3, 2)  # faces + edges
     elif connectivity == 26:
-        structure = ndi.generate_binary_structure(3, 3)  # faces + edges + corners
+        structure = generate_binary_structure(3, 3)  # faces + edges + corners
 
-    ccs_arr, n_components = ndi.label(arr, structure=structure)
+    ccs_arr, n_components = label(arr, structure=structure)
 
     ccs = get_image_from_array(ccs_arr)
     ccs.CopyInformation(image)
@@ -73,7 +72,7 @@ def find_diameters(ccs):
     spacing = get_info(ccs)["spacing"]
     diameters = {}
 
-    slices = ndi.find_objects(ccs_arr)      # returns bounding boxes
+    slices = find_objects(ccs_arr)      # returns bounding boxes
     for label_idx, s in enumerate(slices, start=1): # 0 is background
 
         if s is None:
@@ -102,8 +101,8 @@ def diameter_filter(ccs, lower_thr=None, upper_thr=None):
         - ccs_filtered (SimpleITK.image): Labeled image of connected components
             after filtering.
         - n_components (int): Number of connected components after filtering.
-        - points (dict): Key corresponds to connected component label,
-            value is set to 0 for filtered components, otherwise to 1.
+        - removed (dict): Dictionary of removed labels, where each key is a label (int)
+            and each value is a tuple (min_diameter, max_diameter) (float).
     """
     ccs_arr = get_array_from_image(ccs)
     spacing = get_info(ccs)["spacing"]
@@ -125,17 +124,14 @@ def diameter_filter(ccs, lower_thr=None, upper_thr=None):
 
     # remove components
     to_remove = list(removed.keys())
-    remove_mask = np.isin(ccs_arr, to_remove)
-    ccs_arr[remove_mask] = 0
+    mask = np.isin(ccs_arr, to_remove)
+    ccs_arr[mask] = 0
 
     ccs_filtered = get_image_from_array(ccs_arr)
     ccs_filtered.CopyInformation(ccs)
     n_components = len(diameters) - len(removed)
 
-    # assign 1 point to ccs that are not removed
-    points = {label: 0 if label in removed else 1 for label in diameters.keys()}
-
-    return ccs_filtered, n_components, points
+    return ccs_filtered, n_components, removed
 
 
 def label_filter(segm, labels_to_remove=[], keywords_to_remove=[], labels_dict=None):
@@ -184,35 +180,6 @@ def label_filter(segm, labels_to_remove=[], keywords_to_remove=[], labels_dict=N
     
     return segm_filtered, removed
     
-def pve_filter(ccs, n_components, pve_wm, pve_gm, pve_csf):
-
-    filt = sitk.LabelStatisticsImageFilter()
-    filt.Execute(pve_wm, ccs)
-    pve_wm_sums = [filt.GetSum(l) for l in range(1, n_components + 1)]
-
-    filt = sitk.LabelStatisticsImageFilter()
-    filt.Execute(pve_gm, ccs)
-    pve_gm_sums = [filt.GetSum(l) for l in range(1, n_components + 1)]
-
-    filt = sitk.LabelStatisticsImageFilter()
-    filt.Execute(pve_csf, ccs)
-    pve_csf_sums = [filt.GetSum(l) for l in range(1, n_components + 1)]
-
-    pve_sums = pd.DataFrame({
-        "pve_wm": pve_wm_sums,
-        "pve_gm": pve_gm_sums,
-        "pve_csf": pve_csf_sums
-    }, index=range(1, n_components + 1))
-
-    all_zeros = pve_sums[(pve_sums["pve_wm"] + pve_sums["pve_gm"] + pve_sums["pve_csf"]) == 0].index.values
-
-    max_columns = pve_sums.idxmax(axis=1)
-
-    
-
-
-
-
 
 def evaluate_region_wise(mask, gt):
     """
