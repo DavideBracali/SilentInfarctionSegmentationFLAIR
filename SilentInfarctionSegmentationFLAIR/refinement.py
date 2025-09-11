@@ -99,11 +99,11 @@ def diameter_filter(ccs, lower_thr=None, upper_thr=None):
 
     Returns
     -------
+        - points (pandas.Series): Index corresponds to connected component label,
+            value is set to 0 for filtered components, otherwise to 1.
         - ccs_filtered (SimpleITK.image): Labeled image of connected components
             after filtering.
         - n_components (int): Number of connected components after filtering.
-        - points (dict): Key corresponds to connected component label,
-            value is set to 0 for filtered components, otherwise to 1.
     """
     ccs_arr = get_array_from_image(ccs)
     spacing = get_info(ccs)["spacing"]
@@ -133,9 +133,10 @@ def diameter_filter(ccs, lower_thr=None, upper_thr=None):
     n_components = len(diameters) - len(removed)
 
     # assign 1 point to ccs that are not removed
-    points = {label: 0 if label in removed else 1 for label in diameters.keys()}
+    points = pd.Series({label: 0 if label in removed else 1
+                        for label in diameters.keys()})
 
-    return ccs_filtered, n_components, points
+    return points, n_components, ccs_filtered
 
 
 def label_filter(segm, labels_to_remove=[], keywords_to_remove=[], labels_dict=None):
@@ -185,7 +186,27 @@ def label_filter(segm, labels_to_remove=[], keywords_to_remove=[], labels_dict=N
     return segm_filtered, removed
     
 def pve_filter(ccs, n_components, pve_wm, pve_gm, pve_csf):
+    """
+    Assigns points to connected components based on predominant partial volume estimates (PVE)
+    of white matter (WM), gray matter (GM), and cerebrospinal fluid (CSF).
 
+    Parameters
+    ----------
+        - ccs (SimpleITK.image): Connected components labeled image.
+        - n_components (int): Number of connected components in `ccs`.
+        - pve_wm (SimpleITK.image): White matter PVE image.
+        - pve_gm (SimpleITK.image): Gray matter PVE image.
+        - pve_csf (SimpleITK.image): CSF PVE image.
+
+    Returns
+    -------
+        - points (pandas.Series): Index corresponds to connected component label.
+            Values are assigned as follows:
+                -  2 → WM is predominant
+                -  1 → GM is predominant
+                -  0 → CSF is predominant
+                - -2 → all PVEs are zero
+    """
     filt = sitk.LabelStatisticsImageFilter()
     filt.Execute(pve_wm, ccs)
     pve_wm_sums = [filt.GetSum(l) for l in range(1, n_components + 1)]
@@ -204,13 +225,27 @@ def pve_filter(ccs, n_components, pve_wm, pve_gm, pve_csf):
         "pve_csf": pve_csf_sums
     }, index=range(1, n_components + 1))
 
-    all_zeros = pve_sums[(pve_sums["pve_wm"] + pve_sums["pve_gm"] + pve_sums["pve_csf"]) == 0].index.values
-
     max_columns = pve_sums.idxmax(axis=1)
-
+    points = pd.Series(index=pve_sums.index, dtype=int)
+    n_zeros = 0
+    n_csf = 0
+    n_gm = 0
+    n_wm = 0
+    for idx in pve_sums.index:
+        if (pve_sums.loc[idx].sum() == 0):
+            points[idx] = -2      # -2 points if all pves are 0
+            n_zeros += 1
+        elif max_columns[idx] == "pve_wm":
+            points[idx] = 2       # +2 points if wm is predominant
+            n_wm +=1
+        elif max_columns[idx] == "pve_gm":
+            points[idx] = 1       # +1 points if gm is predominant
+            n_gm += 1
+        else: 
+            points[idx] = 0       # 0 points if csf is predominant
+            n_csf += 1
     
-
-
+    return points, (n_wm, n_gm, n_csf, n_zeros)
 
 
 

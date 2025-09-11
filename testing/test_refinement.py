@@ -16,6 +16,7 @@ import os
 import numpy as np
 import SimpleITK as sitk
 import matplotlib
+import pandas as pd
 
 matplotlib.use('Agg')
 sys.path.insert(0,
@@ -29,6 +30,7 @@ from SilentInfarctionSegmentationFLAIR.refinement import find_diameters
 from SilentInfarctionSegmentationFLAIR.refinement import diameter_filter
 from SilentInfarctionSegmentationFLAIR.refinement import label_filter
 from SilentInfarctionSegmentationFLAIR.refinement import evaluate_region_wise
+from SilentInfarctionSegmentationFLAIR.refinement import pve_filter
 
 
 
@@ -243,11 +245,11 @@ def test_diameter_filter_valid_return(ccs, lower_thr, upper_thr):
             or equal of the labels before filtering
         - number of components after filtering is an integer
         - number of components after filtering is <= than before filtering
-        - returned points is a dictionary
+        - returned points is a series
         - the cube is never removed (1 point for label 1)
     """
 
-    filtered_ccs, filtered_n, points = diameter_filter(ccs, lower_thr, upper_thr)
+    points, filtered_n, filtered_ccs = diameter_filter(ccs, lower_thr, upper_thr)
     labels = set(np.unique(get_array_from_image(ccs)))
     n = len(labels) - 1         # no background
     filtered_labels = set(np.unique(get_array_from_image(filtered_ccs)))
@@ -256,7 +258,7 @@ def test_diameter_filter_valid_return(ccs, lower_thr, upper_thr):
     assert isinstance(filtered_ccs, sitk.Image)
     assert filtered_labels.issubset(labels)
     assert filtered_n <= n
-    assert isinstance(points, dict)
+    assert isinstance(points, pd.Series)
     assert points[1] == 1
 
 
@@ -281,20 +283,25 @@ def test_diameter_filter_expected_results(ccs):
         - nothing is removed in cases 4,5,6
         - everything is removed in cases 7,8,9
     """
-    _,_,points1 = diameter_filter(ccs, lower_thr=1.5)
-    _,_,points2 = diameter_filter(ccs, upper_thr=2.5)
-    _,_,points3 = diameter_filter(ccs, lower_thr=1.5, upper_thr=2.5)
-    _,_,points4 = diameter_filter(ccs, lower_thr=1)
-    _,_,points5 = diameter_filter(ccs, upper_thr=3)
-    _,_,points6 = diameter_filter(ccs, lower_thr=1, upper_thr=3)
-    _,_,points7 = diameter_filter(ccs, lower_thr=3)
-    _,_,points8 = diameter_filter(ccs, upper_thr=1)
-    _,_,points9 = diameter_filter(ccs, lower_thr=3, upper_thr=1)
+    points1,_,_ = diameter_filter(ccs, lower_thr=1.5)
+    points2,_,_ = diameter_filter(ccs, upper_thr=2.5)
+    points3,_,_ = diameter_filter(ccs, lower_thr=1.5, upper_thr=2.5)
+    points4,_,_ = diameter_filter(ccs, lower_thr=1)
+    points5,_,_ = diameter_filter(ccs, upper_thr=3)
+    points6,_,_ = diameter_filter(ccs, lower_thr=1, upper_thr=3)
+    points7,_,_ = diameter_filter(ccs, lower_thr=3)
+    points8,_,_ = diameter_filter(ccs, upper_thr=1)
+    points9,_,_ = diameter_filter(ccs, lower_thr=3, upper_thr=1)
 
-    assert points1 == points2 == points3 == {1:1, 2:0}
-    assert points4 == points5 == points6 == {1:1, 2:1}
-    assert points7 == points8 == points9 == {1:0, 2:0}
-
+    assert points1.equals(pd.Series({1:1, 2:0}))
+    assert points2.equals(pd.Series({1:1, 2:0}))
+    assert points3.equals(pd.Series({1:1, 2:0}))
+    assert points4.equals(pd.Series({1:1, 2:1}))
+    assert points5.equals(pd.Series({1:1, 2:1}))
+    assert points6.equals(pd.Series({1:1, 2:1}))
+    assert points7.equals(pd.Series({1:0, 2:0}))
+    assert points8.equals(pd.Series({1:0, 2:0}))
+    assert points9.equals(pd.Series({1:0, 2:0}))
 
 
 @given(labeled_image_strategy(),
@@ -373,6 +380,89 @@ def test_evaluate_region_wise_valid_return(mask_pair):
     assert set(metrics.keys()) == {'rw-TPF', 'rw-FPF'}
     assert isinstance(metrics['rw-TPF'], float)
     assert isinstance(metrics['rw-FPF'], float)
+
+
+@given(
+    labeled_image_strategy(),   
+    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1)),
+    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1)),
+    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1))
+)
+@settings(max_examples=5, deadline=None)
+def test_pve_filter_valid_return(ccs, wm_arr, gm_arr, csf_arr):
+    """
+    Given:
+        - ccs: labeled image
+        - wm_arr, gm_arr, csf_arr: partial volume estimate images
+    Then:
+        - compute points
+    Assert that:
+        - points is a pandas Series with index = labels in ccs
+            and values are in {-2,0,1,2}
+        - n_filtered is a 4 elements tuple
+        - all of the elements in n_filtered are integers <= n_components
+    """
+    wm_img = sitk.GetImageFromArray(wm_arr)
+    gm_img = sitk.GetImageFromArray(gm_arr)
+    csf_img = sitk.GetImageFromArray(csf_arr)
+    
+    wm_img.CopyInformation(ccs)
+    gm_img.CopyInformation(ccs)
+    csf_img.CopyInformation(ccs)
+    
+    labels_arr = sitk.GetArrayFromImage(ccs)
+    n_components = len(np.unique(labels_arr)) - 1
+    
+    points, n_filtered = pve_filter(ccs, n_components, wm_img, gm_img, csf_img)
+    
+    assert set(points.index) == set(range(1, n_components+1))
+    assert set(points.values).issubset({-2,0,1,2})
+    assert isinstance(n_filtered, tuple)
+    assert len(n_filtered) == 4
+    for n in n_filtered:
+        assert isinstance(n, int)
+        assert n <= n_components
+
+
+@given(
+    labeled_image_strategy(),   
+    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1)),
+    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1)),
+    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1))
+)
+@settings(max_examples=5, deadline=None)
+def test_pve_filter_expected_results(ccs, wm_arr, gm_arr, csf_arr):
+    """
+    Given:
+        - ccs: labeled image
+        - wm_arr, gm_arr, csf_arr: partial volume estimate images
+    Then:
+        - compute points
+    Assert that:
+        - points are assigned as expected
+    """
+    wm_img = sitk.GetImageFromArray(wm_arr)
+    gm_img = sitk.GetImageFromArray(gm_arr)
+    csf_img = sitk.GetImageFromArray(csf_arr)
+    
+    wm_img.CopyInformation(ccs)
+    gm_img.CopyInformation(ccs)
+    csf_img.CopyInformation(ccs)
+    
+    labels_arr = sitk.GetArrayFromImage(ccs)
+    n_components = len(np.unique(labels_arr)) - 1
+    
+    points, _ = pve_filter(ccs, n_components, wm_img, gm_img, csf_img)
+    
+    for label in points.index:
+        mask = labels_arr == label
+        sums = [wm_arr[mask].sum(), gm_arr[mask].sum(), csf_arr[mask].sum()]
+        if sum(sums) == 0:
+            assert points[label] == -2
+        else:
+            max_idx = np.argmax(sums)
+            expected = [2,1,0][max_idx]  # wm, gm, csf
+            assert points[label] == expected
 
 
 
