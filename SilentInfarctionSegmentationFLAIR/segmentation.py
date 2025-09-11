@@ -87,11 +87,11 @@ def apply_threshold(image, thr, show=True, ax=None):
     """
     max_gl = get_array_from_image(image).max()
     # set upper threshold higher than maximum gl because default value is 255
-    if thr >= max_gl:
+    if thr > max_gl:
         upper_thr = float(thr + 1)
         warnings.warn(f"Lower threshold ({thr}) is higher than maximum gray level ({max_gl}).")
     else:
-        upper_thr = float(get_array_from_image(image).max() + 1)
+        upper_thr = float(max_gl + 1)
 
     thr_image = sitk.BinaryThreshold(image, lowerThreshold=thr,
                         upperThreshold=upper_thr)
