@@ -31,6 +31,9 @@ from SilentInfarctionSegmentationFLAIR.refinement import diameter_filter
 from SilentInfarctionSegmentationFLAIR.refinement import label_filter
 from SilentInfarctionSegmentationFLAIR.refinement import evaluate_region_wise
 from SilentInfarctionSegmentationFLAIR.refinement import pve_filter
+from SilentInfarctionSegmentationFLAIR.refinement import nearly_isotropic_kernel
+from SilentInfarctionSegmentationFLAIR.refinement import surrounding_filter
+
 
 
 
@@ -360,28 +363,6 @@ def test_labels_filter_properties(segm, labels_to_remove):
     assert removed2 == {}
 
 
-
-@given(binary_mask_pair_strategy())
-@settings(max_examples=5, deadline=None)
-def test_evaluate_region_wise_valid_return(mask_pair):
-    """
-    Given:
-        - two random binary masks
-    Then:
-        - evaluate them region-wise
-    Assert that:
-        - output is a dict that contains rw-TPF and rw-FPF as keys
-        - all returned values are floats
-    """
-    mask, gt = mask_pair
-    metrics = evaluate_region_wise(mask, gt)
-
-    assert isinstance(metrics, dict)
-    assert set(metrics.keys()) == {'rw-TPF', 'rw-FPF'}
-    assert isinstance(metrics['rw-TPF'], float)
-    assert isinstance(metrics['rw-FPF'], float)
-
-
 @given(
     labeled_image_strategy(),   
     stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1)),
@@ -399,8 +380,9 @@ def test_pve_filter_valid_return(ccs, wm_arr, gm_arr, csf_arr):
     Assert that:
         - points is a pandas Series with index = labels in ccs
             and values are in {-2,0,1,2}
-        - n_filtered is a 4 elements tuple
-        - all of the elements in n_filtered are integers <= n_components
+        - summary is a 4 elements tuple
+        - all of the elements in summary are integers <= n_components
+        - pve_sums is a pandas DataFrame with index = labels in ccs
     """
     wm_img = sitk.GetImageFromArray(wm_arr)
     gm_img = sitk.GetImageFromArray(gm_arr)
@@ -413,15 +395,17 @@ def test_pve_filter_valid_return(ccs, wm_arr, gm_arr, csf_arr):
     labels_arr = sitk.GetArrayFromImage(ccs)
     n_components = len(np.unique(labels_arr)) - 1
     
-    points, n_filtered = pve_filter(ccs, n_components, wm_img, gm_img, csf_img)
+    points, summary, pve_sums = pve_filter(ccs, n_components, [wm_img, gm_img, csf_img])
     
     assert set(points.index) == set(range(1, n_components+1))
     assert set(points.values).issubset({-2,0,1,2})
-    assert isinstance(n_filtered, tuple)
-    assert len(n_filtered) == 4
-    for n in n_filtered:
+    assert isinstance(summary, tuple)
+    assert len(summary) == 4
+    for n in summary:
         assert isinstance(n, int)
         assert n <= n_components
+    assert isinstance(pve_sums, pd.DataFrame)
+    assert set(pve_sums.index) == set(range(1, n_components+1))
 
 
 @given(
@@ -452,7 +436,7 @@ def test_pve_filter_expected_results(ccs, wm_arr, gm_arr, csf_arr):
     labels_arr = sitk.GetArrayFromImage(ccs)
     n_components = len(np.unique(labels_arr)) - 1
     
-    points, _ = pve_filter(ccs, n_components, wm_img, gm_img, csf_img)
+    points, _, _ = pve_filter(ccs, n_components, [wm_img, gm_img, csf_img])
     
     for label in points.index:
         mask = labels_arr == label
@@ -464,6 +448,159 @@ def test_pve_filter_expected_results(ccs, wm_arr, gm_arr, csf_arr):
             expected = [2,1,0][max_idx]  # wm, gm, csf
             assert points[label] == expected
 
+
+@given(
+    spacing=st.lists(st.floats(min_value=0.1, max_value=10), min_size=1, max_size=5),
+    desired_radius=st.floats(min_value=0.1, max_value=20)
+)
+@settings(max_examples=20, deadline=None)
+def test_nearly_isotropic_kernel_valid_return(spacing, desired_radius):
+    """
+    Given:
+        - spacing: list of positive floats
+        - desired_radius: positive float
+    Then:
+        - compute nearly isotropic kernel
+    Assert that:
+        - output is a list of integers
+        - length of output == length of spacing
+        - each element >= 0
+    """
+    kernel = nearly_isotropic_kernel(spacing, desired_radius)
+
+    assert isinstance(kernel, list)
+    assert all(isinstance(k, int) for k in kernel)
+    assert len(kernel) == len(spacing)
+    assert all(k >= 0 for k in kernel)
+
+
+@given(
+    spacing=st.lists(st.floats(min_value=0.1, max_value=10), min_size=1, max_size=3),
+    desired_radius=st.floats(min_value=0.1, max_value=20)
+)
+@settings(max_examples=20, deadline=None)
+def test_nearly_isotropic_kernel_expected_behavior(spacing, desired_radius):
+    """
+    Given:
+        - spacing: list of positive floats
+        - desired_radius: positive float
+    Then:
+        - compute nearly isotropic kernel
+    Assert that:
+        - each element is close to desired_radius / spacing[i], rounded
+    """
+    kernel = nearly_isotropic_kernel(spacing, desired_radius)
+
+    for k, s in zip(kernel, spacing):
+        expected = round(desired_radius / s)
+        assert k == expected
+
+
+@given(
+    labeled_image_strategy(),   
+    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1)),
+    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1)),
+    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1))
+)
+@settings(max_examples=5, deadline=None)
+def test_surrounding_filter_valid_return(ccs, wm_arr, gm_arr, csf_arr):
+    """
+    Given:
+        - ccs: labeled image
+        - wm_arr, gm_arr, csf_arr: partial volume estimate images
+    Then:
+        - compute points
+    Assert that:
+        - points is a pandas Series with index = labels in ccs
+            and values are in {-2,0,1,2}
+        - summary is a 4 elements tuple
+        - all of the elements in summary are integers <= n_components
+        - pve_sums is a pandas DataFrame with index = labels in ccs
+    """
+    wm_img = sitk.GetImageFromArray(wm_arr)
+    gm_img = sitk.GetImageFromArray(gm_arr)
+    csf_img = sitk.GetImageFromArray(csf_arr)
+    
+    wm_img.CopyInformation(ccs)
+    gm_img.CopyInformation(ccs)
+    csf_img.CopyInformation(ccs)
+    
+    labels_arr = sitk.GetArrayFromImage(ccs)
+    n_components = len(np.unique(labels_arr)) - 1
+    
+    points, summary, pve_sums = surrounding_filter(ccs, n_components, [wm_img, gm_img, csf_img])
+    
+    assert set(points.index) == set(range(1, n_components+1))
+    assert set(points.values).issubset({-2,0,1,2})
+    assert isinstance(summary, tuple)
+    assert len(summary) == 4
+    for n in summary:
+        assert isinstance(n, int)
+        assert n <= n_components
+    assert isinstance(pve_sums, pd.DataFrame)
+    assert set(pve_sums.index) == set(range(1, n_components+1))
+
+
+@given(
+    labeled_image_strategy(),   
+    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1)),
+    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1)),
+    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1))
+)
+@settings(max_examples=5, deadline=None)
+def test_pve_filter_expected_results(ccs, wm_arr, gm_arr, csf_arr):
+    """
+    Given:
+        - ccs: labeled image
+        - wm_arr, gm_arr, csf_arr: partial volume estimate images
+    Then:
+        - compute points
+    Assert that:
+        - points are assigned as expected
+    """
+    wm_img = sitk.GetImageFromArray(wm_arr)
+    gm_img = sitk.GetImageFromArray(gm_arr)
+    csf_img = sitk.GetImageFromArray(csf_arr)
+    
+    wm_img.CopyInformation(ccs)
+    gm_img.CopyInformation(ccs)
+    csf_img.CopyInformation(ccs)
+    
+    labels_arr = sitk.GetArrayFromImage(ccs)
+    n_components = len(np.unique(labels_arr)) - 1
+    
+    points, _, _ = surrounding_filter(ccs, n_components, [wm_img, gm_img, csf_img])
+    
+    for label in points.index:
+        mask = labels_arr == label
+        sums = [wm_arr[mask].sum(), gm_arr[mask].sum(), csf_arr[mask].sum()]
+        if sum(sums) == 0:
+            assert points[label] == -2
+        else:
+            max_idx = np.argmax(sums)
+            expected = [2,1,0][max_idx]  # wm, gm, csf
+            assert points[label] == expected
+
+
+@given(binary_mask_pair_strategy())
+@settings(max_examples=5, deadline=None)
+def test_evaluate_region_wise_valid_return(mask_pair):
+    """
+    Given:
+        - two random binary masks
+    Then:
+        - evaluate them region-wise
+    Assert that:
+        - output is a dict that contains rw-TPF and rw-FPF as keys
+        - all returned values are floats
+    """
+    mask, gt = mask_pair
+    metrics = evaluate_region_wise(mask, gt)
+
+    assert isinstance(metrics, dict)
+    assert set(metrics.keys()) == {'rw-TPF', 'rw-FPF'}
+    assert isinstance(metrics['rw-TPF'], float)
+    assert isinstance(metrics['rw-FPF'], float)
 
 
 @given(binary_mask_pair_strategy())

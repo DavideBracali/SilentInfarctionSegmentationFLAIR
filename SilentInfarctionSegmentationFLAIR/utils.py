@@ -12,6 +12,8 @@ import SimpleITK as sitk
 import seaborn as sns
 import matplotlib.pyplot as plt
 import time
+import os
+import pandas as pd
 
 
 class DimensionError(Exception):

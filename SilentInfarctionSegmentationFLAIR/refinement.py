@@ -10,10 +10,12 @@ import numpy as np
 import SimpleITK as sitk
 import scipy.ndimage as ndi
 import pandas as pd
+import time
 
 from SilentInfarctionSegmentationFLAIR.utils import get_info
 from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image
 from SilentInfarctionSegmentationFLAIR.utils import get_image_from_array
+from SilentInfarctionSegmentationFLAIR.utils import progress_bar
 
 
 def connected_components(image, connectivity=26):
@@ -185,7 +187,7 @@ def label_filter(segm, labels_to_remove=[], keywords_to_remove=[], labels_dict=N
     
     return segm_filtered, removed
     
-def pve_filter(ccs, n_components, pve_wm, pve_gm, pve_csf):
+def pve_filter(ccs, n_components, pves):
     """
     Assigns points to connected components based on predominant partial volume estimates (PVE)
     of white matter (WM), gray matter (GM), and cerebrospinal fluid (CSF).
@@ -194,35 +196,42 @@ def pve_filter(ccs, n_components, pve_wm, pve_gm, pve_csf):
     ----------
         - ccs (SimpleITK.image): Connected components labeled image.
         - n_components (int): Number of connected components in `ccs`.
-        - pve_wm (SimpleITK.image): White matter PVE image.
-        - pve_gm (SimpleITK.image): Gray matter PVE image.
-        - pve_csf (SimpleITK.image): CSF PVE image.
+        - pves (list of SimpleITK.image): List of PVE images in the format
+            [pve_wm, pve_gm, pve_csf]
 
     Returns
     -------
         - points (pandas.Series): Index corresponds to connected component label.
             Values are assigned as follows:
-                -  2 → WM is predominant
-                -  1 → GM is predominant
+                - +2 → WM is predominant
+                - +1 → GM is predominant
                 -  0 → CSF is predominant
                 - -2 → all PVEs are zero
+        - (n_wm, n_gm, n_csf, n_zeros) (tuple): Counts of connected components
+            assigned to each category.
+        - pve_sums (pandas.DataFrame): Mean PVE values of WM, GM, and CSF
+            in the surrounding region for each component.
     """
+    pve_wm = pves[0]
+    pve_gm = pves[1]
+    pve_csf = pves[2]
+    
     filt = sitk.LabelStatisticsImageFilter()
     filt.Execute(pve_wm, ccs)
-    pve_wm_sums = [filt.GetSum(l) for l in range(1, n_components + 1)]
+    pve_wm_means = [filt.GetMean(l) for l in range(1, n_components + 1)]
 
     filt = sitk.LabelStatisticsImageFilter()
     filt.Execute(pve_gm, ccs)
-    pve_gm_sums = [filt.GetSum(l) for l in range(1, n_components + 1)]
+    pve_gm_means = [filt.GetMean(l) for l in range(1, n_components + 1)]
 
     filt = sitk.LabelStatisticsImageFilter()
     filt.Execute(pve_csf, ccs)
-    pve_csf_sums = [filt.GetSum(l) for l in range(1, n_components + 1)]
+    pve_csf_means = [filt.GetMean(l) for l in range(1, n_components + 1)]
 
     pve_sums = pd.DataFrame({
-        "pve_wm": pve_wm_sums,
-        "pve_gm": pve_gm_sums,
-        "pve_csf": pve_csf_sums
+        "pve_wm": pve_wm_means,
+        "pve_gm": pve_gm_means,
+        "pve_csf": pve_csf_means
     }, index=range(1, n_components + 1))
 
     max_columns = pve_sums.idxmax(axis=1)
@@ -245,8 +254,113 @@ def pve_filter(ccs, n_components, pve_wm, pve_gm, pve_csf):
             points[idx] = 0       # 0 points if csf is predominant
             n_csf += 1
     
-    return points, (n_wm, n_gm, n_csf, n_zeros)
+    return points, (n_wm, n_gm, n_csf, n_zeros), pve_sums
 
+
+def nearly_isotropic_kernel(spacing, desired_radius):
+
+    """
+    Computes a nearly isotropic kernel radius in voxel units, given the image spacing.
+    Tries to obtain a kernel radius as close as possible to the desired one.
+
+    Parameters
+    ----------
+        - spacing (tuple or list of float): The voxel spacing of the image,
+            e.g. (x_spacing, y_spacing, z_spacing).
+        - desired_radius (float, optional): Desired physical radius (in mm) of the kernel.
+
+    Returns
+    -------
+        - kernel (list of int): The kernel radius for each dimension, adjusted to voxel units.
+    """
+    
+    kernel = []
+    for s in spacing:
+        kernel.append(round(desired_radius / s))
+    return kernel
+
+
+def surrounding_filter(ccs, n_components, pves, dilation_radius = 1):
+    
+    """
+    Assigns points to connected components based on the predominant partial volume estimates (PVE)
+    of surrounding tissue (WM, GM, CSF) in the neighborhood of each lesion.
+
+    Parameters
+    ----------
+        - ccs (SimpleITK.Image): Connected components labeled image.
+        - n_components (int): Number of connected components in `ccs`.
+        - pves (list of SimpleITK.Image): List of PVE images in the format
+            [pve_wm, pve_gm, pve_csf].
+        - dilation_radius (float, optional): Physical radius (in mm) for dilation
+            used to define the surrounding region. Default is 1.
+
+    Returns
+    -------
+        - points (pandas.Series): Index corresponds to connected component label.
+            Values are assigned as follows:
+                - +2 → WM is predominant in the surrounding region
+                - +1 → GM is predominant in the surrounding region
+                -  0 → CSF is predominant in the surrounding region
+                - -2 → all PVEs are zero in the surrounding region
+        - (n_wm, n_gm, n_csf, n_zeros) (tuple): Counts of connected components
+            assigned to each category.
+        - pve_sums (pandas.DataFrame): Mean PVE values of WM, GM, and CSF
+            in the surrounding region for each component.
+    """
+
+    pve_wm_arr = get_array_from_image(pves[0])
+    pve_gm_arr = get_array_from_image(pves[1])
+    pve_csf_arr = get_array_from_image(pves[2])
+
+    wm_surround = []
+    gm_surround = []
+    csf_surround = []
+
+    points = pd.Series(index=range(1, n_components+1))
+    kernel = nearly_isotropic_kernel(ccs.GetSpacing(), dilation_radius)
+    start = time.time()
+    for label in range(1, n_components+1):
+        # get surrounding voxels of every lesion
+        lesion_mask = ccs == label
+        dilated_mask = sitk.BinaryDilate(lesion_mask, kernelRadius=kernel,
+                                         kernelType=sitk.sitkBox)
+        surround_mask = get_array_from_image(dilated_mask & ~lesion_mask).astype(bool)
+
+        # mean pves in the surrounding voxels
+        wm_surround.append(np.mean(pve_wm_arr[surround_mask]))
+        gm_surround.append(np.mean(pve_gm_arr[surround_mask]))
+        csf_surround.append(np.mean(pve_csf_arr[surround_mask]))
+
+        progress_bar(label-1, n_components, start)
+
+    pve_sums = pd.DataFrame({
+        "pve_wm" : wm_surround,
+        "pve_gm" : gm_surround,
+        "pve_csf" : csf_surround}, index=range(1, n_components+1))
+
+    # points assignment
+    max_columns = pve_sums.idxmax(axis=1)
+    points = pd.Series(index=pve_sums.index, dtype=int)
+    n_zeros = 0
+    n_csf = 0
+    n_gm = 0
+    n_wm = 0
+    for idx in pve_sums.index:
+        if (pve_sums.loc[idx].sum() == 0):
+            points[idx] = -2      # -2 points if all pves are 0
+            n_zeros += 1
+        elif max_columns[idx] == "pve_wm":
+            points[idx] = 2       # +2 points if wm is predominant
+            n_wm +=1
+        elif max_columns[idx] == "pve_gm":
+            points[idx] = 1       # +1 points if gm is predominant
+            n_gm += 1
+        else: 
+            points[idx] = 0       # 0 points if csf is predominant
+            n_csf += 1
+    
+    return points, (n_wm, n_gm, n_csf, n_zeros), pve_sums
 
 
 def evaluate_region_wise(mask, gt):

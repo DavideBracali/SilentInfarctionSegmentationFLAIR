@@ -38,7 +38,7 @@ def main(thr_mask, min_diameter=None, pves=[],
         if verbose:
             print(f"Applying PVE filter...")        
         
-        pve_points, n_filtered = pve_filter(ccs, n, pves[0], pves[1], pves[2])
+        pve_points, n_filtered = pve_filter(ccs, n, pves)
         points.append(pve_points)
 
         if verbose:
