@@ -285,10 +285,12 @@ def label_names(label_name_file_path):
             '1 Left-Thalamus' -> label 1 is 'Left-Thalamus'
             '2 Left Thalamus' -> label 2 is 'Left' (only the first word is taken)
 
-    Parameters:
+    Parameters
+    ----------
         label_name_file_path (str): Path to the label .txt file.
 
-    Returns:
+    Returns
+    -------
         label_dict (dict): Mapping from integer label numbers to string names.
     """
     label_dict = {}
@@ -306,12 +308,35 @@ def label_names(label_name_file_path):
 
 
 def progress_bar(iteration, total, start_time=None, prefix="", length=40):
+    """
+    Displays or updates a textual progress bar in the console.
+
+    Parameters
+    ----------
+        iteration (int): Current iteration (0-based).
+        total (int): Total number of iterations.
+        start_time (float, optional): Start time of the operation, e.g., time.time().
+            If provided, an estimated remaining time (ETA) is displayed.
+        prefix (str, optional): Text to display before the progress bar.
+        length (int, optional): Character length of the progress bar.
+
+    Notes
+    -----
+        - The progress bar is updated in-place using carriage return.
+        - At the last iteration, a newline is printed to end the bar.
+        - Handles edge cases where iteration >= total or total <= 0.
+    """
+    
+    if total <= 0:
+        total = 1
+    iteration = min(iteration, total - 1)
+
     percent = f"{100 * ((iteration + 1) / float(total)):.1f}"
     filled_length = int(length * (iteration + 1) // total)
     bar = "█" * filled_length + "-" * (length - filled_length)
 
     eta_str = ""
-    if start_time is not None and iteration >= 0:
+    if start_time is not None:
         elapsed = time.time() - start_time
         avg_time = elapsed / (iteration + 1)
         remaining = int(round(avg_time * (total - (iteration + 1))))
@@ -319,10 +344,9 @@ def progress_bar(iteration, total, start_time=None, prefix="", length=40):
         m = (remaining % 3600) // 60
         s = remaining % 60
         eta_str = f" ETA: {h:d}:{m:02d}:{s:02d}"
-        line= f"\r{prefix} |{bar}| {percent}% ({iteration+1}/{total}){eta_str}"
-        print(f"\r{line.ljust(120)}", end="\r")
 
+    line = f"\r{prefix} |{bar}| {percent}% ({iteration+1}/{total}){eta_str}"
+    print(line.ljust(120), end="\r")
 
-
-    if iteration + 1 == total:
+    if iteration + 1 >= total:
         print()

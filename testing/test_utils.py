@@ -18,6 +18,8 @@ import matplotlib
 from pathlib import Path
 import tempfile
 import pandas as pd
+from contextlib import redirect_stdout
+import io
 
 matplotlib.use('Agg')
 sys.path.insert(0,
@@ -35,6 +37,8 @@ from SilentInfarctionSegmentationFLAIR.utils import orient_image
 from SilentInfarctionSegmentationFLAIR.utils import resample_to_reference
 from SilentInfarctionSegmentationFLAIR.utils import label_names
 from SilentInfarctionSegmentationFLAIR.utils import get_paths_df
+from SilentInfarctionSegmentationFLAIR.utils import progress_bar
+
 
 
 
@@ -430,3 +434,24 @@ invalid line
     assert result == expected
 
     Path(tmp_path).unlink()
+
+
+@given(st.integers(0, 99), st.integers(2,99))
+@settings(max_examples=5, deadline=None)
+def test_progress_bar_basic_output(i, n):
+    """
+    Given:
+        - a call to progress_bar with iteration = i
+            and total = i + n > i + 1
+    Then:
+        - capture the printed output
+    Assert that:
+        - prefix and iteration counters appear in the output
+    """
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        progress_bar(iteration=i, total=i+n, prefix="Test")
+    captured = buf.getvalue()
+
+    assert "Test" in captured
+    assert f"{i+1}/{i+n}" in captured
