@@ -17,6 +17,7 @@ import SimpleITK as sitk
 import matplotlib
 from pathlib import Path
 import tempfile
+import pandas as pd
 
 matplotlib.use('Agg')
 sys.path.insert(0,
@@ -33,6 +34,7 @@ from SilentInfarctionSegmentationFLAIR.utils import plot_image
 from SilentInfarctionSegmentationFLAIR.utils import orient_image
 from SilentInfarctionSegmentationFLAIR.utils import resample_to_reference
 from SilentInfarctionSegmentationFLAIR.utils import label_names
+from SilentInfarctionSegmentationFLAIR.utils import get_paths_df
 
 
 
@@ -314,7 +316,7 @@ def test_orient_image_valid_return(image, new_orientation):
     assert get_info(oriented_image_old) == get_info(image)
     if new_orientation != old_orientation:
         assert get_info(oriented_image_new) != get_info(image)
-           
+
         
 @given(gauss_noise_strategy_3D(), gauss_noise_strategy_3D())
 @settings(max_examples=5, deadline=None)
@@ -333,6 +335,66 @@ def test_resample_to_reference_valid_return(image, reference):
     
     assert isinstance(image_rs, sitk.Image)
     assert get_info(image_rs) == get_info(reference)
+
+
+def test_get_paths_df_expected_result(tmp_path):
+    """
+    Given:
+        - a temporary folder containing some files with different extensions
+    Then:
+        - apply get_paths_df with a filter of extensions
+    Assert that:
+        - DataFrame contains exactly the expected files with correct paths
+    """
+    f1 = tmp_path / "a.txt"
+    f1.write_text("hello")
+    f2 = tmp_path / "b.csv"
+    f2.write_text("world")
+    f3 = tmp_path / "c.txt"
+    f3.write_text("!")
+
+    df = get_paths_df(str(tmp_path), extensions=[".txt"])
+
+    assert isinstance(df, pd.DataFrame)
+    assert str(tmp_path) in df.index
+
+    assert "a.txt" in df.columns
+    assert "c.txt" in df.columns
+    assert "b.csv" not in df.columns  # deve essere filtrato
+
+    assert df.loc[str(tmp_path), "a.txt"] == str(f1)
+    assert df.loc[str(tmp_path), "c.txt"] == str(f3)
+
+
+def test_get_paths_df_empty_folder(tmp_path):
+    """
+    Given:
+        - an empty folder
+    Then:
+        - apply get_paths_df
+    Assert that:
+        - returned DataFrame is empty
+    """
+    df = get_paths_df(str(tmp_path), extensions=[".txt"])
+    assert df.empty
+
+
+def test_get_paths_df_nonlist_extension(tmp_path):
+    """
+    Given:
+        - a folder with one .txt file
+        - extension passed as a string instead of list
+    Then:
+        - apply get_paths_df
+    Assert that:
+        - function still works (converts to list internally)
+    """
+    f = tmp_path / "file.txt"
+    f.write_text("data")
+
+    df = get_paths_df(str(tmp_path), extensions=".txt")
+    assert "file.txt" in df.columns
+    assert df.loc[str(tmp_path), "file.txt"] == str(f)
 
 
 def test_label_names_expected_result():
