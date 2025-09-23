@@ -308,58 +308,64 @@ def surrounding_filter(ccs, n_components, pves, dilation_radius = 1):
         - pve_sums (pandas.DataFrame): Mean PVE values of WM, GM, and CSF
             in the surrounding region for each component.
     """
+    pve_wm = pves[0]
+    pve_gm = pves[1]
+    pve_csf = pves[2]
 
-    pve_wm_arr = get_array_from_image(pves[0])
-    pve_gm_arr = get_array_from_image(pves[1])
-    pve_csf_arr = get_array_from_image(pves[2])
-
-    wm_surround = []
-    gm_surround = []
-    csf_surround = []
-
-    points = pd.Series(index=range(1, n_components+1))
+    # surrounding of all lesions
+    lesion_mask = ccs > 0
     kernel = nearly_isotropic_kernel(ccs.GetSpacing(), dilation_radius)
-    start = time.time()
-    for label in range(1, n_components+1):
-        # get surrounding voxels of every lesion
-        lesion_mask = ccs == label
-        dilated_mask = sitk.BinaryDilate(lesion_mask, kernelRadius=kernel,
-                                         kernelType=sitk.sitkBox)
-        surround_mask = get_array_from_image(dilated_mask & ~lesion_mask).astype(bool)
+    dilated = sitk.BinaryDilate(lesion_mask, kernelRadius=kernel, kernelType=sitk.sitkBox)
+    surround_mask = dilated & ~lesion_mask
 
-        # mean pves in the surrounding voxels
-        wm_surround.append(np.mean(pve_wm_arr[surround_mask]))
-        gm_surround.append(np.mean(pve_gm_arr[surround_mask]))
-        csf_surround.append(np.mean(pve_csf_arr[surround_mask]))
+    # assign each voxel to the closest region
+    filter = sitk.DanielssonDistanceMapImageFilter()
+    filter.SetInputIsBinary(False)
+    filter.SetUseImageSpacing(True)
+    filter.Execute(ccs)
+    voronoi_map = filter.GetVoronoiMap()        # closest ccs for each voxel
 
-        progress_bar(label-1, n_components, start)
+    # assign each surrounding to the closest lesion
+    surround_ccs = sitk.Mask(voronoi_map, sitk.Cast(surround_mask, sitk.sitkUInt8))
+
+    # compute statistics
+    filt = sitk.LabelStatisticsImageFilter()
+    filt.Execute(pve_wm, ccs)
+    pve_wm_means = [filt.GetMean(l) for l in range(1, n_components + 1)]
+
+    filt = sitk.LabelStatisticsImageFilter()
+    filt.Execute(pve_gm, ccs)
+    pve_gm_means = [filt.GetMean(l) for l in range(1, n_components + 1)]
+
+    filt = sitk.LabelStatisticsImageFilter()
+    filt.Execute(pve_csf, ccs)
+    pve_csf_means = [filt.GetMean(l) for l in range(1, n_components + 1)]
 
     pve_sums = pd.DataFrame({
-        "pve_wm" : wm_surround,
-        "pve_gm" : gm_surround,
-        "pve_csf" : csf_surround}, index=range(1, n_components+1))
+        "pve_wm": pve_wm_means,
+        "pve_gm": pve_gm_means,
+        "pve_csf": pve_csf_means
+    }, index=range(1, n_components + 1))
 
-    # points assignment
-    max_columns = pve_sums.idxmax(axis=1)
+    # assign points
     points = pd.Series(index=pve_sums.index, dtype=int)
-    n_zeros = 0
-    n_csf = 0
-    n_gm = 0
-    n_wm = 0
+    n_zeros = n_csf = n_gm = n_wm = 0
+    max_columns = pve_sums.idxmax(axis=1)
+
     for idx in pve_sums.index:
-        if (pve_sums.loc[idx].sum() == 0):
-            points[idx] = -2      # -2 points if all pves are 0
+        if pve_sums.loc[idx].sum() == 0:
+            points[idx] = -2
             n_zeros += 1
         elif max_columns[idx] == "pve_wm":
-            points[idx] = 2       # +2 points if wm is predominant
-            n_wm +=1
+            points[idx] = 2
+            n_wm += 1
         elif max_columns[idx] == "pve_gm":
-            points[idx] = 1       # +1 points if gm is predominant
+            points[idx] = 1
             n_gm += 1
-        else: 
-            points[idx] = 0       # 0 points if csf is predominant
+        else:
+            points[idx] = 0
             n_csf += 1
-    
+
     return points, (n_wm, n_gm, n_csf, n_zeros), pve_sums
 
 
