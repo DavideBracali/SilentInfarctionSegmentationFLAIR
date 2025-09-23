@@ -364,8 +364,8 @@ def test_get_paths_df_expected_result(tmp_path):
 
     assert "a.txt" in df.columns
     assert "c.txt" in df.columns
-    assert "b.csv" not in df.columns  # deve essere filtrato
-
+    assert "b.csv" not in df.columns 
+    
     assert df.loc[str(tmp_path), "a.txt"] == str(f1)
     assert df.loc[str(tmp_path), "c.txt"] == str(f3)
 
