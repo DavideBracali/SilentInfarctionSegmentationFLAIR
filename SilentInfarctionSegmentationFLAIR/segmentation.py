@@ -11,14 +11,7 @@ import SimpleITK as sitk
 import matplotlib.pyplot as plt
 import warnings
 
-
-from SilentInfarctionSegmentationFLAIR.utils import DimensionError
-from SilentInfarctionSegmentationFLAIR.utils import check_3d
-from SilentInfarctionSegmentationFLAIR.utils import get_info
 from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image
-from SilentInfarctionSegmentationFLAIR.utils import plot_image
-from SilentInfarctionSegmentationFLAIR.utils import orient_image
-from SilentInfarctionSegmentationFLAIR.utils import resample_to_reference
 
 
 
