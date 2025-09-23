@@ -369,6 +369,31 @@ def surrounding_filter(ccs, n_components, pves, dilation_radius = 1):
     return points, (n_wm, n_gm, n_csf, n_zeros), pve_sums
 
 
+def gaussian_transform(image, mean, std):
+    """
+    Apply a Gaussian weighting to the gray levels of a SimpleITK image.
+
+    Each pixel intensity is multiplied by a Gaussian function centered at `mean`
+    with standard deviation `std`. This enhances pixel values close to the mean
+    and attenuates values further away.
+
+    Parameters
+    ----------
+    image (SimpleITK.Image): The input image to be transformed.
+    mean (float): The center of the Gaussian, i.e., the gray level to enhance.
+    std (float): The standard deviation of the Gaussian, controlling the width of enhancement.
+
+    Returns
+    -------
+    (SimpleITK.Image): A new image with the Gaussian-weighted gray levels applied. The output
+        image preserves the spacing, origin, and direction of the input image.
+    """
+    arr = get_array_from_image(image)
+    norm = 1 / (std*np.sqrt(2*np.pi))
+    gaussian_arr = norm * np.exp(-0.5 * ((arr - mean) / std)**2) * arr
+    return get_image_from_array(gaussian_arr, image)
+        
+
 def evaluate_region_wise(mask, gt):
     """
     Returns region-wise evaluation parameters from two binary images.
