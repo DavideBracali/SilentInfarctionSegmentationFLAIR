@@ -104,9 +104,7 @@ def get_image_from_array(image_array, reference_image=None):
     image = sitk.GetImageFromArray(sitk_array)
     
     if reference_image is not None:
-        image.SetSpacing(reference_image.GetSpacing())
-        image.SetOrigin(reference_image.GetOrigin())
-        image.SetDirection(reference_image.GetDirection())
+        image.CopyInformation(reference_image)
     
     return image
 
@@ -350,3 +348,53 @@ def progress_bar(iteration, total, start_time=None, prefix="", length=40):
 
     if iteration + 1 >= total:
         print()
+
+
+def to_n_bit(image, n_bits=8):
+    """
+    Normalize an image to 0..(2^n_bits - 1) and cast to unsigned integer.
+
+    Parameters
+    ----------
+    image : SimpleITK.Image
+        Input image (can be float or integer)
+    n_bits : int
+        Number of bits for output image (default 8)
+
+    Returns
+    -------
+    SimpleITK.Image
+        Image normalized and cast to UInt{8,16,32} depending on n_bits
+    """
+    stats = sitk.StatisticsImageFilter()
+    stats.Execute(image)
+    min_val = stats.GetMinimum()
+    max_val = stats.GetMaximum()
+    
+    # data type
+    if n_bits <= 8:
+        voxel_type = sitk.sitkUInt8
+        dtype = np.uint8
+    elif n_bits <= 16:
+        voxel_type = sitk.sitkUInt16
+        dtype = np.uint16
+    else:
+        voxel_type = sitk.sitkUInt32
+        dtype = np.uint32
+
+    # uniform image
+    if max_val == min_val:
+        scaled = sitk.Image(image.GetSize(), voxel_type)
+        scaled.CopyInformation(image)
+        return scaled
+
+    arr = sitk.GetArrayFromImage(image)
+    arr = (arr - min_val) / (max_val - min_val)  # 0..1
+    arr = arr * (2**n_bits - 1)                 # 0..2^n_bits-1
+    arr = np.round(arr).astype(dtype)
+    
+    is_vector = image.GetNumberOfComponentsPerPixel() > 1
+    image_uint = sitk.GetImageFromArray(arr,isVector=is_vector)
+    image_uint.CopyInformation(image)
+    
+    return image_uint
