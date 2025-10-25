@@ -105,6 +105,7 @@ def get_image_from_array(image_array, reference_image=None):
     
     if reference_image is not None:
         image.CopyInformation(reference_image)
+        image = sitk.Cast(image, reference_image.GetPixelID())
     
     return image
 
@@ -394,7 +395,7 @@ def to_n_bit(image, n_bits=8):
     arr = np.round(arr).astype(dtype)
     
     is_vector = image.GetNumberOfComponentsPerPixel() > 1
-    image_uint = sitk.GetImageFromArray(arr,isVector=is_vector)
+    image_uint = sitk.GetImageFromArray(arr, isVector=is_vector)
     image_uint.CopyInformation(image)
     
     return image_uint
