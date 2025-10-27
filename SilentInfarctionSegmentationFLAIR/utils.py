@@ -80,7 +80,7 @@ def get_array_from_image(image):
     return image_array
 
 
-def get_image_from_array(image_array, reference_image=None):
+def get_image_from_array(image_array, reference_image=None, cast_to_reference=True):
     """
     Converts a NumPy array back to a SimpleITK image.
     Assumes the input array has axes:
@@ -93,10 +93,14 @@ def get_image_from_array(image_array, reference_image=None):
         image_array (np.array): NumPy array with shape (x, y, z)
         reference_image (SimpleITK.Image, optional): 
             If provided, copy spacing, origin, and direction from this image.
+        cast_to_reference (bool, optional):
+            Whether to set voxel data type to reference image.
+            If True, inherits voxel type from reference image if provided.
+            If False, sets voxel type automatically from array. 
     
     Returns
     -------
-        image (SimpleITK.Image): SimpleITK image
+        image (SimpleITK.Image): SimpleITK image from array.
     """
     
     sitk_array = np.transpose(image_array, (2, 1, 0))       # SimpleITK expects zyx
@@ -105,7 +109,9 @@ def get_image_from_array(image_array, reference_image=None):
     
     if reference_image is not None:
         image.CopyInformation(reference_image)
-        image = sitk.Cast(image, reference_image.GetPixelID())
+        
+        if cast_to_reference:
+            image = sitk.Cast(image, reference_image.GetPixelID())
     
     return image
 
