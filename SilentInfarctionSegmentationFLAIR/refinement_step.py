@@ -87,7 +87,7 @@ def main(thr_mask, min_diameter=None, pves=[], dilation_radius=None,
         lesion_idx = np.arange(1, n + 1)
     
     ccs_arr = get_array_from_image(ccs)
-    lesion_mask = np.isin(ccs_arr, lesion_idx)
+    lesion_mask = np.isin(ccs_arr, lesion_idx).astype(np.uint8)
     ref_mask = get_image_from_array(lesion_mask, thr_mask)
 
     if ((keywords_to_remove != [] and labels_dict is not None) or

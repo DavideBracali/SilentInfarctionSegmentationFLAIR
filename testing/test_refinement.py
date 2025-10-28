@@ -632,7 +632,7 @@ def test_gaussian_transform_peak_behavior(img, mean, std):
     """
 
     arr_in = sitk.GetArrayFromImage(img)
-    enhanced = gaussian_transform(img, mean, std)
+    enhanced = gaussian_transform(img, mean, std, return_float=True)
     arr_out = sitk.GetArrayFromImage(enhanced)
     
     # Pick one pixel close to mean, one far

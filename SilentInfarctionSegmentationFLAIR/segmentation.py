@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import warnings
 
 from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image
-
+from SilentInfarctionSegmentationFLAIR.utils import get_image_from_array
 
 
 def get_mask_from_segmentation(segm, labels=1):
@@ -78,14 +78,15 @@ def apply_threshold(image, thr, show=True, ax=None):
     -------
         - thr_image (SimpleITK.image): The thresholded binary image.
     """
-    max_gl = get_array_from_image(image).max()
+    arr = get_array_from_image(image)
+    max_gl = np.max(arr)
     # set upper threshold higher than maximum gl because default value is 255
     if thr > max_gl:
-        upper_thr = float(thr + 1)
         warnings.warn(f"Lower threshold ({thr}) is higher than maximum gray level ({max_gl}).")
-    else:
-        upper_thr = float(max_gl + 1)
+        empty_arr = np.zeros(arr.shape)
+        return get_image_from_array(empty_arr, image)
 
+    upper_thr = float(max_gl)
     thr_image = sitk.BinaryThreshold(image, lowerThreshold=thr,
                         upperThreshold=upper_thr)
 
