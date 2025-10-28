@@ -320,20 +320,20 @@ def test_label_filter_valid_return(segm, labels_to_remove):
         - filter labels
     Assert:
         - segm_filtered is a SimpleITK image
-        - removed is a dict with int keys and values
+        - removed is a dict with str keys and int values
     """
     segm_filtered, removed = label_filter(segm, labels_to_remove=labels_to_remove)
 
     assert isinstance(segm_filtered, sitk.Image)
     assert isinstance(removed, dict)
-    assert all(isinstance(k, int) for k in removed.keys())
+    assert all(isinstance(k, str) for k in removed.keys())
     assert all(isinstance(v, int) and v >= 0 for v in removed.values())
 
 
 @given(labeled_image_strategy(),
     st.lists(st.integers(min_value=1, max_value=2), unique=True))
 @settings(max_examples=5, deadline=None)
-def test_labels_filter_properties(segm, labels_to_remove):
+def test_label_filter_properties(segm, labels_to_remove):
     """
     Given:
         - a labeled image (see labeled_image_strategy for details)
@@ -355,11 +355,11 @@ def test_labels_filter_properties(segm, labels_to_remove):
     labels_to_keep = set(np.unique(arr)) - set(labels_to_remove) - {0}
     
     for label in labels_to_remove:
-        assert np.all(arr_filtered[arr == label] == 0)
+        assert np.all(arr_filtered[arr == int(label)] == 0)
     for label in labels_to_keep:
-        assert np.array_equal(arr_filtered[arr == label], arr[arr == label])
+        assert np.array_equal(arr_filtered[arr == int(label)], arr[arr == int(label)])
     for label, count in removed.items():
-        assert count == np.sum(arr == label)
+        assert count == np.sum(arr == int(label))
     assert np.array_equal(get_array_from_image(segm_filtered), get_array_from_image(segm_filtered2))
     assert removed2 == {}
 

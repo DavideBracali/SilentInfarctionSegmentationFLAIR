@@ -160,8 +160,8 @@ def label_filter(segm, labels_to_remove=[], keywords_to_remove=[], labels_dict=N
     Returns
     -------
         - segm_filtered (SimpleITK.Image): Labeled segmentation image after filtering.
-        - removed (dict): Dictionary of removed voxels, where each key is a numeric
-            label (int), and each value contains the number of removed voxels
+        - removed (dict): Dictionary of removed voxels, where each key is a text
+            label (str), and each value contains the number of removed voxels
     """
     if not keywords_to_remove == []:
         if labels_dict is None:
@@ -183,8 +183,13 @@ def label_filter(segm, labels_to_remove=[], keywords_to_remove=[], labels_dict=N
     for label in labels_to_remove:      # build dictionary
         count = np.sum(segm_arr == label)
         if count > 0:
-            removed[label] = int(count)
-    
+            if labels_dict is not None and label in labels_dict.keys():
+                label_name = labels_dict[label]
+            else:
+                label_name = str(label)
+
+            removed[label_name] = int(count)
+            
     return segm_filtered, removed
     
 def pve_filter(ccs, n_components, pves):

@@ -14,13 +14,15 @@ from SilentInfarctionSegmentationFLAIR.refinement import connected_components
 from SilentInfarctionSegmentationFLAIR.refinement import diameter_filter
 from SilentInfarctionSegmentationFLAIR.refinement import pve_filter
 from SilentInfarctionSegmentationFLAIR.refinement import surrounding_filter
+from SilentInfarctionSegmentationFLAIR.refinement import label_filter
 from SilentInfarctionSegmentationFLAIR.refinement import get_array_from_image
 from SilentInfarctionSegmentationFLAIR.refinement import get_image_from_array
 
 
 
 def main(thr_mask, min_diameter=None, pves=[], dilation_radius=None,
-        min_points=3, verbose=True):
+         segm=None, labels_to_remove=[], keywords_to_remove=[], labels_dict=None, 
+         min_points=3, verbose=True):
 
     points = []
     
@@ -55,27 +57,53 @@ def main(thr_mask, min_diameter=None, pves=[], dilation_radius=None,
             print(f"{n_filtered[0]} / {n} lesions are predominantly composed of WM\n"+
                   f"{n_filtered[1]} / {n} lesions are predominantly composed of GM\n"+
                   f"{n_filtered[2]} / {n} lesions are predominantly composed of CSF\n"+
-                  f"{n_filtered[3]} / {n} lesions have null PVE effect for neither WM, GM and CSF")
+                  f"{n_filtered[3]} / {n} lesions have null PVE effect for neither\n"+
+                  "WM, GM and CSF")
 
 
         if dilation_radius is not None:    
             if verbose:
-                print(f"Applying PVE filter inside the lesions...")
+                print(f"Applying PVE filter around the lesions...")
 
-            surround_points, n_filtered, _ = surrounding_filter(ccs, n, pves, dilation_radius=dilation_radius)
+            surround_points, n_filtered, _ = surrounding_filter(ccs, n, pves,
+                                                                dilation_radius=dilation_radius)
             points.append(surround_points)
 
             if verbose:
                 print(f"{n_filtered[0]} / {n} lesions are predominantly surrounded by WM\n"+
                     f"{n_filtered[1]} / {n} lesions are predominantly surrounded by GM\n"+
                     f"{n_filtered[2]} / {n} lesions are predominantly surrounded by CSF\n"+
-                    f"{n_filtered[3]} / {n} lesions neighborhoods have null PVE effect for neither WM, GM and CSF")
-        
+                    f"{n_filtered[3]} / {n} lesions neighborhoods have null PVE effect\n"+
+                    "for neither WM, GM and CSF")
+
+
+
 
     # only keep lesions with a minimum number of points
-    lesion_idx = points[points >= min_points].index
+    if points:
+        combined_points = sum(points)  
+        lesion_idx = combined_points[combined_points >= min_points].index
+    else:
+        lesion_idx = np.arange(1, n + 1)
+    
     ccs_arr = get_array_from_image(ccs)
     lesion_mask = np.isin(ccs_arr, lesion_idx)
     ref_mask = get_image_from_array(lesion_mask, thr_mask)
+
+    if ((keywords_to_remove != [] and labels_dict is not None) or
+        (labels_to_remove != [])) and segm is not None:
+        if verbose:
+            print(f"Applying labels filter...")
+        
+        segm_filt, removed = label_filter(segm,
+                                          labels_to_remove=labels_to_remove,
+                                          keywords_to_remove=keywords_to_remove,
+                                          labels_dict=labels_dict)
+        ref_mask = ref_mask & (segm_filt > 0)
+
+        if verbose:
+            for label, n_removed in removed.items():
+                print(f"Removed {n_removed} voxels of label '{label}'")
+        
 
     return ref_mask
