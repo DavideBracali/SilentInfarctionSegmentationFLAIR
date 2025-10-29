@@ -280,8 +280,9 @@ def nearly_isotropic_kernel(spacing, desired_radius):
     """
     
     kernel = []
+
     for s in spacing:
-        kernel.append(round(desired_radius / s))
+        kernel.append(max(1, round(desired_radius / s)))
     return kernel
 
 

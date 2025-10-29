@@ -111,8 +111,9 @@ def evaluate_voxel_wise(mask, gt):
     
     Returns
     -------
-        metrics (dict): A dict containing true/false positive fractions
-            and the DICE coefficient (floats).
+        metrics (dict): A dict containing true/false positive fractions,
+        the DICE coefficient and the Mattheus correlation coefficient
+        (floats).
     """
     mask_arr = get_array_from_image(mask)
     gt_arr = get_array_from_image(gt)
@@ -129,14 +130,21 @@ def evaluate_voxel_wise(mask, gt):
     else:
         dice = 2*tp / (2*tp + fp + fn)
 
+    # Matthews coefficient
+    if np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)) == 0:
+        mcc = 0
+    else:
+        mcc = (tp*tn - fp*fn)/np.sqrt((tp + fp)*(tp + fn)*(tn + fp)*(tn + fn))
+
     pos = tp + fn
     neg = tn + fp
 
     metrics = {
         "vw-TPF": tp / pos if pos > 0 else 0.0,
         "vw-FPF": fp / neg if neg > 0 else 0.0,
-        "vw-DSC": dice
-    }
+        "vw-DSC": dice,
+        "vw-MCC": mcc}
+    
     metrics = {k: float(v) for k,v in metrics.items()}
 
 

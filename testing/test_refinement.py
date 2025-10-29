@@ -493,7 +493,7 @@ def test_nearly_isotropic_kernel_expected_behavior(spacing, desired_radius):
     kernel = nearly_isotropic_kernel(spacing, desired_radius)
 
     for k, s in zip(kernel, spacing):
-        expected = round(desired_radius / s)
+        expected = max(1, round(desired_radius / s))
         assert k == expected
 
 
