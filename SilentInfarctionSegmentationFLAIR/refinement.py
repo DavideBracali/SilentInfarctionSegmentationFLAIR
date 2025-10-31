@@ -336,15 +336,15 @@ def surrounding_filter(ccs, n_components, pves, dilation_radius = 1):
 
     # compute statistics
     filt = sitk.LabelStatisticsImageFilter()
-    filt.Execute(pve_wm, ccs)
+    filt.Execute(pve_wm, surround_ccs)
     pve_wm_means = [filt.GetMean(l) for l in range(1, n_components + 1)]
 
     filt = sitk.LabelStatisticsImageFilter()
-    filt.Execute(pve_gm, ccs)
+    filt.Execute(pve_gm, surround_ccs)
     pve_gm_means = [filt.GetMean(l) for l in range(1, n_components + 1)]
 
     filt = sitk.LabelStatisticsImageFilter()
-    filt.Execute(pve_csf, ccs)
+    filt.Execute(pve_csf, surround_ccs)
     pve_csf_means = [filt.GetMean(l) for l in range(1, n_components + 1)]
 
     pve_sums = pd.DataFrame({
@@ -428,6 +428,51 @@ def gaussian_transform(image, mean, std, return_float = False, normalized = Fals
         gaussian_arr = np.exp(-0.5 * ((arr - mean) / std)**2) * arr
         # return transformed image with the same voxel type 
         return get_image_from_array(gaussian_arr, image, cast_to_reference=True)
+
+
+
+def extend_lesions(lesion_mask, image, n_std=1, dilation_radius=1):
+    
+    # surrounding of all lesions
+    ccs, n_components = connected_components(lesion_mask) 
+    kernel = nearly_isotropic_kernel(ccs.GetSpacing(), dilation_radius)
+    dilated = sitk.BinaryDilate(lesion_mask, kernelRadius=kernel, kernelType=sitk.sitkBox)
+    surround_mask = dilated & ~lesion_mask
+
+    # assign each voxel to the closest region
+    filter = sitk.DanielssonDistanceMapImageFilter()
+    filter.SetInputIsBinary(False)
+    filter.SetUseImageSpacing(True)
+    filter.Execute(ccs)
+    voronoi_map = filter.GetVoronoiMap()        # closest ccs for each voxel
+
+    # assign each surrounding to the closest lesion
+    surround_ccs = sitk.Mask(voronoi_map, sitk.Cast(surround_mask, sitk.sitkUInt8))
+
+    # compute statistics
+    filt = sitk.LabelStatisticsImageFilter()
+    filt.Execute(image, ccs)
+    means = np.array([filt.GetMean(l)
+                      for l in range(1, n_components + 1)])
+    stds = np.array([filt.GetSigma(l)
+                     for l in range(1, n_components + 1)])
+    thrs = means - n_std*stds
+
+    surround_arr = get_array_from_image(surround_ccs)
+    thrs_with_zero = np.concatenate([[0], thrs])  # thrs_with_zero[0] = 0
+    # if surround_arr[x,y,z] = i --> threshold_arr[x,y,z] = thrs_with_zero[i]
+    thrs_arr = np.take(thrs_with_zero, surround_arr)
+
+    image_arr = get_array_from_image(sitk.Mask(image, surround_mask))
+    extended_lesion_arr = (image_arr > thrs_arr).astype(np.uint8)
+    extended_lesion = get_image_from_array(extended_lesion_arr, lesion_mask)
+    extended_lesion = sitk.Cast(lesion_mask, sitk.sitkUInt8) | extended_lesion
+
+    return extended_lesion
+
+
+
+
 
 
 def evaluate_region_wise(mask, gt):

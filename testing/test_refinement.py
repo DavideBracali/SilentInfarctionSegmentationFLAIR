@@ -34,6 +34,8 @@ from SilentInfarctionSegmentationFLAIR.refinement import pve_filter
 from SilentInfarctionSegmentationFLAIR.refinement import nearly_isotropic_kernel
 from SilentInfarctionSegmentationFLAIR.refinement import surrounding_filter
 from SilentInfarctionSegmentationFLAIR.refinement import gaussian_transform
+from SilentInfarctionSegmentationFLAIR.refinement import extend_lesions
+
 
 
 
@@ -148,6 +150,39 @@ def non_binary_image_strategy(draw):
     img = sitk.GetImageFromArray(arr)
 
     return img
+
+@st.composite
+def blurred_sphere_strategy(draw):
+    """
+    Generates a 3D SimpleITK image with:
+    - a spherical bright region (lesion core)
+    - smoothly fading intensity toward the background (Gaussian-like falloff)
+    
+    Useful for testing functions that rely on local intensity thresholds
+    or lesion extension (e.g., extend_lesions).
+    """
+
+    size = draw(st.tuples(st.integers(30, 50), st.integers(30, 50), st.integers(30, 50)))
+    radius = draw(st.integers(5, min(size) // 4))
+    center = (
+        draw(st.integers(radius + 2, size[0] - radius - 2)),
+        draw(st.integers(radius + 2, size[1] - radius - 2)),
+        draw(st.integers(radius + 2, size[2] - radius - 2)))
+
+    z, y, x = np.ogrid[:size[0], :size[1], :size[2]]
+    dist = np.sqrt((x - center[2])**2 + (y - center[1])**2 + (z - center[0])**2)
+
+    sigma = draw(st.floats(min_value=radius / 2, max_value=radius * 1.5))
+    intensity_peak = draw(st.floats(min_value=80.0, max_value=150.0))
+    arr = intensity_peak * np.exp(-(dist**2) / (2 * sigma**2))
+
+    arr = arr.astype(np.float32)
+    img = sitk.GetImageFromArray(arr)
+    img.SetSpacing((1.0, 1.0, 1.0))
+
+    return img
+
+
 
 ##################
 ###  TESTING   ###
@@ -549,7 +584,7 @@ def test_surrounding_filter_valid_return(ccs, wm_arr, gm_arr, csf_arr):
     stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1))
 )
 @settings(max_examples=5, deadline=None)
-def test_pve_filter_expected_results(ccs, wm_arr, gm_arr, csf_arr):
+def test_surrounding_filter_expected_results(ccs, wm_arr, gm_arr, csf_arr):
     """
     Given:
         - ccs: labeled image
@@ -573,13 +608,23 @@ def test_pve_filter_expected_results(ccs, wm_arr, gm_arr, csf_arr):
     points, _, _ = surrounding_filter(ccs, n_components, [wm_img, gm_img, csf_img])
     
     for label in points.index:
-        mask = labels_arr == label
-        sums = [wm_arr[mask].sum(), gm_arr[mask].sum(), csf_arr[mask].sum()]
+        lesion_mask = labels_arr == label
+
+        lesion_img = sitk.GetImageFromArray(lesion_mask.astype(np.uint8))
+        lesion_img.CopyInformation(ccs)
+        dilated = sitk.BinaryDilate(lesion_img, [1, 1, 1], sitk.sitkBox)
+        surround_mask = sitk.GetArrayFromImage(dilated) & ~lesion_mask
+
+        wm_mean = wm_arr[surround_mask].mean() if surround_mask.any() else 0
+        gm_mean = gm_arr[surround_mask].mean() if surround_mask.any() else 0
+        csf_mean = csf_arr[surround_mask].mean() if surround_mask.any() else 0
+        sums = [wm_mean, gm_mean, csf_mean]
+
         if sum(sums) == 0:
             assert points[label] == -2
         else:
             max_idx = np.argmax(sums)
-            expected = [2,1,0][max_idx]  # wm, gm, csf
+            expected = [2, 1, 0][max_idx]  # wm, gm, csf
             assert points[label] == expected
 
 
@@ -641,6 +686,71 @@ def test_gaussian_transform_peak_behavior(img, mean, std):
     far_idx = np.unravel_index(np.argmax(diff), diff.shape)
     
     assert arr_out[close_idx] >= arr_out[far_idx]
+
+
+@settings(deadline=None, max_examples=5)
+@given(blurred_sphere_strategy())
+def test_extend_lesions_valid_return(image):
+    """
+    Given:
+        - a blurred spherical lesion image
+    Then:
+        - call extend_lesions with a binary lesion mask
+    Assert that:
+        - the output is a valid binary SimpleITK image
+        - the size matches the input
+        - only 0 and 1 values are present
+    """
+    lesion_mask = image > np.percentile(sitk.GetArrayFromImage(image), 80)
+    extended = extend_lesions(lesion_mask, image)
+    arr = sitk.GetArrayFromImage(extended)
+
+    assert isinstance(extended, sitk.Image)
+    assert extended.GetSize() == image.GetSize()
+    assert extended.GetPixelID() == sitk.sitkUInt8
+    assert np.isin(arr, [0, 1]).all()
+
+
+@settings(deadline=None, max_examples=5)
+@given(blurred_sphere_strategy())
+def test_extend_lesions_includes_original(image):
+    """
+    Given:
+        - a blurred spherical lesion image
+    Then:
+        - extend_lesions is applied to the binary lesion mask
+    Assert that:
+        - all voxels in the original lesion remain labeled in the extended mask
+    """
+    lesion_mask = image > np.percentile(sitk.GetArrayFromImage(image), 80)
+    extended = extend_lesions(lesion_mask, image)
+
+    arr_lesion = sitk.GetArrayFromImage(lesion_mask)
+    arr_extended = sitk.GetArrayFromImage(extended)
+
+    assert np.all(arr_extended[arr_lesion == 1] == 1)
+
+
+@settings(deadline=None, max_examples=5)
+@given(blurred_sphere_strategy(), st.floats(min_value=0.5, max_value=2.0))
+def test_extend_lesions_respects_threshold(image, n_std):
+    """
+    Given:
+        - a blurred spherical lesion image
+        - two different n_std values
+    Then:
+        - increasing n_std should increase the extension
+    Assert that:
+        - the number of lesion voxels increases with larger n_std
+    """
+    lesion_mask = image > np.percentile(sitk.GetArrayFromImage(image), 80)
+    small_ext = extend_lesions(lesion_mask, image, n_std=0.5)
+    large_ext = extend_lesions(lesion_mask, image, n_std=n_std)
+
+    arr_small = sitk.GetArrayFromImage(small_ext)
+    arr_large = sitk.GetArrayFromImage(large_ext)
+
+    assert arr_large.sum() >= arr_small.sum()
 
 
 @given(binary_mask_pair_strategy())
