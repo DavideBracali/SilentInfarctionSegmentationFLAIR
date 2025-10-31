@@ -131,10 +131,12 @@ def evaluate_voxel_wise(mask, gt):
         dice = 2*tp / (2*tp + fp + fn)
 
     # Matthews coefficient
-    if np.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)) == 0:
+    denom = np.sqrt(float(tp + fp)*float(tp + fn)*
+                    float(tn + fp)*float(tn + fn))   # float to avoid overflow
+    if denom == 0:
         mcc = 0
     else:
-        mcc = (tp*tn - fp*fn)/np.sqrt((tp + fp)*(tp + fn)*(tn + fp)*(tn + fn))
+        mcc = (tp*tn - fp*fn)/denom
 
     pos = tp + fn
     neg = tn + fp
