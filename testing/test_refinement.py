@@ -702,7 +702,8 @@ def test_extend_lesions_valid_return(image):
         - only 0 and 1 values are present
     """
     lesion_mask = image > np.percentile(sitk.GetArrayFromImage(image), 80)
-    extended = extend_lesions(lesion_mask, image)
+    ccs, n_components = connected_components(lesion_mask)
+    extended = extend_lesions(ccs, n_components, image)
     arr = sitk.GetArrayFromImage(extended)
 
     assert isinstance(extended, sitk.Image)
@@ -723,7 +724,8 @@ def test_extend_lesions_includes_original(image):
         - all voxels in the original lesion remain labeled in the extended mask
     """
     lesion_mask = image > np.percentile(sitk.GetArrayFromImage(image), 80)
-    extended = extend_lesions(lesion_mask, image)
+    ccs, n_components = connected_components(lesion_mask)
+    extended = extend_lesions(ccs, n_components, image)
 
     arr_lesion = sitk.GetArrayFromImage(lesion_mask)
     arr_extended = sitk.GetArrayFromImage(extended)
@@ -744,8 +746,9 @@ def test_extend_lesions_respects_threshold(image, n_std):
         - the number of lesion voxels increases with larger n_std
     """
     lesion_mask = image > np.percentile(sitk.GetArrayFromImage(image), 80)
-    small_ext = extend_lesions(lesion_mask, image, n_std=0.5)
-    large_ext = extend_lesions(lesion_mask, image, n_std=n_std)
+    ccs, n_components = connected_components(lesion_mask)
+    small_ext = extend_lesions(ccs, n_components, image, n_std=0.5)
+    large_ext = extend_lesions(ccs, n_components, image, n_std=n_std)
 
     arr_small = sitk.GetArrayFromImage(small_ext)
     arr_large = sitk.GetArrayFromImage(large_ext)

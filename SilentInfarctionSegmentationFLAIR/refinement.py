@@ -431,10 +431,10 @@ def gaussian_transform(image, mean, std, return_float = False, normalized = Fals
 
 
 
-def extend_lesions(lesion_mask, image, n_std=1, dilation_radius=1):
+def extend_lesions(ccs, n_components, image, n_std=1, dilation_radius=1):
     
     # surrounding of all lesions
-    ccs, n_components = connected_components(lesion_mask) 
+    lesion_mask = ccs > 0
     kernel = nearly_isotropic_kernel(ccs.GetSpacing(), dilation_radius)
     dilated = sitk.BinaryDilate(lesion_mask, kernelRadius=kernel, kernelType=sitk.sitkBox)
     surround_mask = dilated & ~lesion_mask
