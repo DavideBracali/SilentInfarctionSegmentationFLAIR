@@ -3,7 +3,6 @@ data/
 .pytest_cache/
 Examples/
 SilentInfarctionSegmentationFLAIR/prove.py
-prove.ipynb
 analysis/
 prove/
 
