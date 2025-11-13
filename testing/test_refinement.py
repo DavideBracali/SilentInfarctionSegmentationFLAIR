@@ -17,6 +17,7 @@ import numpy as np
 import SimpleITK as sitk
 import matplotlib
 import pandas as pd
+from scipy.spatial import cKDTree
 
 matplotlib.use('Agg')
 sys.path.insert(0,
@@ -577,55 +578,55 @@ def test_surrounding_filter_valid_return(ccs, wm_arr, gm_arr, csf_arr):
     assert set(pve_sums.index) == set(range(1, n_components+1))
 
 
-@given(
-    labeled_image_strategy(),   
-    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1)),
-    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1)),
-    stnp.arrays(dtype=np.float32, shape=(20,20,20), elements=st.floats(0, 1))
-)
+@given(labeled_image_strategy())
 @settings(max_examples=5, deadline=None)
-def test_surrounding_filter_expected_results(ccs, wm_arr, gm_arr, csf_arr):
+def test_surrounding_filter_expected_results(ccs):
     """
     Given:
         - ccs: labeled image
-        - wm_arr, gm_arr, csf_arr: partial volume estimate images
     Then:
-        - compute points
+        - compute points with only wm, only gm, only csf and all 0s
     Assert that:
         - points are assigned as expected
     """
-    wm_img = sitk.GetImageFromArray(wm_arr)
-    gm_img = sitk.GetImageFromArray(gm_arr)
-    csf_img = sitk.GetImageFromArray(csf_arr)
-    
-    wm_img.CopyInformation(ccs)
-    gm_img.CopyInformation(ccs)
-    csf_img.CopyInformation(ccs)
-    
-    labels_arr = sitk.GetArrayFromImage(ccs)
-    n_components = len(np.unique(labels_arr)) - 1
-    
-    points, _, _ = surrounding_filter(ccs, n_components, [wm_img, gm_img, csf_img])
-    
-    for label in points.index:
-        lesion_mask = labels_arr == label
+    n_components = int(sitk.GetArrayViewFromImage(ccs).max())
+    shape = sitk.GetArrayViewFromImage(ccs).shape
 
-        lesion_img = sitk.GetImageFromArray(lesion_mask.astype(np.uint8))
-        lesion_img.CopyInformation(ccs)
-        dilated = sitk.BinaryDilate(lesion_img, [1, 1, 1], sitk.sitkBox)
-        surround_mask = sitk.GetArrayFromImage(dilated) & ~lesion_mask
+    pve_wm = sitk.Image(shape[2], shape[1], shape[0], sitk.sitkFloat32)
+    pve_gm = sitk.Image(shape[2], shape[1], shape[0], sitk.sitkFloat32)
+    pve_csf = sitk.Image(shape[2], shape[1], shape[0], sitk.sitkFloat32)
 
-        wm_mean = wm_arr[surround_mask].mean() if surround_mask.any() else 0
-        gm_mean = gm_arr[surround_mask].mean() if surround_mask.any() else 0
-        csf_mean = csf_arr[surround_mask].mean() if surround_mask.any() else 0
-        sums = [wm_mean, gm_mean, csf_mean]
+    # Caso 1: solo WM
+    pve_wm += 1.0
+    pves = [pve_wm, pve_gm, pve_csf]
+    points, counts, _ = surrounding_filter(ccs, n_components, pves)
+    assert all(points == 2)
+    assert counts[0] == n_components
 
-        if sum(sums) == 0:
-            assert points[label] == -2
-        else:
-            max_idx = np.argmax(sums)
-            expected = [2, 1, 0][max_idx]  # wm, gm, csf
-            assert points[label] == expected
+    # Caso 2: solo GM
+    pve_wm *= 0.0
+    pve_gm += 1.0
+    pves = [pve_wm, pve_gm, pve_csf]
+    points, counts, _ = surrounding_filter(ccs, n_components, pves)
+    assert all(points == 1)
+    assert counts[1] == n_components
+
+    # Caso 3: solo CSF
+    pve_gm *= 0.0
+    pve_csf += 1.0
+    pves = [pve_wm, pve_gm, pve_csf]
+    points, counts, _ = surrounding_filter(ccs, n_components, pves)
+    assert all(points == 0)
+    assert counts[2] == n_components
+
+    # Caso 4: tutte PVEs zero
+    pve_csf *= 0.0
+    pves = [pve_wm, pve_gm, pve_csf]
+    points, counts, _ = surrounding_filter(ccs, n_components, pves)
+    assert all(points == -2)
+    assert counts[3] == n_components
+
+
 
 
 @given(

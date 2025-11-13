@@ -11,17 +11,19 @@ import warnings
 import numpy as np
 
 from SilentInfarctionSegmentationFLAIR.refinement import connected_components
+from SilentInfarctionSegmentationFLAIR.refinement import extend_lesions
 from SilentInfarctionSegmentationFLAIR.refinement import diameter_filter
 from SilentInfarctionSegmentationFLAIR.refinement import pve_filter
 from SilentInfarctionSegmentationFLAIR.refinement import surrounding_filter
 from SilentInfarctionSegmentationFLAIR.refinement import label_filter
-from SilentInfarctionSegmentationFLAIR.refinement import get_array_from_image
-from SilentInfarctionSegmentationFLAIR.refinement import get_image_from_array
+from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image
+from SilentInfarctionSegmentationFLAIR.utils import get_image_from_array
 
 
 
-def main(thr_mask, min_diameter=None, pves=[], dilation_radius=None,
-         segm=None, labels_to_remove=[], keywords_to_remove=[], labels_dict=None, 
+def main(thr_mask, image=None, pves=[], segm=None, min_diameter=None,
+         surround_dilation_radius=None, n_std=None, extend_dilation_radius=1,
+         labels_to_remove=[], keywords_to_remove=[], labels_dict=None,
          min_points=3, verbose=True):
 
     points = []
@@ -31,6 +33,20 @@ def main(thr_mask, min_diameter=None, pves=[], dilation_radius=None,
     if verbose:
         print(f"Number of connected components (lesions) in the image: {n}")
 
+    # extend lesions
+    if n_std is not None and image is not None:
+        if verbose:
+            print("Extending lesions...")
+        
+        ext_mask = extend_lesions(ccs, n, image, n_std=n_std,
+                                  dilation_radius=extend_dilation_radius)
+        if verbose:
+            print(f"Before lesion extension: {n} connected components")
+
+        ccs, n = connected_components(ext_mask)
+        if verbose:
+            print(f"After lesion extension: {n} connected components")
+        
     # minimum diameter filter
     if min_diameter is not None:        
         if verbose:
@@ -61,12 +77,12 @@ def main(thr_mask, min_diameter=None, pves=[], dilation_radius=None,
                   "WM, GM and CSF")
 
 
-        if dilation_radius is not None:    
+        if surround_dilation_radius is not None:    
             if verbose:
-                print(f"Applying PVE filter around the lesions...")
+                print("Applying PVE filter around the lesions...")
 
             surround_points, n_filtered, _ = surrounding_filter(ccs, n, pves,
-                                                                dilation_radius=dilation_radius)
+                                                                dilation_radius=surround_dilation_radius)
             points.append(surround_points)
 
             if verbose:
@@ -90,6 +106,7 @@ def main(thr_mask, min_diameter=None, pves=[], dilation_radius=None,
     lesion_mask = np.isin(ccs_arr, lesion_idx).astype(np.uint8)
     ref_mask = get_image_from_array(lesion_mask, thr_mask)
 
+    # remove voxels where it is anatomically impossible to have lesions
     if ((keywords_to_remove != [] and labels_dict is not None) or
         (labels_to_remove != [])) and segm is not None:
         if verbose:

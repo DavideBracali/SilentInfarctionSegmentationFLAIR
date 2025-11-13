@@ -9,6 +9,7 @@ Created on 2025-08-13 13:41:50
 import numpy as np
 import SimpleITK as sitk
 import scipy.ndimage as ndi
+from scipy.spatial import cKDTree
 import pandas as pd
 import time
 
@@ -262,7 +263,7 @@ def pve_filter(ccs, n_components, pves):
     return points, (n_wm, n_gm, n_csf, n_zeros), pve_sums
 
 
-def nearly_isotropic_kernel(spacing, desired_radius):
+def nearly_isotropic_kernel(spacing, desired_radius=1):
 
     """
     Computes a nearly isotropic kernel radius in voxel units, given the image spacing.
@@ -325,11 +326,17 @@ def surrounding_filter(ccs, n_components, pves, dilation_radius = 1):
     surround_mask = dilated & ~lesion_mask
 
     # assign each voxel to the closest region
-    filter = sitk.DanielssonDistanceMapImageFilter()
-    filter.SetInputIsBinary(False)
-    filter.SetUseImageSpacing(True)
-    filter.Execute(ccs)
-    voronoi_map = filter.GetVoronoiMap()        # closest ccs for each voxel
+    ccs_arr = sitk.GetArrayFromImage(ccs)
+    surround_arr = sitk.GetArrayFromImage(surround_mask)
+    seed_coords = np.argwhere(ccs_arr > 0)
+    seed_labels = ccs_arr[ccs_arr > 0]
+    target_coords = np.argwhere(surround_arr > 0)
+    tree = cKDTree(seed_coords)
+    distances, indices = tree.query(target_coords)
+    voronoi_arr = np.zeros_like(ccs_arr, dtype=ccs_arr.dtype)
+    voronoi_arr[target_coords[:,0], target_coords[:,1], target_coords[:,2]] = seed_labels[indices]
+    voronoi_map = sitk.GetImageFromArray(voronoi_arr)   # closest ccs for each voxel
+    voronoi_map.CopyInformation(ccs)
 
     # assign each surrounding to the closest lesion
     surround_ccs = sitk.Mask(voronoi_map, sitk.Cast(surround_mask, sitk.sitkUInt8))
@@ -432,7 +439,53 @@ def gaussian_transform(image, mean, std, return_float = False, normalized = Fals
 
 
 def extend_lesions(ccs, n_components, image, n_std=1, dilation_radius=1):
+    """
+    Extend detected lesion regions by including surrounding voxels whose intensity 
+    exceeds a lesion-specific threshold based on local statistics.
+
+    The function first dilates the connected component segmentation to define 
+    a surrounding region for each lesion. Each voxel in this surrounding area 
+    is assigned to the closest lesion using a Voronoi-like partition derived 
+    from the distance map. For each lesion, a threshold is computed as:
     
+        threshold_i = mean_i - n_std * std_i
+
+    where `mean_i` and `std_i` are the mean and standard deviation of the voxel 
+    intensities within the i-th lesion. Voxels in the surrounding region are 
+    added to the lesion mask if their intensity exceeds the corresponding threshold.
+
+    Parameters
+    ----------
+    ccs : sitk.Image
+        Labeled connected component image, where each lesion has a unique integer label 
+        (1 to `n_components`), and background is 0.
+    n_components : int
+        Number of connected components (lesions) in `ccs`.
+    image : sitk.Image
+        Original intensity image used to compute lesion statistics and intensity thresholds.
+    n_std : float, optional
+        Number of standard deviations to subtract from the mean for thresholding.
+        Lower values make the threshold less strict and extend lesions more.
+        Default is 1.
+    dilation_radius : float, optional
+        Radius (in physical units) used to define the surrounding region 
+        via morphological dilation. Default is 1.
+
+    Returns
+    -------
+    extended_lesion : sitk.Image
+        Binary image where voxels belonging to the original or extended lesions 
+        are set to 1, and all others to 0.
+
+    Notes
+    -----
+    - Uses the `sitk.DanielssonDistanceMapImageFilter` to assign each voxel 
+      in the surrounding region to its nearest lesion.
+    - Extension is adaptive: each lesion has its own intensity threshold 
+      based on its local statistics.
+    - The function assumes that `get_array_from_image` and `get_image_from_array` 
+      correctly handle orientation and spacing.
+    """
     # surrounding of all lesions
     lesion_mask = ccs > 0
     kernel = nearly_isotropic_kernel(ccs.GetSpacing(), dilation_radius)
@@ -440,11 +493,17 @@ def extend_lesions(ccs, n_components, image, n_std=1, dilation_radius=1):
     surround_mask = dilated & ~lesion_mask
 
     # assign each voxel to the closest region
-    filter = sitk.DanielssonDistanceMapImageFilter()
-    filter.SetInputIsBinary(False)
-    filter.SetUseImageSpacing(True)
-    filter.Execute(ccs)
-    voronoi_map = filter.GetVoronoiMap()        # closest ccs for each voxel
+    ccs_arr = sitk.GetArrayFromImage(ccs)
+    surround_arr = sitk.GetArrayFromImage(surround_mask)
+    seed_coords = np.argwhere(ccs_arr > 0)
+    seed_labels = ccs_arr[ccs_arr > 0]
+    target_coords = np.argwhere(surround_arr > 0)
+    tree = cKDTree(seed_coords)
+    distances, indices = tree.query(target_coords)
+    voronoi_arr = np.zeros_like(ccs_arr, dtype=ccs_arr.dtype)
+    voronoi_arr[target_coords[:,0], target_coords[:,1], target_coords[:,2]] = seed_labels[indices]
+    voronoi_map = sitk.GetImageFromArray(voronoi_arr)   # closest ccs for each voxel
+    voronoi_map.CopyInformation(ccs)
 
     # assign each surrounding to the closest lesion
     surround_ccs = sitk.Mask(voronoi_map, sitk.Cast(surround_mask, sitk.sitkUInt8))
@@ -470,10 +529,68 @@ def extend_lesions(ccs, n_components, image, n_std=1, dilation_radius=1):
 
     return extended_lesion
 
+def extend_lesions_debug(ccs, n_components, image, n_std=1, dilation_radius=1):
+    start_total = time.perf_counter()
+    print(">>> Avvio funzione extend_lesions")
 
+    # --- Step 1: Dilation ----------------------------------------------------
+    t0 = time.perf_counter()
+    lesion_mask = ccs > 0
+    kernel = nearly_isotropic_kernel(ccs.GetSpacing(), dilation_radius)
+    dilated = sitk.BinaryDilate(lesion_mask, kernelRadius=kernel, kernelType=sitk.sitkBox)
+    surround_mask = dilated & ~lesion_mask
+    print(f"[DEBUG] Step 1 - Dilatazione: {time.perf_counter() - t0:.3f} s")
 
+    # --- Step 2: Distance & Voronoi -----------------------------------------
+    t0 = time.perf_counter()
+    ccs_arr = sitk.GetArrayFromImage(ccs)
+    surround_arr = sitk.GetArrayFromImage(surround_mask)
+    seed_coords = np.argwhere(ccs_arr > 0)
+    seed_labels = ccs_arr[ccs_arr > 0]
+    target_coords = np.argwhere(surround_arr > 0)
+    tree = cKDTree(seed_coords)
+    distances, indices = tree.query(target_coords)
+    voronoi_arr = np.zeros_like(ccs_arr, dtype=ccs_arr.dtype)
+    voronoi_arr[target_coords[:,0], target_coords[:,1], target_coords[:,2]] = seed_labels[indices]
+    voronoi_map = sitk.GetImageFromArray(voronoi_arr)
+    voronoi_map.CopyInformation(ccs)
+    print(f"[DEBUG] Step 2 - Distance + Voronoi: {time.perf_counter() - t0:.3f} s")
 
+    # --- Step 3: Masking -----------------------------------------------------
+    t0 = time.perf_counter()
+    surround_ccs = sitk.Mask(voronoi_map, sitk.Cast(surround_mask, sitk.sitkUInt8))
+    print(f"[DEBUG] Step 3 - Masking: {time.perf_counter() - t0:.3f} s")
 
+    # --- Step 4: Compute stats ----------------------------------------------
+    t0 = time.perf_counter()
+    filt = sitk.LabelStatisticsImageFilter()
+    filt.Execute(image, ccs)
+    means = np.array([filt.GetMean(l) for l in range(1, n_components + 1)])
+    stds = np.array([filt.GetSigma(l) for l in range(1, n_components + 1)])
+    thrs = means - n_std * stds
+    print(f"[DEBUG] Step 4 - Label statistics: {time.perf_counter() - t0:.3f} s")
+
+    # --- Step 5: Conversion & threshold map ---------------------------------
+    t0 = time.perf_counter()
+    surround_arr = get_array_from_image(surround_ccs)
+    thrs_with_zero = np.concatenate([[0], thrs])
+    thrs_arr = np.take(thrs_with_zero, surround_arr)
+    print(f"[DEBUG] Step 5 - Array conversion + threshold map: {time.perf_counter() - t0:.3f} s")
+
+    # --- Step 6: Apply intensity mask ---------------------------------------
+    t0 = time.perf_counter()
+    image_arr = get_array_from_image(sitk.Mask(image, surround_mask))
+    extended_lesion_arr = (image_arr > thrs_arr).astype(np.uint8)
+    print(f"[DEBUG] Step 6 - Apply threshold: {time.perf_counter() - t0:.3f} s")
+
+    # --- Step 7: Recombine and return ---------------------------------------
+    t0 = time.perf_counter()
+    extended_lesion = get_image_from_array(extended_lesion_arr, lesion_mask)
+    extended_lesion = sitk.Cast(lesion_mask, sitk.sitkUInt8) | extended_lesion
+    print(f"[DEBUG] Step 7 - Recombine: {time.perf_counter() - t0:.3f} s")
+
+    print(f">>> Tempo totale funzione: {time.perf_counter() - start_total:.3f} s")
+    return extended_lesion
 
 def evaluate_region_wise(mask, gt):
     """
