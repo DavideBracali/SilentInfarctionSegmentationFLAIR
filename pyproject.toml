@@ -6,7 +6,7 @@ authors = [
 ]
 description = '3D segmentation of silent infarctions in FLAIR MRI images.'
 readme = 'README.md'
-requires-python = '>=3.5'
+requires-python = '>=3.9'
 license = {text = "MIT"}
 keywords = [
   'python',
@@ -39,7 +39,8 @@ dependencies = [
   'matplotlib',
   'seaborn',
   'pandas',
-  'scipy'
+  'scipy',
+  'bayesian-optimization'
 ]
 
 [project.urls]
