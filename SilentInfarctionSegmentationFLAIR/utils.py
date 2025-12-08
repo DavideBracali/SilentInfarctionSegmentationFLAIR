@@ -407,7 +407,7 @@ def to_n_bit(image, n_bits=8):
     return image_uint
 
 def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, pos_neg_stratify=False,
-                     gt_file="GT.nii", show=False):
+                     gt_file="GT.nii", show=False, save_series=True):
 
     """
     Split patients into train, validation and test sets based on imaging files found
@@ -452,7 +452,19 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, po
     - A `ratios.png` file is saved one directory above `data_folder`, showing the
       distributions of positive-label ratios for train/validation/test sets.
     """
-    
+
+    if not os.path.isdir(data_folder):
+        raise FileNotFoundError(f"data_folder not found: {data_folder}")
+
+    if not (0 <= validation_fraction < 1):
+        raise ValueError("validation_fraction must be in [0, 1)")
+
+    if not (0 <= test_fraction < 1):
+        raise ValueError("test_fraction must be in [0, 1)")
+
+    if validation_fraction + test_fraction >= 1:
+        raise ValueError("validation_fraction + test_fraction must be < 1")
+
     # organize all images in a df
     paths_list = []
     for root, _, files in os.walk(data_folder):
@@ -464,6 +476,9 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, po
     for root, file in paths_list:
         patient = os.path.basename(root)
         paths_df.loc[patient, file] = os.path.join(root, file)
+
+    if len(paths_list) == 0:
+        raise RuntimeError("No .nii files found inside data_folder")
 
     # drop NaN
     dropped_patients = paths_df.index[paths_df.isna().any(axis=1)]
@@ -481,7 +496,10 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, po
         label_stats.Execute(gt, gt)  # same image as input and label
         count_0 = label_stats.GetCount(0)
         count_1 = label_stats.GetCount(1) if label_stats.HasLabel(1) else 0
-        ratios.loc[patient] = (count_1 / (count_0 + count_1))
+        if count_0 + count_1 == 0:
+            raise ValueError(f"Ground truth for patient {patient} has no valid labels.")
+        else:
+            ratios.loc[patient] = (count_1 / (count_0 + count_1))
         
     q1 = ratios.quantile(0.25)
     q2 = ratios.quantile(0.50)
@@ -531,6 +549,7 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, po
         plot_list.append({"Set": "Validation", "Ratio": ratios[p]})
     for p in ts_patients:
         plot_list.append({"Set": "Test", "Ratio": ratios[p]})
+
     df_plot = pd.DataFrame(plot_list)
     plt.figure(figsize=(8, 6))
     sns.stripplot(data=df_plot, x="Set", y="Ratio", jitter=0.1, size=8)
@@ -538,6 +557,11 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, po
     plt.grid(axis='y', alpha=0.3)
     if show:        plt.show()
     plt.savefig(os.path.join(data_folder, "../ratios.png"))
+
+    if save_series:
+        pd.Series(tr_patients).to_pickle("../train_patients.pkl")
+        pd.Series(val_patients).to_pickle("../validation_patients.pkl")
+        pd.Series(ts_patients).to_pickle("../test_patients.pkl")
 
     return tr_patients, val_patients, ts_patients
 
