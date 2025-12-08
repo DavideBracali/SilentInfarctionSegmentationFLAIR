@@ -556,12 +556,12 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, po
     plt.title("Distribution of positive ratios per set")
     plt.grid(axis='y', alpha=0.3)
     if show:        plt.show()
-    plt.savefig(os.path.join(data_folder, "../ratios.png"))
+    plt.savefig(os.path.join(data_folder, "ratios.png"))
 
     if save_series:
-        pd.Series(tr_patients).to_pickle("../train_patients.pkl")
-        pd.Series(val_patients).to_pickle("../validation_patients.pkl")
-        pd.Series(ts_patients).to_pickle("../test_patients.pkl")
+        pd.Series(tr_patients).to_pickle(os.path.join(data_folder, "train_patients.pkl"))
+        pd.Series(val_patients).to_pickle(os.path.join(data_folder, "validation_patients.pkl"))
+        pd.Series(ts_patients).to_pickle(os.path.join(data_folder, "test_patients.pkl"))
 
     return tr_patients, val_patients, ts_patients
 
