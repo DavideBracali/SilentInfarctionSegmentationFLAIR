@@ -555,3 +555,41 @@ def test_all_patients_used(fake_data):
     existing = set(os.listdir(fake_data))
 
     assert existing == assigned
+
+
+def test_raise_all_errors():
+    """
+    Given:
+        - invalid folder
+        - invalid validation and test fractions
+        - a folder without .nii files
+    Then:
+        - repeatedly call train_val_test_split with bad parameters
+    Assert that:
+        - correct exceptions are raised each time
+    """
+
+    with pytest.raises(FileNotFoundError):
+        train_val_test_split("folder_that_does_not_exist")
+
+
+    dummy_folder = Path("dummy_test_folder")
+    dummy_folder.mkdir(exist_ok=True)
+
+    try:
+        with pytest.raises(ValueError):
+            train_val_test_split(str(dummy_folder), validation_fraction=-0.1)
+
+        with pytest.raises(ValueError):
+            train_val_test_split(str(dummy_folder), test_fraction=-0.5)
+
+        with pytest.raises(ValueError):
+            train_val_test_split(str(dummy_folder),
+                                 validation_fraction=0.7,
+                                 test_fraction=0.4)
+
+        with pytest.raises(RuntimeError):
+            train_val_test_split(str(dummy_folder), validation_fraction=0.1)
+
+    finally:
+        dummy_folder.rmdir()
