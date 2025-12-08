@@ -38,6 +38,7 @@ from SilentInfarctionSegmentationFLAIR.utils import resample_to_reference
 from SilentInfarctionSegmentationFLAIR.utils import label_names
 from SilentInfarctionSegmentationFLAIR.utils import get_paths_df
 from SilentInfarctionSegmentationFLAIR.utils import progress_bar
+from SilentInfarctionSegmentationFLAIR.utils import train_val_test_split
 
 
 
@@ -113,6 +114,29 @@ def gauss_noise_strategy_2D(draw):
     image = filter_.Execute()
 
     return image
+
+@pytest.fixture
+def fake_data(tmp_path):
+    """
+    Creates a temporary data folder for 4 patients containing 3 random images each
+    """
+    root = tmp_path / "data"
+    root.mkdir()
+
+    # create 4 fake patients
+    for pid, r in zip(["P1", "P2", "P3", "P4"], [0.1, 0.4, 0.6, 0.9]):
+        d = root / pid
+        d.mkdir()
+
+        img = sitk.Image(5, 5, sitk.sitkUInt8)
+        arr = np.where(np.random.rand(5, 5) < r, 1, 0).astype(np.uint8)
+        img = sitk.GetImageFromArray(arr)
+
+        sitk.WriteImage(img, str(d / "GT.nii"))
+        sitk.WriteImage(img, str(d / "A.nii"))
+        sitk.WriteImage(img, str(d / "B.nii"))
+
+    return root
 
 
 ##################
@@ -455,3 +479,79 @@ def test_progress_bar_basic_output(i, n):
 
     assert "Test" in captured
     assert f"{i+1}/{i+n}" in captured
+
+
+def test_train_val_test_split_valid_return(fake_data):
+    """
+    Given:
+        - a temporary dataset containing multiple patients
+        - a call to train_val_test_split with validation_fraction > 0 and test_fraction > 0
+    Then:
+        - the function returns three collections of patient IDs
+    Assert that:
+        - the returned outputs are lists of strings
+    """
+    tr, val, ts = train_val_test_split(
+        data_folder=str(fake_data),
+        validation_fraction=0.25,
+        test_fraction=0.25,
+        pos_neg_stratify=False
+    )
+
+    assert isinstance(tr, list)
+    assert isinstance(val, list)
+    assert isinstance(ts, list)
+
+    assert all(isinstance(p, str) for p in tr)
+    assert all(isinstance(p, str) for p in val)
+    assert all(isinstance(p, str) for p in ts)
+
+
+def test_no_overlap(fake_data):
+    """
+    Given:
+        - a temporary dataset containing multiple patients
+        - a call to train_val_test_split with validation_fraction > 0 and test_fraction > 0
+    Then:
+        - the function returns three collections of patient IDs
+    Assert that:
+        - there is no overlap between the three sets
+    """
+    tr, val, ts = train_val_test_split(
+        data_folder=str(fake_data),
+        validation_fraction=0.25,
+        test_fraction=0.25,
+        pos_neg_stratify=False
+    )
+
+    set_tr = set(tr)
+    set_val = set(val)
+    set_ts = set(ts)
+
+    assert set_tr.isdisjoint(set_val)
+    assert set_tr.isdisjoint(set_ts)
+    assert set_val.isdisjoint(set_ts)
+
+
+def test_all_patients_used(fake_data):
+    """
+    Given:
+        - a temporary dataset containing multiple patients
+        - a call to train_val_test_split with validation_fraction > 0 and test_fraction > 0
+    Then:
+        - the function returns three collections of patient IDs
+    Assert that:
+        - every patient in the folder is assigned to at least one set
+    """
+    tr, val, ts = train_val_test_split(
+        data_folder=str(fake_data),
+        validation_fraction=0.25,
+        test_fraction=0.25,
+        pos_neg_stratify=False
+    )
+
+    assigned = set(tr + val + ts)
+
+    existing = set(os.listdir(fake_data))
+
+    assert existing == assigned

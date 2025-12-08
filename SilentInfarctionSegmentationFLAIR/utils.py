@@ -405,3 +405,141 @@ def to_n_bit(image, n_bits=8):
     image_uint.CopyInformation(image)
     
     return image_uint
+
+def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, pos_neg_stratify=False,
+                     gt_file="GT.nii", show=False):
+
+    """
+    Split patients into train, validation and test sets based on imaging files found
+    in the given folder, optionally stratifying according to the ratio of positive/negative
+    labels in the ground-truth image.
+
+    Parameters
+    ----------
+    data_folder : str
+        Path to the root folder containing patient subdirectories, each holding
+        `.nii` files including the ground truth file.
+    validation_fraction : float, optional
+        Fraction of patients to include in the validation set. Default is 0.
+    test_fraction : float, optional
+        Fraction of patients to include in the test set. Default is 0.
+    pos_neg_stratify : bool, optional
+        If True, perform stratified sampling based on quartiles of the positive-label
+        ratio. Default is False.
+    gt_file : str, optional
+        Filename of the ground truth image inside each patient directory. Default is "GT.nii".
+    show : bool, optional
+        Whether to show the ratio distribution plot. Default is False.
+
+    Returns
+    -------
+    tr_patients : list of str
+        List of patient directory names assigned to the training set.
+    val_patients : list of str
+        List of patient directory names assigned to the validation set.
+    ts_patients : list of str
+        List of patient directory names assigned to the test set.
+
+    Notes
+    -----
+    - Patients missing one of the required `.nii` files are discarded.
+    - Positive/negative ratio is defined as:
+
+      ``ratio = count(label == 1) / (count(label == 0) + count(label == 1))``
+
+    - If `pos_neg_stratify=True`, the stratification is computed by dividing
+      patient ratios into quartiles and splitting proportionally within each group.
+    - A `ratios.png` file is saved one directory above `data_folder`, showing the
+      distributions of positive-label ratios for train/validation/test sets.
+    """
+    
+    # organize all images in a df
+    paths_list = []
+    for root, _, files in os.walk(data_folder):
+        for file in files:
+            if file.endswith(".nii"):
+                paths_list.append((root, file))
+
+    paths_df = pd.DataFrame()
+    for root, file in paths_list:
+        patient = os.path.basename(root)
+        paths_df.loc[patient, file] = os.path.join(root, file)
+
+    # drop NaN
+    dropped_patients = paths_df.index[paths_df.isna().any(axis=1)]
+    if len(dropped_patients) > 0:
+       print("WARNING!!! The following patients will be removed because " \
+                      f"one of the required images is missing: {list(dropped_patients)}")
+    paths_df = paths_df.dropna(how="any")
+
+    all_patients = list(paths_df.index)
+
+    ratios = pd.Series(index=all_patients)
+    for patient in all_patients:
+        gt = sitk.ReadImage(paths_df.loc[patient, gt_file])
+        label_stats = sitk.LabelStatisticsImageFilter()
+        label_stats.Execute(gt, gt)  # same image as input and label
+        count_0 = label_stats.GetCount(0)
+        count_1 = label_stats.GetCount(1) if label_stats.HasLabel(1) else 0
+        ratios.loc[patient] = (count_1 / (count_0 + count_1))
+        
+    q1 = ratios.quantile(0.25)
+    q2 = ratios.quantile(0.50)
+    q3 = ratios.quantile(0.75)
+
+    quartiles = pd.Series(index=all_patients, dtype=int)
+    quartiles[ratios <= q1] = 1
+    quartiles[(ratios > q1) & (ratios <= q2)] = 2
+    quartiles[(ratios > q2) & (ratios <= q3)] = 3
+    quartiles[ratios > q3] = 4
+
+    tr_patients = []
+    val_patients = []
+    ts_patients = []
+    if pos_neg_stratify:
+        for q in quartiles.unique():
+            patients_in_q = list(quartiles[quartiles == q].index.tolist())
+            n = len(patients_in_q)
+            n_val = int(n * validation_fraction)
+            n_ts = int(n * test_fraction)
+            n_tr = n - n_ts - n_val
+            np.random.shuffle(patients_in_q)
+
+            tr_patients.extend(patients_in_q[:n_tr])
+            val_patients.extend(patients_in_q[n_tr : n_tr + n_val])
+            ts_patients.extend(patients_in_q[n_tr + n_val : n_tr + n_val + n_ts])
+
+
+        remaining = list(set(all_patients) - set(tr_patients) - set(val_patients) - set(ts_patients))
+        tr_patients.extend(remaining)
+
+    else:
+        n = len(all_patients)
+        n_val = int(n * validation_fraction)
+        n_ts = int(n * test_fraction)
+        n_tr = n - n_ts - n_val
+        np.random.shuffle(list(all_patients))
+
+        tr_patients.extend(all_patients[:n_tr])
+        val_patients.extend(all_patients[n_tr : n_tr + n_val])
+        ts_patients.extend(all_patients[n_tr + n_val : n_tr + n_val + n_ts])
+
+    plot_list = []
+    for p in tr_patients:
+        plot_list.append({"Set": "Train", "Ratio": ratios[p]})
+    for p in val_patients:
+        plot_list.append({"Set": "Validation", "Ratio": ratios[p]})
+    for p in ts_patients:
+        plot_list.append({"Set": "Test", "Ratio": ratios[p]})
+    df_plot = pd.DataFrame(plot_list)
+    plt.figure(figsize=(8, 6))
+    sns.stripplot(data=df_plot, x="Set", y="Ratio", jitter=0.1, size=8)
+    plt.title("Distribution of positive ratios per set")
+    plt.grid(axis='y', alpha=0.3)
+    if show:        plt.show()
+    plt.savefig(os.path.join(data_folder, "../ratios.png"))
+
+    return tr_patients, val_patients, ts_patients
+
+
+
