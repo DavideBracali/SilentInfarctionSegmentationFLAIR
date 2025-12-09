@@ -552,7 +552,8 @@ def test_all_patients_used(fake_data):
 
     assigned = set(tr + val + ts)
 
-    existing = set(os.listdir(fake_data))
+    existing = set([d for d in os.listdir(fake_data)
+                    if os.path.isdir(os.path.join(fake_data, d))])
 
     assert existing == assigned
 
