@@ -407,7 +407,7 @@ def to_n_bit(image, n_bits=8):
     return image_uint
 
 def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, pos_neg_stratify=False,
-                     gt_file="GT.nii", show=False, save_series=True):
+                     gt_file="GT.nii", show=False, save_series=True, title=None):
 
     """
     Split patients into train, validation and test sets based on imaging files found
@@ -514,49 +514,114 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, po
     tr_patients = []
     val_patients = []
     ts_patients = []
+
     if pos_neg_stratify:
-        for q in quartiles.unique():
-            patients_in_q = list(quartiles[quartiles == q].index.tolist())
-            n = len(patients_in_q)
-            n_val = int(n * validation_fraction)
-            n_ts = int(n * test_fraction)
-            n_tr = n - n_ts - n_val
-            np.random.shuffle(patients_in_q)
+        total_n = len(all_patients)
+        total_val = int(round(total_n * validation_fraction))
+        total_ts = int(round(total_n * test_fraction))
 
-            tr_patients.extend(patients_in_q[:n_tr])
-            val_patients.extend(patients_in_q[n_tr : n_tr + n_val])
-            ts_patients.extend(patients_in_q[n_tr + n_val : n_tr + n_val + n_ts])
+        assigned_val = 0
+        assigned_ts = 0
+        remaining_pool = []
 
+        # proportional allocation per quartile
+        for q in sorted(quartiles.unique()):
+            group = list(quartiles[quartiles == q].index)
+            n = len(group)
+            if n == 0:
+                continue
 
-        remaining = list(set(all_patients) - set(tr_patients) - set(val_patients) - set(ts_patients))
-        tr_patients.extend(remaining)
+            prop = n / total_n
+            n_val_q = int(round(total_val * prop))
+            n_ts_q = int(round(total_ts * prop))
+
+            # cap by remaining budgets
+            n_val_q = min(n_val_q, total_val - assigned_val)
+            n_ts_q = min(n_ts_q, total_ts - assigned_ts)
+
+            # cap by group size
+            if n_val_q + n_ts_q > n:
+                excess = (n_val_q + n_ts_q) - n
+                reduce_ts = min(excess, n_ts_q)
+                n_ts_q -= reduce_ts
+                excess -= reduce_ts
+                if excess > 0:
+                    reduce_val = min(excess, n_val_q)
+                    n_val_q -= reduce_val
+
+            np.random.shuffle(group)
+
+            val_patients.extend(group[:n_val_q])
+            assigned_val += n_val_q
+
+            ts_patients.extend(group[n_val_q:n_val_q + n_ts_q])
+            assigned_ts += n_ts_q
+
+            remaining_pool.extend(group[n_val_q + n_ts_q:])
+
+        # fix rounding leftovers
+        np.random.shuffle(remaining_pool)
+
+        need_val = total_val - assigned_val
+        if need_val > 0:
+            val_patients.extend(remaining_pool[:need_val])
+            remaining_pool = remaining_pool[need_val:]
+
+        need_ts = total_ts - assigned_ts
+        if need_ts > 0:
+            ts_patients.extend(remaining_pool[:need_ts])
+            remaining_pool = remaining_pool[need_ts:]
+
+        tr_patients.extend(remaining_pool)
+
+        # enforce exact totals
+        if len(val_patients) < total_val:
+            diff = total_val - len(val_patients)
+            move = tr_patients[:diff]
+            val_patients.extend(move)
+            tr_patients = tr_patients[diff:]
+
+        if len(ts_patients) < total_ts:
+            diff = total_ts - len(ts_patients)
+            move = tr_patients[:diff]
+            ts_patients.extend(move)
+            tr_patients = tr_patients[diff:]
 
     else:
         n = len(all_patients)
-        n_val = int(n * validation_fraction)
-        n_ts = int(n * test_fraction)
-        n_tr = n - n_ts - n_val
-        np.random.shuffle(list(all_patients))
+        total_val = int(round(n * validation_fraction))
+        total_ts = int(round(n * test_fraction))
+        total_tr = n - total_val - total_ts
 
-        tr_patients.extend(all_patients[:n_tr])
-        val_patients.extend(all_patients[n_tr : n_tr + n_val])
-        ts_patients.extend(all_patients[n_tr + n_val : n_tr + n_val + n_ts])
+        np.random.shuffle(all_patients)
+        tr_patients = all_patients[:total_tr]
+        val_patients = all_patients[total_tr:total_tr + total_val]
+        ts_patients = all_patients[total_tr + total_val:total_tr + total_val + total_ts]
 
-    plot_list = []
-    for p in tr_patients:
-        plot_list.append({"Set": "Train", "Ratio": ratios[p]})
-    for p in val_patients:
-        plot_list.append({"Set": "Validation", "Ratio": ratios[p]})
-    for p in ts_patients:
-        plot_list.append({"Set": "Test", "Ratio": ratios[p]})
+    # build plotting df
+    df_plot = pd.DataFrame(
+        [{"Set": "Train", "Ratio": ratios[p]} for p in tr_patients] +
+        [{"Set": "Validation", "Ratio": ratios[p]} for p in val_patients] +
+        [{"Set": "Test", "Ratio": ratios[p]} for p in ts_patients]
+    )
 
-    df_plot = pd.DataFrame(plot_list)
     plt.figure(figsize=(8, 6))
+    sns.boxplot(data=df_plot,
+        x="Set",
+        y="Ratio",
+        showcaps=False,
+        showfliers=False,
+        boxprops={'facecolor':'none'},
+        whiskerprops={'linewidth':1},
+        medianprops={'linewidth':1}
+    )
     sns.stripplot(data=df_plot, x="Set", y="Ratio", jitter=0.1, size=8)
-    plt.title("Distribution of positive ratios per set")
     plt.grid(axis='y', alpha=0.3)
-    if show:        plt.show()
+    if show:    plt.show()
+    if title is not None: plt.title(title)
+    plt.ylabel("positive/total voxels ratio")
     plt.savefig(os.path.join(data_folder, "ratios.png"))
+    plt.close()
 
     if save_series:
         pd.Series(tr_patients).to_pickle(os.path.join(data_folder, "train_patients.pkl"))
@@ -564,6 +629,5 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, po
         pd.Series(ts_patients).to_pickle(os.path.join(data_folder, "test_patients.pkl"))
 
     return tr_patients, val_patients, ts_patients
-
 
 
