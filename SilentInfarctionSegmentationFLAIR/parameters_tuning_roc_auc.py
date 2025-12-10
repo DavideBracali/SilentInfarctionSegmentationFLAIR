@@ -116,6 +116,8 @@ keywords_to_remove = [
 ]
 labels_dict = label_names(label_name_file)
 
+gammas = np.linspace(0.5, 5.0, 10)
+
 def print_ram(prefix="RAM"):
     process = psutil.Process(os.getpid())
     ram_mb = process.memory_info().rss / 1024**2
@@ -207,8 +209,7 @@ def process_patient(args_tuple):
 
     gm = sitk.Mask(image, gm_mask)
 
-    gammas = np.linspace(0.1, 5, 10)
-    stats = pd.DataFrame(index=range(len(gammas)), columns=["gamma","TP","FP","P","N"])
+    stats = pd.DataFrame(index=range(len(gammas)), columns=["gamma","TPF","FPF","P","N","DSC"])
     for g, gamma in enumerate(gammas):
         # threshold
         thr_mask = threshold.main(image, gm, gamma=gamma, show=False, verbose=False)
@@ -234,7 +235,7 @@ def process_patient(args_tuple):
         stats.loc[g, "FPF"] = metrics["vw-FPF"]
         stats.loc[g, "P"] = np.sum(get_array_from_image(gt) > 0)
         stats.loc[g, "N"] = np.sum(get_array_from_image(gt) == 0)
-
+        stats.loc[g, "DSC"] = metrics["vw-DSC"]
     
     # AUC
     stats_sorted = stats.astype(float).sort_values(by="FPF")
@@ -244,6 +245,41 @@ def process_patient(args_tuple):
 
     return stats, auc_1p
 
+def plot_strip_tr_val(tr_dice, val_dice, title="DSC distribution by gamma", show=True, save_path=None):
+    """
+    strip plot for train and validation DSC given wide-format dataframes
+    (rows = patients, columns = gamma values)
+    """
+
+    # convert train set
+    df_tr = tr_dice.melt(var_name="gamma", value_name="DSC")
+    df_tr["Set"] = "Train"
+
+    # convert validation set
+    df_val = val_dice.melt(var_name="gamma", value_name="DSC")
+    df_val["Set"] = "Validation"
+
+    # merge
+    df_plot = pd.concat([df_tr, df_val], ignore_index=True)
+
+    plt.figure(figsize=(10, 6))
+    sns.stripplot(
+        data=df_plot,
+        x="gamma",
+        y="DSC",
+        hue="Set",
+        jitter=True,
+        alpha=0.8,
+        dodge=True
+    )
+
+    plt.title(title)
+    plt.grid(axis='y', alpha=0.3)
+    plt.legend()
+
+    if show:    plt.show()
+    if save_path is not None:   plt.savefig(save_path)
+    plt.close()
 
 def main(data_folder, results_folder, init_points, n_iter, n_cores):
  
@@ -312,7 +348,7 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
         # plot ROC
         plt.figure(figsize=(6,6))
         plt.plot(fpf_sorted, tpf_sorted)
-        plt.plot([0,1],[0,1], linestyle=".")
+        plt.plot([0,1],[0,1], linestyle="--")
         plt.title("Receiver Operating Characteristic (ROC) curve")
         plt.xlabel("False Positives Fraction")
         plt.ylabel("True Positives Fraction")
@@ -333,21 +369,23 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
 
     # create results folder
     os.makedirs(results_folder, exist_ok=True)
-
-    # check if there is an existing train/val split
-    if os.path.isfile(os.path.join(data_folder, "train_patients.pkl")
-        ) and os.path.isfile(os.path.join(data_folder, "validation_patients.pkl")):
-        tr_patients = list(pd.read_pickle(os.path.join(data_folder, "train_patients.pkl")))
-        val_patients = list(pd.read_pickle(os.path.join(data_folder, "validation_patients.pkl")))
-        print(f"Found train-validation split in '{data_folder}'. " \
-              f"{len(tr_patients)} patients will be used for training, {len(val_patients)} for validation.")
-    else:
-        tr_patients, val_patients, _ = train_val_test_split(data_folder,
-                                                validation_fraction=0.3, test_fraction=0.1,
-                                                pos_neg_stratify=True, show=False)
     
-    if not os.path.isfile(os.path.join(results_folder, "tr_aucs.npy")):
-
+    if os.path.isfile(os.path.join(results_folder, "best_params.pkl")):
+        best_params = pd.read_pickle(os.path.join(results_folder, "best_params.pkl")).to_dict()
+    else:
+        # check if there is an existing train/val split
+        if os.path.isfile(os.path.join(data_folder, "train_patients.pkl")
+            ) and os.path.isfile(os.path.join(data_folder, "validation_patients.pkl")):
+            tr_patients = list(pd.read_pickle(os.path.join(data_folder, "train_patients.pkl")))
+            val_patients = list(pd.read_pickle(os.path.join(data_folder, "validation_patients.pkl")))
+            print(f"Found train-validation split in '{data_folder}'. " \
+                f"{len(tr_patients)} patients will be used for training, {len(val_patients)} for validation.")
+        else:
+            tr_patients, val_patients, _ = train_val_test_split(data_folder,
+                                                    validation_fraction=0.3, test_fraction=0.1,
+                                                    pos_neg_stratify=True, show=False,
+                title="Stratification of train–validation–test split according to positive-to-total ratio")
+            
         if len(tr_patients) <= n_cores: # preload data (faster but heavy in RAM) 
             print(f"{len(tr_patients)} training patients and {n_cores} avalible cores. " \
                         "Preloading data in advance...")
@@ -357,26 +395,57 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
             print(f"{len(tr_patients)} training patients and {n_cores} avalible cores. " \
                     "Data will be loaded at each iteration...")
 
-        # maximize training DICE    
+        # maximize training AUC    
         optimizer = BayesianOptimization(f=auc_obj_global, pbounds=pbounds, random_state=42)
         optimizer.maximize(init_points=init_points, n_iter=n_iter)
         best_params = optimizer.max["params"]
-        pd.DataFrame(best_params).to_pickle(os.path.join(results_folder, "best_params.pkl"))
+        pd.DataFrame(best_params, index=[0]).to_pickle(os.path.join(results_folder, "best_params.pkl"))
         # tr_auc_list is a global variable defined inside auc_obj_global
-        np.save(os.path.join(results_folder, "tr_aucs.npy"), np.array(tr_auc_list))
-        res = optimizer.res
-        pd.DataFrame(res).to_pickle(os.path.join(results_folder, "history.pkl"))
-
-"""
-    # validation
-    val_data, _ = load_subjects(data_folder, patients=val_patients)
-    val_dice_list = [process_patient((val_data[patient],) + tuple(params[k]
-                                                             for k in list(pbounds.keys())))
-                    for patient in val_patients]
-    np.save(os.path.join(results_folder, "val_dice.npy"), np.array(val_dice_list))
-"""
+        np.save(os.path.join(results_folder, "tr_auc.npy"), np.array(tr_auc_list))
+        history = optimizer.res
+        pd.DataFrame(history).to_pickle(os.path.join(results_folder, "history.pkl"))
 
 
+    # training DICE with best params
+    if os.path.isfile(os.path.join(results_folder, "tr_dice.pkl")):
+        tr_dice = pd.read_pickle(os.path.join(results_folder, "tr_dice.pkl"))
+    else:
+        tr_data, _ = load_subjects(data_folder, patients=tr_patients)
+        tr_results = [process_patient((tr_data[patient],) + tuple(best_params[k]
+                                                                for k in list(pbounds.keys())))
+                        for patient in tr_patients]
+        tr_stats_list = [r[0] for r in tr_results]
+        rows = []
+        for stats in tr_stats_list:
+            s = stats.set_index("gamma")["DSC"]
+            s = s.reindex(gammas)
+            rows.append(s)
+        tr_dice = pd.DataFrame(rows, columns=gammas)
+        tr_dice.to_pickle(os.path.join(results_folder, "tr_dice.pkl"))
+
+
+    # validation DICE with best params
+    print("Validating best parameters on validation set...")
+    if os.path.isfile(os.path.join(results_folder, "val_dice.pkl")):
+        val_dice = pd.read_pickle(os.path.join(results_folder, "val_dice.pkl"))
+    else:
+        val_data, _ = load_subjects(data_folder, patients=val_patients)
+        val_results = [process_patient((val_data[patient],) + tuple(best_params[k]
+                                                                for k in list(pbounds.keys())))
+                        for patient in val_patients]
+        val_stats_list = [r[0] for r in val_results]
+        val_auc_list = [r[1] for r in val_results]
+        np.save(os.path.join(results_folder, "val_auc.npy"), np.array(val_auc_list))
+        rows = []
+        for stats in val_stats_list:
+            s = stats.set_index("gamma")["DSC"]
+            s = s.reindex(gammas)
+            rows.append(s)
+        val_dice = pd.DataFrame(rows, columns=gammas)
+        val_dice.to_pickle(os.path.join(results_folder, "val_dice.pkl"))
+
+    # plot
+    plot_strip_tr_val(tr_dice, val_dice, save_path=os.path.join(results_folder, "DSC_distributions.png"))
     
 
 if __name__ == '__main__':
