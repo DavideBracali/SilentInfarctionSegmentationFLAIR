@@ -17,7 +17,6 @@ import numpy as np
 import SimpleITK as sitk
 import matplotlib
 import pandas as pd
-from scipy.spatial import cKDTree
 
 matplotlib.use('Agg')
 sys.path.insert(0,
@@ -34,7 +33,6 @@ from SilentInfarctionSegmentationFLAIR.refinement import evaluate_region_wise
 from SilentInfarctionSegmentationFLAIR.refinement import pve_filter
 from SilentInfarctionSegmentationFLAIR.refinement import nearly_isotropic_kernel
 from SilentInfarctionSegmentationFLAIR.refinement import surrounding_filter
-from SilentInfarctionSegmentationFLAIR.refinement import gaussian_transform
 from SilentInfarctionSegmentationFLAIR.refinement import extend_lesions
 
 
@@ -625,68 +623,6 @@ def test_surrounding_filter_expected_results(ccs):
     points, counts, _ = surrounding_filter(ccs, n_components, pves)
     assert all(points == -2)
     assert counts[3] == n_components
-
-
-
-
-@given(
-    non_binary_image_strategy(),
-    st.floats(min_value=0, max_value=20),   # mean
-    st.floats(min_value=0.1, max_value=10)  # std > 0
-)
-@settings(max_examples=5, deadline=None)
-def test_gaussian_transform_valid_return(img, mean, std):
-    """
-    Given:
-        - a non-binary SimpleITK image (gray levels 10-15)
-        - mean and std for the Gaussian weighting
-    Then:
-        - apply gaussian_transform
-    Assert:
-        - output is a SimpleITK image
-        - output has same size, spacing, origin, direction as input
-        - all output pixel values are non-negative
-    """
-
-    enhanced = gaussian_transform(img, mean, std)
-    
-    arr_in = sitk.GetArrayFromImage(img)
-    arr_out = sitk.GetArrayFromImage(enhanced)
-    
-    assert isinstance(enhanced, sitk.Image)
-    assert enhanced.GetSize() == img.GetSize()
-    assert enhanced.GetSpacing() == img.GetSpacing()
-    assert enhanced.GetOrigin() == img.GetOrigin()
-    assert enhanced.GetDirection() == img.GetDirection()
-    assert np.all(arr_out >= 0)
-    assert arr_out.shape == arr_in.shape
-
-
-@given(non_binary_image_strategy(),
-    st.floats(min_value=0, max_value=20),
-    st.floats(min_value=0.1, max_value=10))
-@settings(max_examples=5, deadline=None)
-def test_gaussian_transform_peak_behavior(img, mean, std):
-    """
-    Given:
-        - a non-binary SimpleITK image
-        - mean and std for Gaussian weighting
-    Then:
-        - apply gaussian_transform
-    Assert:
-        - pixels close to 'mean' are enhanced more than pixels far from 'mean'
-    """
-
-    arr_in = sitk.GetArrayFromImage(img)
-    enhanced = gaussian_transform(img, mean, std, return_float=True)
-    arr_out = sitk.GetArrayFromImage(enhanced)
-    
-    # Pick one pixel close to mean, one far
-    diff = np.abs(arr_in - mean)
-    close_idx = np.unravel_index(np.argmin(diff), diff.shape)
-    far_idx = np.unravel_index(np.argmax(diff), diff.shape)
-    
-    assert arr_out[close_idx] >= arr_out[far_idx]
 
 
 @settings(deadline=None, max_examples=5)

@@ -101,7 +101,7 @@ def plot_multiple_histograms(images, bins=None, labels=None, title="Gray level h
 
     Returns
     -------
-        histograms (list): List of NumPy histograms in the format (counts: np.ndarray, bin_edges: np.ndarray).
+        hist_tables (list): List of NumPy histograms in the format (counts: np.ndarray, bin_edges: np.ndarray).
     """
 
     if labels is None:
@@ -149,10 +149,10 @@ def plot_multiple_histograms(images, bins=None, labels=None, title="Gray level h
     if save_path:
         plt.savefig(save_path)
 
+    plt.close()
 
     return hist_tables
 
-# !!!! per ora inutile...
 def histogram_stats(hist, q1=25, q2=75):
     """
     Estimate the mean and two percentiles from a histogram.

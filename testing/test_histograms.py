@@ -22,7 +22,7 @@ sys.path.insert(0,
 
 from SilentInfarctionSegmentationFLAIR.histograms import plot_histogram
 from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histograms
-from SilentInfarctionSegmentationFLAIR.histograms import histogram_stats  #!!!!!!!!! inutile occhio
+from SilentInfarctionSegmentationFLAIR.histograms import histogram_stats 
 from SilentInfarctionSegmentationFLAIR.histograms import gaussian_smooth_histogram
 from SilentInfarctionSegmentationFLAIR.histograms import mode_and_rhwhm
 

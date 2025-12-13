@@ -631,3 +631,56 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, po
     return tr_patients, val_patients, ts_patients
 
 
+def gaussian_transform(image, mean, std, return_float = False, normalized = False):
+    """
+    Apply a Gaussian weighting to the voxel intensities of a SimpleITK image.
+
+    Each voxel intensity `I` is transformed according to:
+        G(I) = exp(-0.5 * ((I - mean) / std)²) * I
+    If `return_float=True` and `normalized=True`, the result is further scaled by:
+        1 / (std * sqrt(2π))
+
+    Parameters
+    ----------
+    image : SimpleITK.Image
+        Input image with non-negative voxel intensities.
+    mean : float
+        Mean of the Gaussian distribution (center of enhancement).
+    std : float
+        Standard deviation of the Gaussian (controls the enhancement width).
+    return_float : bool, optional (default=False)
+        If True, return a float-valued image between 0 and 1.
+        If False, the result is cast back to the original voxel type.
+    normalized : bool, optional (default=False)
+        If True and `return_float=True`, apply the normalization factor
+        1 / (std * sqrt(2π)).
+
+    Returns
+    -------
+    SimpleITK.Image
+        The Gaussian-weighted image. Spacing, origin and direction are
+        preserved from the input image.
+
+    Raises
+    ------
+    ValueError
+        If the input image contains negative voxel intensities.
+    """
+    arr = get_array_from_image(image)
+
+    if np.any(arr < 0):
+        raise ValueError("The input image contains negative values.")
+
+    if return_float:
+        if normalized:
+            norm = 1 / (std * np.sqrt(2*np.pi))
+        else:
+            norm = 1
+        # return transformed image of floats between 0 and 1 
+        gaussian_arr = norm * np.exp(-0.5 * ((arr - mean) / std)**2)
+        return get_image_from_array(gaussian_arr, image, cast_to_reference=False)
+
+    else:
+        gaussian_arr = np.exp(-0.5 * ((arr - mean) / std)**2) * arr
+        # return transformed image with the same voxel type 
+        return get_image_from_array(gaussian_arr, image, cast_to_reference=True)
