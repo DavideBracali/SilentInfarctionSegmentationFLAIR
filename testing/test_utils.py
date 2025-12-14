@@ -41,6 +41,8 @@ from SilentInfarctionSegmentationFLAIR.utils import get_paths_df
 from SilentInfarctionSegmentationFLAIR.utils import progress_bar
 from SilentInfarctionSegmentationFLAIR.utils import train_val_test_split
 from SilentInfarctionSegmentationFLAIR.utils import gaussian_transform
+from SilentInfarctionSegmentationFLAIR.utils import cliffs_delta
+
 
 
 
@@ -150,6 +152,23 @@ def non_binary_image_strategy(draw):
     img = sitk.GetImageFromArray(arr)
 
     return img
+
+@st.composite
+def float_array_1d(draw, min_size=5, max_size=200):
+    """
+    Generate a uniformly distributed random 1D array of floats.
+    """
+    size = draw(st.integers(min_size, max_size))
+    arr = draw(stnp.arrays(
+        dtype=np.float64,
+        shape=(size,),
+        elements=st.floats(-100, 100, allow_nan=False, allow_infinity=False)
+    ))
+    return arr
+
+
+
+
 
 
 ##################
@@ -668,3 +687,69 @@ def test_gaussian_transform_peak_behavior(img, mean, std):
     far_idx = np.unravel_index(np.argmax(diff), diff.shape)
     
     assert arr_out[close_idx] >= arr_out[far_idx]
+
+
+@given(float_array_1d(), float_array_1d())
+@settings(max_examples=10, deadline=None)
+def test_cliffs_delta_valid_return(x, y):
+    """
+    Given:
+        - two 1D numeric arrays
+    Then:
+        - compute Cliff's Delta
+    Assert that:
+        - a float is returned
+        - result is bounded in [-1, 1]
+    """
+    delta = cliffs_delta(x, y)
+
+    assert isinstance(delta, float)
+    assert -1.0 <= delta <= 1.0
+
+
+@given(float_array_1d(), float_array_1d())
+@settings(max_examples=10, deadline=None)
+def test_cliffs_delta_antisymmetry(x, y):
+    """
+    Given:
+        - two 1D numeric arrays
+    Then:
+        - compute Cliff's Delta in both orders
+    Assert that:
+        - delta(x, y) == -delta(y, x)
+    """
+    d_xy = cliffs_delta(x, y)
+    d_yx = cliffs_delta(y, x)
+    assert np.isclose(d_xy, -d_yx)
+
+
+@given(float_array_1d())
+@settings(max_examples=10, deadline=None)
+def test_cliffs_delta_same_distribution_zero(x):
+    """
+    Given:
+        - a 1D numeric array
+    Then:
+        - compute Cliff's Delta with itself
+    Assert that:
+        - delta is approximately zero
+    """
+    delta = cliffs_delta(x, x)
+    assert np.isclose(delta, 0.0)
+
+
+@given(float_array_1d())
+@settings(max_examples=10, deadline=None)
+def test_cliffs_delta_perfect_separation(x):
+    """
+    Given:
+        - an array x
+    Then:
+        - create y strictly smaller than x
+    Assert that:
+        - Cliff's Delta is close to +1
+    """
+    y = x - 1000
+    delta = cliffs_delta(x, y)
+    assert np.isclose(delta, 1.0)
+

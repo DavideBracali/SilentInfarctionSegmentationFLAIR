@@ -684,3 +684,7 @@ def gaussian_transform(image, mean, std, return_float = False, normalized = Fals
         gaussian_arr = np.exp(-0.5 * ((arr - mean) / std)**2) * arr
         # return transformed image with the same voxel type 
         return get_image_from_array(gaussian_arr, image, cast_to_reference=True)
+
+def cliffs_delta(x, y):
+    diff = x[:, None] - y[None, :]
+    return (np.sum(diff > 0) - np.sum(diff < 0)) / (x.size * y.size)
