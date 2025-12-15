@@ -107,8 +107,8 @@ def plot_multiple_histograms(images, bins=None, labels=None, title="Gray level h
     if labels is None:
         labels = [f"Image {i+1}" for i in range(len(images))]
 
-    if show and ax is None:
-        ax=plt.gca()
+    if ax is None:
+        fig, ax = plt.subplots()
 
 
     hist_tables = []
@@ -134,22 +134,21 @@ def plot_multiple_histograms(images, bins=None, labels=None, title="Gray level h
         bins_width = bins_edges[1] - bins_edges[0]
         bins_center = (bins_edges[:-1] + bins_edges[1:]) / 2
 
-        if arr.size != 0 and show:
+        if arr.size != 0 and (show or save_path is not None):
             ax.bar(bins_center, counts, alpha=alpha, label=label,
                    width=bins_width, align='center')
+            ax.set_xlabel("Gray level (excluding black)" if no_bkg else "Gray level")
+            ax.set_ylabel("Density" if normalize else "Counts")
+            ax.set_title(title)
+            ax.legend(title=legend_title)
 
         hist_tables.append(hist)
 
-    if show:
-        ax.set_xlabel("Gray level (excluding black)" if no_bkg else "Gray level")
-        ax.set_ylabel("Density" if normalize else "Counts")
-        ax.set_title(title)
-        ax.legend(title=legend_title)
+        if save_path:
+            plt.savefig(save_path)
 
-    if save_path:
-        plt.savefig(save_path)
-
-    plt.close()
+        if show:
+            plt.show()
 
     return hist_tables
 

@@ -357,9 +357,10 @@ def progress_bar(iteration, total, start_time=None, prefix="", length=40):
         print()
 
 
-def to_n_bit(image, n_bits=8):
+def normalize(image, n_bits=8):
     """
-    Normalize an image to 0..(2^n_bits - 1) and cast to unsigned integer.
+    Normalize an image to 0..(2^n_bits - 1) using a min-max rescaling.
+    If n_bits == 0 and cast to float64, else cast to unsigned integer.
 
     Parameters
     ----------
@@ -371,7 +372,7 @@ def to_n_bit(image, n_bits=8):
     Returns
     -------
     SimpleITK.Image
-        Image normalized and cast to UInt{8,16,32} depending on n_bits
+        Image normalized and cast to UInt{8,16,32} or float32 depending on n_bits
     """
     stats = sitk.StatisticsImageFilter()
     stats.Execute(image)
@@ -379,7 +380,10 @@ def to_n_bit(image, n_bits=8):
     max_val = stats.GetMaximum()
     
     # data type
-    if n_bits <= 8:
+    if n_bits <= 1:
+        voxel_type = sitk.sitkFloat64
+        dtype = np.float64
+    elif n_bits <= 8:
         voxel_type = sitk.sitkUInt8
         dtype = np.uint8
     elif n_bits <= 16:
@@ -397,8 +401,10 @@ def to_n_bit(image, n_bits=8):
 
     arr = sitk.GetArrayFromImage(image)
     arr = (arr - min_val) / (max_val - min_val)  # 0..1
-    arr = arr * (2**n_bits - 1)                 # 0..2^n_bits-1
-    arr = np.round(arr).astype(dtype)
+    
+    if n_bits > 1:
+        arr = arr * (2**n_bits - 1)                 # 0..2^n_bits-1
+        arr = np.round(arr).astype(dtype)
     
     is_vector = image.GetNumberOfComponentsPerPixel() > 1
     image_uint = sitk.GetImageFromArray(arr, isVector=is_vector)
