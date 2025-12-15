@@ -187,7 +187,7 @@ def histogram_stats(hist, q1=25, q2=75):
     return mean, p1, p2, variance, skewness, kurt
 
 
-def gaussian_smooth_histogram(hist, sigma=3, show=True, ax=None):
+def gaussian_smooth_histogram(hist, sigma=5, show=True, ax=None):
     """
     Smoothens an histogram convoluting with a gaussian kernel, and optionally plots it.
 

@@ -39,7 +39,7 @@ def main(image, gm, gamma, gt=None, show=True, verbose=True,
                                          bins=[None,'auto'])
         gm_hist = hists[0]
     else:
-        gm_hist = plot_histogram(gm, no_bkg=True, show=show, ax=ax)
+        gm_hist = plot_histogram(gm, no_bkg=True, bins='fd', show=show, ax=ax)
     
     # smooth histogram with gaussian filter
     gm_smooth_hist = gaussian_smooth_histogram(gm_hist, show=show)

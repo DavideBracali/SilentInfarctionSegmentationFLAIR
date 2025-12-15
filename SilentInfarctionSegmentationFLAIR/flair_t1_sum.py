@@ -12,15 +12,15 @@ import numpy as np
 
 from SilentInfarctionSegmentationFLAIR.utils import (get_array_from_image,
                                                      get_image_from_array,
-                                                     to_n_bit)
+                                                     normalize)
 from SilentInfarctionSegmentationFLAIR.utils import gaussian_transform
 from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histograms
 
-def main(flair, t1, alpha, beta, wm_mask, gm_mask=None, gt=None, verbose=True):
+def main(flair, t1, alpha, beta, wm_mask, verbose=True):
 
-    # normalize FLAIR and T1
-    flair = to_n_bit(flair, 8)
-    t1 = to_n_bit(t1, 8)
+    # normalize FLAIR and T1 between 0 and 1 and cast to float32
+    flair = normalize(flair, 1)
+    t1 = normalize(t1, 1)
 
     # extract WM statistics from T1
     wm_t1 = sitk.Mask(t1, wm_mask)
@@ -38,8 +38,10 @@ def main(flair, t1, alpha, beta, wm_mask, gm_mask=None, gt=None, verbose=True):
     t1_gauss = gaussian_transform(t1, mean=wm_mean, std=alpha*wm_std)
     t1_gauss_arr = beta * get_array_from_image(t1_gauss)
     t1_gauss_scaled = get_image_from_array(
-        t1_gauss_arr, sitk.Cast(t1_gauss, sitk.sitkUInt16))
-    image = sitk.Cast(flair, sitk.sitkUInt16) + t1_gauss_scaled
-    image = to_n_bit(image, 8)
+        t1_gauss_arr, t1_gauss)
+    image = flair + t1_gauss_scaled
+
+    # cast to 8-bit unsigned int
+    image = normalize(image, 8)
     
     return image

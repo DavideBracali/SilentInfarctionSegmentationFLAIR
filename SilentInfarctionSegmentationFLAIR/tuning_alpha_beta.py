@@ -113,7 +113,6 @@ keywords_to_remove = [
 ]
 labels_dict = label_names(label_name_file)
 
-gammas = np.linspace(0.5, 5.0, 10)
 
 
 def load_subjects(data_folder, patients=None, paths_only=False):
