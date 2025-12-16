@@ -63,7 +63,7 @@ def get_mask_from_pve(pve, thr=1e-12):
     return mask
 
 
-def apply_threshold(image, thr, show=True, ax=None):
+def apply_threshold(image, thr, ax=None):
     """
     Applies a binary lower threshold to a SimpleITK image.
     Voxels with gray level >= thr will be set to 1, otherwise to 0.
@@ -87,16 +87,14 @@ def apply_threshold(image, thr, show=True, ax=None):
         return get_image_from_array(empty_arr, image)
 
     upper_thr = float(max_gl)
-    thr_image = sitk.BinaryThreshold(image, lowerThreshold=thr,
+    thr_mask = sitk.BinaryThreshold(image, lowerThreshold=thr,
                         upperThreshold=upper_thr)
 
-    if show:
-        if ax is None:
-            ax = plt.gca()
+    if ax is not None:
         ax.axvline(thr, linestyle='--', color='lime',
                 linewidth=2, label=f"Threshold ({thr:.1f})")
 
-    return thr_image
+    return thr_mask
 
 
 

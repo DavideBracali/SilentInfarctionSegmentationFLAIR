@@ -40,7 +40,8 @@ def plot_histogram(image, bins=None, title="Gray level histogram",
     -------
         hist (tuple): (counts: np.ndarray, bin_edges: np.ndarray)
     """
-
+    if ax is None:
+        fig, ax = plt.subplots()
     image_array = get_array_from_image(image)
     arr = image_array.flatten()
 
@@ -58,9 +59,7 @@ def plot_histogram(image, bins=None, title="Gray level histogram",
     bins_width = bins_edges[1] - bins_edges[0]
     bins_center = (bins_edges[:-1] + bins_edges[1:]) / 2
 
-    if arr.size != 0 and show:
-        if ax is None:
-            ax=plt.gca()
+    if arr.size != 0:
         ax.bar(bins_center, counts, alpha=alpha, width=bins_width, align='center')
         xlabel = "Gray level (excluding black)" if no_bkg else "Gray level"
         ax.set_xlabel(xlabel)
@@ -70,6 +69,8 @@ def plot_histogram(image, bins=None, title="Gray level histogram",
 
     if save_path is not None:
         plt.savefig(save_path)
+
+    if show:    plt.show()
 
     return hist
 
@@ -143,11 +144,12 @@ def plot_multiple_histograms(images, bins=None, labels=None, title="Gray level h
 
         hist_tables.append(hist)
 
-        if save_path:
-            plt.savefig(save_path)
+    if save_path:
+        plt.savefig(save_path)
 
-        if show:
-            plt.show()
+    if show:
+        plt.show()
+
     plt.close()
     return hist_tables
 
@@ -185,7 +187,7 @@ def histogram_stats(hist, q1=25, q2=75):
     return mean, p1, p2, variance, skewness, kurt
 
 
-def gaussian_smooth_histogram(hist, sigma=3, show=True, ax=None):
+def gaussian_smooth_histogram(hist, sigma=3, ax=None):
     """
     Smoothens an histogram convoluting with a gaussian kernel, and optionally plots it.
 
@@ -205,16 +207,14 @@ def gaussian_smooth_histogram(hist, sigma=3, show=True, ax=None):
     counts, bins = hist
     bins_center = (bins[:-1] + bins[1:]) / 2
     smooth_counts = gaussian_filter1d(counts, sigma=sigma)
-    if show:
-        if ax is None:
-            ax = plt.gca()
+    if ax is not None:
         ax.plot(bins_center, smooth_counts, 'r-', linewidth=2, 
             alpha=0.7, label=f'Gaussian smoothing (σ={sigma})')
     smooth_hist = (smooth_counts, bins)
     return smooth_hist
 
 
-def mode_and_rhwhm(hist, show=True, ax=None):
+def mode_and_rhwhm(hist, ax=None):
     """
     Computes mode (most frequent gray level) and Right-side Half Width at Half Maximum,
     and optionally plots them.
@@ -242,9 +242,7 @@ def mode_and_rhwhm(hist, show=True, ax=None):
     right_hm_gl = np.min(right_less_than_hm_gl)     # first time hist crosses the hm line
     rhwhm = right_hm_gl - mode
 
-    if show:
-        if ax is None:
-            ax = plt.gca()
+    if ax is not None:
         ax.axvline(mode, linestyle='--', color='red',
                 linewidth=2,label=f"Mode ({mode:.1f})")
         ax.annotate('',

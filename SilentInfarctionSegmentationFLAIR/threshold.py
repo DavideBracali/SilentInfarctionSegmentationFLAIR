@@ -8,50 +8,148 @@ Created on 2025-08-03 17:32:07
 
 import matplotlib.pyplot as plt
 import SimpleITK as sitk
+import os
+import argparse
+import numpy as np
 
-from SilentInfarctionSegmentationFLAIR.histograms import plot_histogram
-from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histograms
-from SilentInfarctionSegmentationFLAIR.histograms import gaussian_smooth_histogram
-from SilentInfarctionSegmentationFLAIR.histograms import mode_and_rhwhm
-from SilentInfarctionSegmentationFLAIR.segmentation import apply_threshold
-from SilentInfarctionSegmentationFLAIR.segmentation import evaluate_voxel_wise
-from SilentInfarctionSegmentationFLAIR.refinement import evaluate_region_wise
 
-def main(image, gm, gamma, show=True, verbose=True, save_path=None):
+from SilentInfarctionSegmentationFLAIR.histograms import (plot_histogram,
+                                                          gaussian_smooth_histogram,
+                                                          mode_and_rhwhm)
+from SilentInfarctionSegmentationFLAIR.segmentation import (apply_threshold,
+                                                            get_mask_from_segmentation)
+from SilentInfarctionSegmentationFLAIR.utils import (orient_image,
+                                                     resample_to_reference,
+                                                     plot_image,
+                                                     get_array_from_image)
 
-    # evaluation parameters
-    metrics_rw = []
-    metrics_vw = []
+
+#!!!!!!!!!!! FARE FILE INI
+gm_labels = [3, 8, 10, 11, 12, 13, 17, 18, 26,
+              42, 47, 49, 50, 51, 52, 53, 54, 62]
+wm_labels = [2, 7, 41, 46]
+flair_file = "FLAIR.nii"
+t1_file = "T1ontoFLAIR.nii"
+segm_file = "aseg.auto_noCCseg.nii"
+gm_pve_file = "pve_gm.nii"
+wm_pve_file = "pve_wm.nii"
+csf_pve_file = "pve_csf.nii"
+gt_file = "GT.nii"
+label_name_file = "data/FreeSurferColorLUT.txt"
+
+def parse_args():
+    description = (
+        "Computes a GM-based threshold using histogram mode and RHWHM. "
+        "Applies the threshold to the input image."
+    )
+
+    parser = argparse.ArgumentParser(description=description)
+
+    _ = parser.add_argument('--image',
+                            dest='image',
+                            action='store',
+                            type=str,
+                            required=True,
+                            help='Path to input image')
+
+    _ = parser.add_argument('--segm',
+                            dest='segm',
+                            action='store',
+                            type=str,
+                            required=True,
+                            help='Path to segmentation image')
+
+    _ = parser.add_argument('--gamma',
+                            dest='gamma',
+                            action='store',
+                            type=float,
+                            required=True,
+                            help='Gamma multiplier for RHWHM')
+
+    _ = parser.add_argument('--no_show',
+                            dest='show',
+                            action='store_false',
+                            help='Disable plot visualization')
+
+    _ = parser.add_argument('--no_verbose',
+                            dest='verbose',
+                            action='store_false',
+                            help='Disable verbose output')
+
+    _ = parser.add_argument('--save_dir',
+                            dest='save_dir',
+                            action='store',
+                            type=str,
+                            required=False,
+                            default=None,
+                            help='Directory where the figure and the segmentation mask will be saved')
+
+    args = parser.parse_args()
+    return args
+
+
+def main(image, gm_mask, gamma, show=False, verbose=True, save_dir=None):
 
     # initialize figure
-    if show:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-    else:
-        ax = None
+    fig, ax = plt.subplots()
 
     # compute gm histogram
-    gm_hist = plot_histogram(gm, no_bkg=True, bins='fd', show=show, ax=ax)
+    gm = sitk.Mask(image, gm_mask)
+    gm_hist = plot_histogram(gm, no_bkg=True, bins='fd', ax=ax, show=False)
     
     # smooth histogram with gaussian filter
-    gm_smooth_hist = gaussian_smooth_histogram(gm_hist, show=show)
+    gm_smooth_hist = gaussian_smooth_histogram(gm_hist, ax=ax)
 
     # find mode and right-side half width at half maximum
-    mode, rhwhm = mode_and_rhwhm(gm_smooth_hist, show=show)
+    mode, rhwhm = mode_and_rhwhm(gm_smooth_hist, ax=ax)
 
     # apply threshold
     thr = mode + gamma * rhwhm
     if verbose:
-        print(f"Applying threshold at gray level {thr:.1f} (gamma = {gamma:.1f})")
-    thr_mask = apply_threshold(image, float(thr), show=show)
+        print(f"Applying threshold at gray level {thr:.1f} (gamma = {gamma:.1f})...")
+    thr_mask = apply_threshold(image, float(thr), ax=ax)
 
     # plot additional details
     ax.legend()
     ax.set_title(f"GM histogram and threshold with γ={gamma}")
     plt.tight_layout()
     
-    if save_path is not None:   plt.savefig(save_path)
+    # save histogram and segmentation
+    if save_dir is not None:
+        os.makedirs(save_dir, exist_ok=True)
+        plt.savefig(os.path.join(save_dir, "thr.png"))
+        sitk.WriteImage(thr_mask, os.path.join(save_dir, "thr_mask.nii"))
 
-    if show:    plt.show()
+    if show:
+        plt.show()
+    plt.close()
+
+    if show or save_dir is not None:
+        _ = plot_image(image, mask=thr_mask,
+                title=f"Threshold segmented mask (γ = {gamma})",
+                show=show,
+                save_path=os.path.join(save_dir,"thr_mask.png")
+                    if save_dir else None)
 
     return thr_mask
+
+
+if __name__ == "__main__":
+
+    args = parse_args()
+
+    image = sitk.ReadImage(args.image)
+    image = orient_image(image, "RAS")
+
+    segm = sitk.ReadImage(args.segm, sitk.sitkUInt8)
+    segm = resample_to_reference(segm, image)
+    gm_mask = get_mask_from_segmentation(segm, gm_labels)
+
+    thr_mask = main(
+        image=image,
+        gm_mask=gm_mask,
+        gamma=args.gamma,
+        show=args.show,
+        verbose=args.verbose,
+        save_dir=args.save_dir
+    )

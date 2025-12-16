@@ -116,7 +116,8 @@ def get_image_from_array(image_array, reference_image=None, cast_to_reference=Tr
     return image
 
 
-def plot_image(image, xyz=None):
+def plot_image(image, xyz=None, mask=None, 
+               title=None, show=True, save_path=None):
     """
     Plots a 3D image using SimpleITK, Matplotlib.pyplot, Seaborn.
     You can specify the intersection between the three planes. By default it is
@@ -134,7 +135,6 @@ def plot_image(image, xyz=None):
     """
     image_array = get_array_from_image(image)
 
-    
     # default values: center of the image
     if xyz == None:
         xyz = tuple(int(np.round(image_array.shape[i] / 2)) for i in range(3))
@@ -156,18 +156,47 @@ def plot_image(image, xyz=None):
         _ = ax1.axis('off')
         _ = ax2.axis('off')
         
-        _ = ax0.imshow(image_array[:,:,xyz[2]].T, cmap='gray', 
-                       origin='lower', aspect=axial_aspect)        #xy
-        _ = ax1.imshow(image_array[xyz[0],:,:].T, cmap='gray',
-                       origin='lower', aspect=sagittal_aspect)     #yz
-        _ = ax2.imshow(image_array[:,xyz[1],:].T, cmap='gray',
-                       origin='lower', aspect=coronal_aspect)      #xz
+        if mask is not None:    # rgb
+            mask_arr = get_array_from_image(mask).astype(bool)
+            rgb_arr = np.zeros(image_array.shape + (3,))
+            rgb_arr = np.stack([image_array,
+                                image_array*(~mask_arr),
+                                image_array*(~mask_arr)],
+                                axis=-1)
+
+            
+            xy = np.transpose(rgb_arr[:,:,xyz[2],:], (1,0,2))
+            yz = np.transpose(rgb_arr[xyz[0],:,:,:], (1,0,2))
+            xz = np.transpose(rgb_arr[:,xyz[1],:,:], (1,0,2))
+
+            _ = ax0.imshow(xy,       
+                        origin='lower', aspect=axial_aspect)        #xy
+            _ = ax1.imshow(yz,
+                        origin='lower', aspect=sagittal_aspect)     #yz
+            _ = ax2.imshow(xz,
+                        origin='lower', aspect=coronal_aspect)      #xz
+            
+        else:                   # shades of gray
+            _ = ax0.imshow(image_array[:,:,xyz[2]].T, cmap='gray', 
+                        origin='lower', aspect=axial_aspect)        #xy
+            _ = ax1.imshow(image_array[xyz[0],:,:].T, cmap='gray',
+                        origin='lower', aspect=sagittal_aspect)     #yz
+            _ = ax2.imshow(image_array[:,xyz[1],:].T, cmap='gray',
+                        origin='lower', aspect=coronal_aspect)      #xz
 
         _ = ax0.set_title('Axial')
         _ = ax1.set_title('Sagittal')
         _ = ax2.set_title('Coronal')
 
-    plt.show()
+    if title is not None:
+        plt.suptitle(title, y=0.65)
+    
+    if save_path is not None:
+        plt.savefig(save_path)
+
+    if show:
+        plt.show()
+
     plt.close()
         
     # plot info
@@ -177,7 +206,7 @@ def plot_image(image, xyz=None):
        "aspects": (axial_aspect, sagittal_aspect, coronal_aspect)}
     
     return plot_info
-        
+
 
 def orient_image(image, orientation):
     
