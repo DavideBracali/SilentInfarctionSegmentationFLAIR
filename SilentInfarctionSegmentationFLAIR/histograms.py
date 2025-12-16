@@ -107,9 +107,8 @@ def plot_multiple_histograms(images, bins=None, labels=None, title="Gray level h
     if labels is None:
         labels = [f"Image {i+1}" for i in range(len(images))]
 
-    if ax is None:
+    if ax is None and (show or save_path is not None):
         fig, ax = plt.subplots()
-
 
     hist_tables = []
     for idx, (image, label) in enumerate(zip(images, labels)):    
@@ -149,7 +148,7 @@ def plot_multiple_histograms(images, bins=None, labels=None, title="Gray level h
 
         if show:
             plt.show()
-
+    plt.close()
     return hist_tables
 
 def histogram_stats(hist, q1=25, q2=75):
