@@ -286,7 +286,7 @@ def test_apply_threshold_valid_return(image, thr):
     
     arr = sitk.GetArrayFromImage(image)
 
-    mask = apply_threshold(image, thr, show=False)    
+    mask = apply_threshold(image, thr)    
     mask_arr = sitk.GetArrayFromImage(mask)
     
 
@@ -313,7 +313,7 @@ def test_threshold_lower_than_min(image):
     arr = sitk.GetArrayFromImage(image)
     min_gl = np.min(arr)
 
-    mask = apply_threshold(image, thr=float(min_gl-1e-6), show=False)
+    mask = apply_threshold(image, thr=float(min_gl-1e-6))
     
     mask_arr = sitk.GetArrayFromImage(mask)
 
@@ -336,7 +336,7 @@ def test_threshold_higher_than_max(image):
     arr = sitk.GetArrayFromImage(image)
     max_gl = np.max(arr)
 
-    mask = apply_threshold(image, thr=float(max_gl+1e-3), show=False)
+    mask = apply_threshold(image, thr=float(max_gl+1e-3))
     
     mask_arr = sitk.GetArrayFromImage(mask)
 

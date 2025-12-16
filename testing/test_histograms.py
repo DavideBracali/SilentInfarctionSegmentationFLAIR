@@ -238,7 +238,7 @@ def test_gaussian_smooth_histogram_valid_return(image, bins):
     """
     hist = plot_histogram(image, bins, show=False)
     counts, bins = hist
-    smooth_counts, smooth_bins = gaussian_smooth_histogram(hist, sigma=3, show=False)
+    smooth_counts, smooth_bins = gaussian_smooth_histogram(hist, sigma=3)
 
     assert isinstance(smooth_counts, np.ndarray)
     assert isinstance(smooth_bins, np.ndarray)
@@ -264,7 +264,7 @@ def test_gaussian_smooth_histogram_min_max(image, bins):
     """
     hist = plot_histogram(image, bins, show=False)
     counts, _ = hist
-    smooth_counts, _ = gaussian_smooth_histogram(hist, sigma=3, show=False)
+    smooth_counts, _ = gaussian_smooth_histogram(hist, sigma=3)
 
     assert smooth_counts.min() >= min(counts)
     assert smooth_counts.max() <= max(counts)
@@ -291,7 +291,7 @@ def test_mode_and_rhwhm_valid_return(image, bins):
 
     hist = plot_histogram(image, bins, show=False)
     _, edges = hist
-    mode, rhwhm = mode_and_rhwhm(hist, show=False)
+    mode, rhwhm = mode_and_rhwhm(hist)
 
     assert isinstance(mode, float) or isinstance(mode, np.floating)
     assert isinstance(rhwhm, float) or isinstance(rhwhm, np.floating)
