@@ -23,8 +23,7 @@ import seaborn as sns
 import psutil
 sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
 
-from SilentInfarctionSegmentationFLAIR.utils import (to_n_bit,
-                                                     orient_image,
+from SilentInfarctionSegmentationFLAIR.utils import (orient_image,
                                                      resample_to_reference,
                                                      get_array_from_image,
                                                      get_image_from_array,
@@ -164,11 +163,10 @@ def load_subjects(data_folder, patients=None, paths_only=False):
     data = {}
     if paths_only == False:
         for patient in paths_df.index:
-            flair = to_n_bit(
-                orient_image(sitk.ReadImage(paths_df.loc[patient, flair_file]), "RAS"), 8
-            )
+            flair = sitk.ReadImage(paths_df.loc[patient, flair_file])
+            flair = orient_image(flair, "RAS")
 
-            t1 = to_n_bit(sitk.ReadImage(paths_df.loc[patient, t1_file]), 8)
+            t1 = sitk.ReadImage(paths_df.loc[patient, t1_file])
             t1 = resample_to_reference(t1, flair)
 
             gt = resample_to_reference(sitk.ReadImage(paths_df.loc[patient, gt_file]), flair)
@@ -312,7 +310,7 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
 
             separation_list.extend(results)  
             
-        print("Elapsed time:", time.time()-start)
+        print(f"Elapsed time: {(time.time()-start):.3g})")
         return separation_list
 
     def separation_obj_mean(*args, **kwargs):
@@ -327,23 +325,21 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
     os.makedirs(results_folder, exist_ok=True)
     
     # train-val-test split
-    if os.path.isfile(os.path.join(results_folder, "tr_separation.npy")):
-        best_params = pd.read_pickle(os.path.join(results_folder, "best_params.pkl")).to_dict()
-        tr_separation_list = np.load(os.path.join(results_folder, "tr_separation.npy"))
+    if os.path.isfile(os.path.join(data_folder, "train_patients.pkl")
+        ) and os.path.isfile(os.path.join(data_folder, "validation_patients.pkl")):
+        tr_patients = list(pd.read_pickle(os.path.join(data_folder, "train_patients.pkl")))
+        val_patients = list(pd.read_pickle(os.path.join(data_folder, "validation_patients.pkl")))
+        print(f"Found train-validation split in '{data_folder}'. " \
+            f"{len(tr_patients)} patients will be used for training, {len(val_patients)} for validation.")
     else:
-        # check if there is an existing train/val split
-        if os.path.isfile(os.path.join(data_folder, "train_patients.pkl")
-            ) and os.path.isfile(os.path.join(data_folder, "validation_patients.pkl")):
-            tr_patients = list(pd.read_pickle(os.path.join(data_folder, "train_patients.pkl")))
-            val_patients = list(pd.read_pickle(os.path.join(data_folder, "validation_patients.pkl")))
-            print(f"Found train-validation split in '{data_folder}'. " \
-                f"{len(tr_patients)} patients will be used for training, {len(val_patients)} for validation.")
-        else:
-            tr_patients, val_patients, _ = train_val_test_split(data_folder,
-                                                    validation_fraction=0.3, test_fraction=0.1,
-                                                    pos_neg_stratify=True, show=False,
-                title="Stratification of train–validation–test split according to positive-to-total ratio")
-            
+        tr_patients, val_patients, _ = train_val_test_split(data_folder,
+                                                validation_fraction=0.3, test_fraction=0.1,
+                                                show=False,
+            title="Stratification of train–validation–test split according to positive-to-total ratio")
+
+    # optimization
+    if not os.path.isfile(os.path.join(results_folder, "best_params.pkl")):
+        
         if len(tr_patients) <= n_cores: # preload data (faster but heavy in RAM) 
             print(f"{len(tr_patients)} training patients and {n_cores} avalible cores. " \
                         "Preloading data in advance...")
@@ -363,6 +359,21 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
         history = optimizer.res
         pd.DataFrame(history).to_pickle(os.path.join(results_folder, "history.pkl"))
 
+    else:
+
+        best_params = pd.read_pickle(os.path.join(results_folder, "best_params.pkl")).iloc[0].to_dict()
+        if os.path.isfile(os.path.join(results_folder, "tr_separation.npy")):
+            tr_separation_list = np.load(os.path.join(results_folder, "tr_separation.npy"))
+        else:
+            print("Evaluating best parameters on training set...")
+            tr_separation_list = separation_obj(alpha=best_params["alpha"],
+                                                beta=best_params["beta"],
+                                                train_patients=tr_patients,
+                                                data=None)
+            np.save(os.path.join(results_folder, "tr_separation.npy"), tr_separation_list)
+
+            
+
     # validation
     print("Validating best parameters on validation set...")
     if os.path.isfile(os.path.join(results_folder, "val_separation.npy")):
@@ -375,6 +386,15 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
         np.save(os.path.join(results_folder, "val_separation.npy"), np.array(val_separation_list))
 
 
+    print("\nBest parameters: ")
+    for k, v in best_params.items():
+        print(f"{k} = {v}")
+    
+    print("Average separation on training set: "\
+          f"{np.mean(tr_separation_list):.3g} ± {np.std(tr_separation_list):.3g}")
+    
+    print("Average separation on validation set: "\
+          f"{np.mean(val_separation_list):.3g} ± {np.std(val_separation_list):.3g}")
     
 
 if __name__ == '__main__':
@@ -383,4 +403,4 @@ if __name__ == '__main__':
 
     start_time = time.time()
     main(args.data_folder, args.results_folder, args.init_points, args.n_iter, args.n_cores)
-    print(f"Elapsed time: {(time.time()-start_time):.2f} s")
+    print(f"Elapsed time: {(time.time()-start_time):.3g} s")
