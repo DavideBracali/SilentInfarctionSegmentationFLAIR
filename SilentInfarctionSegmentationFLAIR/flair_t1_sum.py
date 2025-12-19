@@ -9,6 +9,7 @@ Created on 2025-08-18 12:10:40
 import SimpleITK as sitk
 import os
 import argparse
+import yaml
 
 from SilentInfarctionSegmentationFLAIR.utils import (get_array_from_image,
                                                      get_image_from_array,
@@ -20,18 +21,21 @@ from SilentInfarctionSegmentationFLAIR.utils import (get_array_from_image,
 from SilentInfarctionSegmentationFLAIR.segmentation import get_mask_from_segmentation
 from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histograms
 
-#!!!!!!!!!!! FARE FILE INI
-gm_labels = [3, 8, 10, 11, 12, 13, 17, 18, 26,
-              42, 47, 49, 50, 51, 52, 53, 54, 62]
-wm_labels = [2, 7, 41, 46]
-flair_file = "FLAIR.nii"
-t1_file = "T1ontoFLAIR.nii"
-segm_file = "aseg.auto_noCCseg.nii"
-gm_pve_file = "pve_gm.nii"
-wm_pve_file = "pve_wm.nii"
-csf_pve_file = "pve_csf.nii"
-gt_file = "GT.nii"
-label_name_file = "data/FreeSurferColorLUT.txt"
+# load constants from yaml file
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
+
+gm_labels = config["labels"]["gm"]
+wm_labels = config["labels"]["wm"]
+
+flair_file = config["files"]["flair"]
+t1_file = config["files"]["t1"]
+segm_file = config["files"]["segmentation"]
+gm_pve_file = config["files"]["gm_pve"]
+wm_pve_file = config["files"]["wm_pve"]
+csf_pve_file = config["files"]["csf_pve"]
+gt_file = config["files"]["gt"]
+label_name_file = config["files"]["label_name"]
 
 def parse_args():
     description = (
