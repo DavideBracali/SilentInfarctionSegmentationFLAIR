@@ -441,8 +441,8 @@ def normalize(image, n_bits=8):
     
     return image_uint
 
-def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, pos_neg_stratify=False,
-                     gt_file="GT.nii", show=False, save_series=True, title=None):
+def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, 
+                        gt_file="GT.nii", show=False, save_series=True, title=None):
 
     """
     Split patients into train, validation and test sets based on imaging files found
@@ -524,17 +524,33 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, po
 
     all_patients = list(paths_df.index)
 
-    ratios = pd.Series(index=all_patients)
+    ratios = {}
+    excluded_patients = []
     for patient in all_patients:
         gt = sitk.ReadImage(paths_df.loc[patient, gt_file])
         label_stats = sitk.LabelStatisticsImageFilter()
-        label_stats.Execute(gt, gt)  # same image as input and label
+        label_stats.Execute(gt, gt)
+
         count_0 = label_stats.GetCount(0)
         count_1 = label_stats.GetCount(1) if label_stats.HasLabel(1) else 0
+
         if count_0 + count_1 == 0:
             raise ValueError(f"Ground truth for patient {patient} has no valid labels.")
-        else:
-            ratios.loc[patient] = (count_1 / (count_0 + count_1))
+
+        if count_1 == 0:
+            excluded_patients.append(patient)
+            continue
+
+        ratios[patient] = count_1 / (count_0 + count_1)
+
+    ratios = pd.Series(ratios)
+    all_patients = list(ratios.index)
+
+    if len(excluded_patients) > 0:
+        print(
+            f"[INFO] Excluding {len(excluded_patients)} patients with zero lesion ratio: "
+            f"{excluded_patients}"
+        )
         
     q1 = ratios.quantile(0.25)
     q2 = ratios.quantile(0.50)
@@ -550,88 +566,76 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, po
     val_patients = []
     ts_patients = []
 
-    if pos_neg_stratify:
-        total_n = len(all_patients)
-        total_val = int(round(total_n * validation_fraction))
-        total_ts = int(round(total_n * test_fraction))
+    total_n = len(all_patients)
+    total_val = int(round(total_n * validation_fraction))
+    total_ts = int(round(total_n * test_fraction))
 
-        assigned_val = 0
-        assigned_ts = 0
-        remaining_pool = []
+    assigned_val = 0
+    assigned_ts = 0
+    remaining_pool = []
 
-        # proportional allocation per quartile
-        for q in sorted(quartiles.unique()):
-            group = list(quartiles[quartiles == q].index)
-            n = len(group)
-            if n == 0:
-                continue
+    # proportional allocation per quartile
+    for q in sorted(quartiles.unique()):
+        group = list(quartiles[quartiles == q].index)
+        n = len(group)
+        if n == 0:
+            continue
 
-            prop = n / total_n
-            n_val_q = int(round(total_val * prop))
-            n_ts_q = int(round(total_ts * prop))
+        prop = n / total_n
+        n_val_q = int(round(total_val * prop))
+        n_ts_q = int(round(total_ts * prop))
 
-            # cap by remaining budgets
-            n_val_q = min(n_val_q, total_val - assigned_val)
-            n_ts_q = min(n_ts_q, total_ts - assigned_ts)
+        # cap by remaining budgets
+        n_val_q = min(n_val_q, total_val - assigned_val)
+        n_ts_q = min(n_ts_q, total_ts - assigned_ts)
 
-            # cap by group size
-            if n_val_q + n_ts_q > n:
-                excess = (n_val_q + n_ts_q) - n
-                reduce_ts = min(excess, n_ts_q)
-                n_ts_q -= reduce_ts
-                excess -= reduce_ts
-                if excess > 0:
-                    reduce_val = min(excess, n_val_q)
-                    n_val_q -= reduce_val
+        # cap by group size
+        if n_val_q + n_ts_q > n:
+            excess = (n_val_q + n_ts_q) - n
+            reduce_ts = min(excess, n_ts_q)
+            n_ts_q -= reduce_ts
+            excess -= reduce_ts
+            if excess > 0:
+                reduce_val = min(excess, n_val_q)
+                n_val_q -= reduce_val
 
-            np.random.shuffle(group)
+        np.random.shuffle(group)
 
-            val_patients.extend(group[:n_val_q])
-            assigned_val += n_val_q
+        val_patients.extend(group[:n_val_q])
+        assigned_val += n_val_q
 
-            ts_patients.extend(group[n_val_q:n_val_q + n_ts_q])
-            assigned_ts += n_ts_q
+        ts_patients.extend(group[n_val_q:n_val_q + n_ts_q])
+        assigned_ts += n_ts_q
 
-            remaining_pool.extend(group[n_val_q + n_ts_q:])
+        remaining_pool.extend(group[n_val_q + n_ts_q:])
 
-        # fix rounding leftovers
-        np.random.shuffle(remaining_pool)
+    # fix rounding leftovers
+    np.random.shuffle(remaining_pool)
 
-        need_val = total_val - assigned_val
-        if need_val > 0:
-            val_patients.extend(remaining_pool[:need_val])
-            remaining_pool = remaining_pool[need_val:]
+    need_val = total_val - assigned_val
+    if need_val > 0:
+        val_patients.extend(remaining_pool[:need_val])
+        remaining_pool = remaining_pool[need_val:]
 
-        need_ts = total_ts - assigned_ts
-        if need_ts > 0:
-            ts_patients.extend(remaining_pool[:need_ts])
-            remaining_pool = remaining_pool[need_ts:]
+    need_ts = total_ts - assigned_ts
+    if need_ts > 0:
+        ts_patients.extend(remaining_pool[:need_ts])
+        remaining_pool = remaining_pool[need_ts:]
 
-        tr_patients.extend(remaining_pool)
+    tr_patients.extend(remaining_pool)
 
-        # enforce exact totals
-        if len(val_patients) < total_val:
-            diff = total_val - len(val_patients)
-            move = tr_patients[:diff]
-            val_patients.extend(move)
-            tr_patients = tr_patients[diff:]
+    # enforce exact totals
+    if len(val_patients) < total_val:
+        diff = total_val - len(val_patients)
+        move = tr_patients[:diff]
+        val_patients.extend(move)
+        tr_patients = tr_patients[diff:]
 
-        if len(ts_patients) < total_ts:
-            diff = total_ts - len(ts_patients)
-            move = tr_patients[:diff]
-            ts_patients.extend(move)
-            tr_patients = tr_patients[diff:]
-
-    else:
-        n = len(all_patients)
-        total_val = int(round(n * validation_fraction))
-        total_ts = int(round(n * test_fraction))
-        total_tr = n - total_val - total_ts
-
-        np.random.shuffle(all_patients)
-        tr_patients = all_patients[:total_tr]
-        val_patients = all_patients[total_tr:total_tr + total_val]
-        ts_patients = all_patients[total_tr + total_val:total_tr + total_val + total_ts]
+    if len(ts_patients) < total_ts:
+        diff = total_ts - len(ts_patients)
+        move = tr_patients[:diff]
+        ts_patients.extend(move)
+        tr_patients = tr_patients[diff:]
 
     # build plotting df
     df_plot = pd.DataFrame(

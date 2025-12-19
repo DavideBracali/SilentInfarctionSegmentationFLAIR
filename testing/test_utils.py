@@ -526,9 +526,7 @@ def test_train_val_test_split_valid_return(fake_data):
     tr, val, ts = train_val_test_split(
         data_folder=str(fake_data),
         validation_fraction=0.25,
-        test_fraction=0.25,
-        pos_neg_stratify=False
-    )
+        test_fraction=0.25)
 
     assert isinstance(tr, list)
     assert isinstance(val, list)
@@ -552,9 +550,7 @@ def test_no_overlap(fake_data):
     tr, val, ts = train_val_test_split(
         data_folder=str(fake_data),
         validation_fraction=0.25,
-        test_fraction=0.25,
-        pos_neg_stratify=False
-    )
+        test_fraction=0.25)
 
     set_tr = set(tr)
     set_val = set(val)
@@ -578,9 +574,7 @@ def test_all_patients_used(fake_data):
     tr, val, ts = train_val_test_split(
         data_folder=str(fake_data),
         validation_fraction=0.25,
-        test_fraction=0.25,
-        pos_neg_stratify=False
-    )
+        test_fraction=0.25)
 
     assigned = set(tr + val + ts)
 
