@@ -34,7 +34,8 @@ def parse_args():
         allow_abbrev=True,
         exit_on_error=True,
         description=description,
-        epilog=f'SilentInfarctionSegmentationFLAIR Python package v{__version__}'
+        epilog=f'SilentInfarctionSegmentationFLAIR \
+            Python package v{__version__}'
     )
 
     parser.add_argument(
@@ -170,14 +171,22 @@ if __name__ == '__main__':
     if gt is not None:
         print("Computing evaluation metrics AFTER THRESHOLDING...")
         thr_results = evaluate_voxel_wise(thr_mask, gt)
-        print(f"  - True positives fraction: {thr_results['vw-TPF']:.3g}")
-        print(f"  - False positives fraction: {thr_results['vw-FPF']:.3g}")
-        print(f"  - DICE coefficient: {thr_results['vw-DSC']:.3g}")
-        print(f"  - Mattheus correlation coefficient: {thr_results['vw-MCC']:.3g}")
+        print(f"  - True positives fraction: \
+              {thr_results['vw-TPF']:.3g}")
+        print(f"  - False positives fraction: \
+              {thr_results['vw-FPF']:.3g}")
+        print(f"  - DICE coefficient: \
+              {thr_results['vw-DSC']:.3g}")
+        print(f"  - Mattheus correlation coefficient: \
+              {thr_results['vw-MCC']:.3g}")
 
         print("Computing evaluation metrics AFTER REFINEMENT STEP:")
         ref_results = evaluate_voxel_wise(ref_mask, gt)
-        print(f"  - True positives fraction: {ref_results['vw-TPF']:.3g}")
-        print(f"  - False positives fraction: {ref_results['vw-FPF']:.3g}")
-        print(f"  - DICE coefficient: {ref_results['vw-DSC']:.3g}")
-        print(f"  - Mattheus correlation coefficient: {ref_results['vw-MCC']:.3g}")
+        print(f"  - True positives fraction: \
+              {ref_results['vw-TPF']:.3g}")
+        print(f"  - False positives fraction: \
+              {ref_results['vw-FPF']:.3g}")
+        print(f"  - DICE coefficient: \
+              {ref_results['vw-DSC']:.3g}")
+        print(f"  - Mattheus correlation coefficient: \
+              {ref_results['vw-MCC']:.3g}")
