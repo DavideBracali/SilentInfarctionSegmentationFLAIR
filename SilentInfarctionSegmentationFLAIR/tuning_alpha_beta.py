@@ -313,7 +313,7 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
 
             separation_list.extend(results)  
             
-        print(f"Elapsed time: {(time.time()-start):.3g})")
+        print(f"Elapsed time: {(time.time()-start):.3g} s")
         return separation_list
 
     def separation_obj_mean(*args, **kwargs):
