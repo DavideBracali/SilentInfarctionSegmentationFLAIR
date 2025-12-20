@@ -356,23 +356,22 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
         optimizer.maximize(init_points=init_points, n_iter=n_iter)
         best_params = optimizer.max["params"]
         pd.DataFrame(best_params, index=[0]).to_pickle(os.path.join(results_folder, "best_params.pkl"))
-        # tr_separation_list is a global variable defined inside auc_obj_global
-        np.save(os.path.join(results_folder, "tr_separation.npy"), np.array(tr_separation_list))
         history = optimizer.res
         pd.DataFrame(history).to_pickle(os.path.join(results_folder, "history.pkl"))
 
     else:
-
         best_params = pd.read_pickle(os.path.join(results_folder, "best_params.pkl")).iloc[0].to_dict()
-        if os.path.isfile(os.path.join(results_folder, "tr_separation.npy")):
-            tr_separation_list = np.load(os.path.join(results_folder, "tr_separation.npy"))
-        else:
-            print("Evaluating best parameters on training set...")
-            tr_separation_list = separation_obj(alpha=best_params["alpha"],
-                                                beta=best_params["beta"],
-                                                train_patients=tr_patients,
-                                                data=None)
-            np.save(os.path.join(results_folder, "tr_separation.npy"), tr_separation_list)
+    
+    # training performance
+    if os.path.isfile(os.path.join(results_folder, "tr_separation.npy")):
+        tr_separation_list = np.load(os.path.join(results_folder, "tr_separation.npy"))
+    else:
+        print("Evaluating best parameters on training set...")
+        tr_separation_list = separation_obj(alpha=best_params["alpha"],
+                                            beta=best_params["beta"],
+                                            train_patients=tr_patients,
+                                            data=None)
+        np.save(os.path.join(results_folder, "tr_separation.npy"), tr_separation_list)
 
             
 
