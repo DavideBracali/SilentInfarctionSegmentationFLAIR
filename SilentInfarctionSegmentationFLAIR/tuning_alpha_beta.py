@@ -14,13 +14,10 @@ import argparse
 import gc
 import yaml
 from bayes_opt import BayesianOptimization
+from scipy.stats import mode
 import time
 import multiprocessing as mp
-import matplotlib
-matplotlib.use("Agg")
-from matplotlib import pyplot as plt
-import seaborn as sns
-import psutil
+
 sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
 
 from SilentInfarctionSegmentationFLAIR.utils import (orient_image,
@@ -56,7 +53,7 @@ def parse_args():
                             action='store',
                             type=str,
                             required=False,
-                            default="training",
+                            default="tuning_alpha_beta",
                             help='Path of the folder where data is located')
 
     _ = parser.add_argument('--init_points',
@@ -99,7 +96,6 @@ with open("config.yaml", "r") as f:
 
 gm_labels = config["labels"]["gm"]
 wm_labels = config["labels"]["wm"]
-keywords_to_remove = config["labels"]["keywords_to_remove"]
 
 flair_file = config["files"]["flair"]
 t1_file = config["files"]["t1"]
@@ -164,12 +160,15 @@ def load_subjects(data_folder, patients=None, paths_only=False):
             flair = orient_image(flair, "RAS")
 
             t1 = sitk.ReadImage(paths_df.loc[patient, t1_file])
-            t1 = resample_to_reference(t1, flair)
+            t1 = resample_to_reference(t1, flair,
+                                       sitk.sitkLinear)
 
-            gt = resample_to_reference(sitk.ReadImage(paths_df.loc[patient, gt_file]), flair)
+            gt = resample_to_reference(sitk.ReadImage(paths_df.loc[patient, gt_file]), flair,
+                                       sitk.sitkNearestNeighbor)
             gt = sitk.Cast(gt, sitk.sitkUInt8)
 
-            segm = resample_to_reference(sitk.ReadImage(paths_df.loc[patient, segm_file]), flair)
+            segm = resample_to_reference(sitk.ReadImage(paths_df.loc[patient, segm_file]), flair,
+                                         sitk.sitkNearestNeighbor)
             gm_mask = get_mask_from_segmentation(segm, gm_labels)
             wm_mask = get_mask_from_segmentation(segm, wm_labels)
 
@@ -220,24 +219,24 @@ def process_patient(args_tuple):
     gm_gl = gm_arr[gm_arr>0]
     wm_gl = wm_arr[wm_arr>0]
     lesions_gl = lesions_arr[lesions_arr>0]
+    
+    les_low = np.quantile(lesions_gl, 0.25)
+    gm_high = np.quantile(gm_gl, 0.75)
+    the_bigger_the_better = les_low - gm_high 
 
-    if len(gm_gl) == 0 or len(wm_gl) == 0 or len(lesions_gl) == 0:
-        return -100000       # penalty for configurations that produce empty masks
+    wm_high = np.quantile(wm_gl, 0.75)
+    gm_mode = np.argmax(np.bincount(gm_gl))
+    if_positive_is_very_very_bad = wm_high - gm_mode  
 
-    downsample_size = 1000
+    # maximization logic:
+    # if gm << lesions this is good (true positives)
+    # but if wm and gl overlap this is very bad
+    # because in that case we have some wm > gm_mode (false positives)
+    # so we try to separate lesions and gm
+    # as long wm and gm don't overlap too much
+    # so we try to maximize:
 
-    if len(gm_gl) > downsample_size:
-        idx = np.linspace(0, len(gm_gl)-1, downsample_size, dtype=int)
-        gm_gl =  np.sort(gm_gl)[idx]
-
-    if len(lesions_gl) > downsample_size:
-        idx = np.linspace(0, len(lesions_gl)-1, downsample_size, dtype=int)
-        lesions_gl = np.sort(lesions_gl)[idx]
-
-    delta_l_gm = cliffs_delta(lesions_gl, gm_gl)    # big if gm < lesions  (more true positives)
-    delta_gm_wm = cliffs_delta(gm_gl, wm_gl)        # big if wm < gm (less false positives)
-
-    return delta_l_gm + delta_gm_wm
+    return the_bigger_the_better - 1000*max(if_positive_is_very_very_bad, 0)
 
 
 def main(data_folder, results_folder, init_points, n_iter, n_cores):
@@ -311,7 +310,6 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
         return separation_list
 
     def separation_obj_mean(*args, **kwargs):
-        global tr_separation_list
         tr_separation_list = separation_obj(*args,
                                 train_patients=tr_patients,
                                 data=preloaded_data,
