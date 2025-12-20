@@ -109,26 +109,28 @@ label_name_file = config["files"]["label_name"]
 
 def load_subjects(data_folder, patients=None, paths_only=False):
     """
-    Load imaging data for multiple subjects and organize them into a dictionary.
-
+    Load imaging data for multiple subjects and organize into a dictionary.
 
     Parameters
     ----------
     data_folder : str
-        Path to the folder containing patient subfolders with .nii files.
+        Path to folder containing patient subfolders with .nii files.
     patients : list of str, optional
-        List of patient IDs to load. If None, all available patients are loaded.
+        List of patient IDs to load; if None, loads all patients.
     paths_only : bool, default=False
-        If True, only the file paths are returned without loading images into memory.
-
+        If True, only returns file paths without loading images into memory.
 
     Returns
     -------
     data : dict
-        Dictionary where keys are patient IDs and values are dictionaries containing
-        SimpleITK images and masks.
+        Dictionary where keys are patient IDs and values are dictionaries containing:
+            - flair : SimpleITK.Image, FLAIR image
+            - t1 : SimpleITK.Image, T1-weighted image
+            - gt : SimpleITK.Image, ground truth mask
+            - gm_mask : SimpleITK.Image, GM mask from segmentation
+            - wm_mask : SimpleITK.Image, WM mask from segmentation
     paths_df : pandas.DataFrame
-        DataFrame mapping each patient to the corresponding file paths of required images.
+        DataFrame mapping each patient to their corresponding file paths.
     """
     # organize all images in a df
     paths_list = []
@@ -181,7 +183,11 @@ def load_subjects(data_folder, patients=None, paths_only=False):
 
 def process_patient(args_tuple):
     """
-    Process a single patient's imaging data and compute histogram separation metrics.
+    Process a single patient's data and compute the separation score.
+
+    The score is designed to:
+        - Maximize separation between GM and lesions (true positives)
+        - Penalize overlap between WM and GM (false positives)
 
     Parameters
     ----------
@@ -197,7 +203,8 @@ def process_patient(args_tuple):
     Returns
     -------
     float
-        Sum of cliffs delta between lesions/GM and GM/WM
+        Separation score: larger values indicate better GM-lesion separation
+        and minimal WM overlap.
     """
     data, alpha, beta = args_tuple
 
@@ -241,25 +248,25 @@ def process_patient(args_tuple):
 
 def main(data_folder, results_folder, init_points, n_iter, n_cores):
     """
-    Main execution pipeline for Bayesian optimization of segmentation parameters.
+    Main pipeline for Bayesian optimization of segmentation parameters.
 
     Steps:
     - Load patient data
     - Split into training and validation sets
-    - Perform Bayesian optimization on training patients
-    - Save best parameters and training separation
-    - Validate best parameters on the validation set
+    - Optimize alpha and beta using Bayesian Optimization
+    - Save best parameters and separation metrics
+    - Validate the best parameters on the validation set
 
     Parameters
     ----------
     data_folder : str
-        Path to the input dataset directory.
+        Path to the dataset directory.
     results_folder : str
-        Path where outputs, logs, and metrics will be saved.
+        Path to save outputs, logs, and metrics.
     init_points : int
         Number of initial random exploration steps for Bayesian Optimization.
     n_iter : int
-        Number of optimization iterations.
+        Number of BO iterations.
     n_cores : int
         Number of CPU cores to use for multiprocessing.
 
