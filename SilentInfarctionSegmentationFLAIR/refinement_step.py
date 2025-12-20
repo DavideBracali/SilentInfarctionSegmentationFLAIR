@@ -32,6 +32,7 @@ with open("config.yaml", "r") as f:
 
 gm_labels = config["labels"]["gm"]
 wm_labels = config["labels"]["wm"]
+keywords_to_remove = config["labels"]["keywords_to_remove"]
 
 flair_file = config["files"]["flair"]
 t1_file = config["files"]["t1"]
@@ -324,6 +325,9 @@ if __name__ == "__main__":
     if args.segm is not None:
         segm = sitk.ReadImage(args.segm, sitk.sitkUInt8)
         segm = resample_to_reference(segm, thr_mask, sitk.sitkNearestNeighbor)
+
+    if args.keywords_to_remove == []:
+        args.keywords_to_remove = keywords_to_remove
 
     ref_mask = main(
         thr_mask=thr_mask,

@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 import argparse
 import gc
-import random
+import yaml
 from bayes_opt import BayesianOptimization
 import time
 import multiprocessing as mp
@@ -93,25 +93,22 @@ def parse_args():
 pbounds={"alpha": (1, 10),
         "beta": (0, 5)}
 
-gm_labels = [3, 8, 10, 11, 12, 13, 17, 18, 26,
-              42, 47, 49, 50, 51, 52, 53, 54, 62]
-wm_labels = [2, 7, 41, 46]
-flair_file = "FLAIR.nii"
-t1_file = "T1ontoFLAIR.nii"
-segm_file = "aseg.auto_noCCseg.nii"
-gm_pve_file = "pve_gm.nii"
-wm_pve_file = "pve_wm.nii"
-csf_pve_file = "pve_csf.nii"
-gt_file = "GT.nii"
-label_name_file = "data/FreeSurferColorLUT.txt"
-keywords_to_remove = [
-    "Bone", "Teeth", "Cranium", "Skull", "Table", "Diploe", "Endosteum", "Periosteum",
-    "CSF", "Ventricle", "Humor", "Lens", "Globe", "Choroid",
-    "Epidermis", "Scalp", "Skin", "Dura",
-    "Air", "Nasal"
-]
-labels_dict = label_names(label_name_file)
+# load constants from yaml file
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
 
+gm_labels = config["labels"]["gm"]
+wm_labels = config["labels"]["wm"]
+keywords_to_remove = config["labels"]["keywords_to_remove"]
+
+flair_file = config["files"]["flair"]
+t1_file = config["files"]["t1"]
+segm_file = config["files"]["segmentation"]
+gm_pve_file = config["files"]["gm_pve"]
+wm_pve_file = config["files"]["wm_pve"]
+csf_pve_file = config["files"]["csf_pve"]
+gt_file = config["files"]["gt"]
+label_name_file = config["files"]["label_name"]
 
 
 def load_subjects(data_folder, patients=None, paths_only=False):
