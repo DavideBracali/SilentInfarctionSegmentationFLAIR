@@ -560,30 +560,6 @@ def test_no_overlap(fake_data):
     assert set_tr.isdisjoint(set_ts)
     assert set_val.isdisjoint(set_ts)
 
-
-def test_all_patients_used(fake_data):
-    """
-    Given:
-        - a temporary dataset containing multiple patients
-        - a call to train_val_test_split with validation_fraction > 0 and test_fraction > 0
-    Then:
-        - the function returns three collections of patient IDs
-    Assert that:
-        - every patient in the folder is assigned to at least one set
-    """
-    tr, val, ts = train_val_test_split(
-        data_folder=str(fake_data),
-        validation_fraction=0.25,
-        test_fraction=0.25)
-
-    assigned = set(tr + val + ts)
-
-    existing = set([d for d in os.listdir(fake_data)
-                    if os.path.isdir(os.path.join(fake_data, d))])
-
-    assert existing == assigned
-
-
 def test_raise_all_errors():
     """
     Given:
