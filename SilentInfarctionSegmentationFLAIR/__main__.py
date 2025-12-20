@@ -84,27 +84,26 @@ def parse_args():
     return parser.parse_args()
 
 
-# load constants from yaml file
-with open("config.yaml", "r") as f:
-    config = yaml.safe_load(f)
-
-gm_labels = config['labels']['gm']
-wm_labels = config['labels']['wm']
-keywords_to_remove = config['labels']['keywords_to_remove']
-
-flair_file = config['files']['flair']
-t1_file = config['files']['t1']
-segm_file = config['files']['segmentation']
-gm_pve_file = config['files']['gm_pve']
-wm_pve_file = config['files']['wm_pve']
-csf_pve_file = config['files']['csf_pve']
-gt_file = config['files']['gt']
-label_name_file = config['files']['label_name']
-
-
 def main(patient_folder, params_path, results_folder, verbose, show):
 
     patient = os.path.basename(patient_folder)
+    
+    # load constants from yaml file
+    with open("config.yaml", "r") as f:
+        config = yaml.safe_load(f)
+
+    gm_labels = config['labels']['gm']
+    wm_labels = config['labels']['wm']
+    keywords_to_remove = config['labels']['keywords_to_remove']
+
+    flair_file = config['files']['flair']
+    t1_file = config['files']['t1']
+    segm_file = config['files']['segmentation']
+    gm_pve_file = config['files']['gm_pve']
+    wm_pve_file = config['files']['wm_pve']
+    csf_pve_file = config['files']['csf_pve']
+    gt_file = config['files']['gt']
+    label_name_file = config['files']['label_name']
 
     # load images from patient folder
     flair = sitk.ReadImage(os.path.join(patient_folder, flair_file))
