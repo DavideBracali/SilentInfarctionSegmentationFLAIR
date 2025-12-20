@@ -70,7 +70,8 @@ def parse_args():
                             dest='gt',
                             action='store',
                             type=str,
-                            required=True,
+                            required=False,
+                            default=None,
                             help='Path to ground-truth lesion mask')
 
     _ = parser.add_argument('--alpha',
@@ -109,7 +110,7 @@ def parse_args():
     return args
 
 
-def main(flair, t1, alpha, beta, gm_mask, wm_mask, gt,
+def main(flair, t1, alpha, beta, gm_mask, wm_mask, gt=None,
          show=False, save_dir=None, verbose=True):
 
     # normalize FLAIR and T1 between 0 and 1 and cast to float32
@@ -138,7 +139,7 @@ def main(flair, t1, alpha, beta, gm_mask, wm_mask, gt,
     image = normalize(image, 8)
 
     # save histograms
-    if save_dir is not None or show:
+    if (save_dir is not None or show) and gt is not None:
         if save_dir is not None:
             os.makedirs(save_dir, exist_ok=True)
             sitk.WriteImage(image, os.path.join(save_dir, "image.nii"))
