@@ -229,11 +229,12 @@ def process_patient(args_tuple):
     
     les_low = np.quantile(lesions_gl, 0.25)
     gm_high = np.quantile(gm_gl, 0.75)
-    the_bigger_the_better = les_low - gm_high 
+    scale = np.quantile(gm_gl, 0.75) - np.quantile(gm_gl, 0.25) + 1e-6
+    reward = (les_low - gm_high) / scale
 
-    wm_high = np.quantile(wm_gl, 0.75)
     gm_mode = np.argmax(np.bincount(gm_gl))
-    if_positive_is_very_very_bad = wm_high - gm_mode  
+    mean_wm_above_gm = np.mean(wm_gl > gm_mode) 
+    penalty = np.exp(5*mean_wm_above_gm) - 1
 
     # maximization logic:
     # if gm << lesions this is good (true positives)
@@ -243,7 +244,7 @@ def process_patient(args_tuple):
     # as long wm and gm don't overlap too much
     # so we try to maximize:
 
-    return the_bigger_the_better - 1000*max(if_positive_is_very_very_bad, 0)
+    return reward - max(penalty, 0)
 
 
 def main(data_folder, results_folder, init_points, n_iter, n_cores):
