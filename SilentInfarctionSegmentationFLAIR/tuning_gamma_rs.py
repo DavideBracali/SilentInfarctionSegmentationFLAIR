@@ -634,10 +634,10 @@ def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores)
                 val_dices.loc[gamma, "q3"]   = np.quantile(val_dice_list, 0.75)
 
                 print(f"Average DICE on validation set for gamma = {gamma}: "\
-                    f"{val_dices.loc[gamma, "mean"]:.3g} ± "\
-                    f"{val_dices.loc[gamma, "std"]:.3g}\n"\
-                    f"IQR = [{val_dices.loc[gamma, "q1"]:.3g}, "\
-                    f"{val_dices.loc[gamma, "q3"]:.3g}]")
+                    f"{val_dices.loc[gamma, 'mean']:.3g} ± "\
+                    f"{val_dices.loc[gamma, 'std']:.3g}\n"\
+                    f"IQR = [{val_dices.loc[gamma, 'q1']:.3g}, "\
+                    f"{val_dices.loc[gamma, 'q3']:.3g}]")
             
             val_dices.to_pickle(os.path.join(results_folder, "val_dices.pkl"))
 
@@ -681,10 +681,10 @@ def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores)
             tr_dices.loc[gamma, "q3"]   = np.quantile(tr_dice_list, 0.75)
 
             print(f"Average DICE on training set for gamma = {gamma}: "\
-                f"{tr_dices.loc[gamma, "mean"]:.3g} ± "\
-                f"{tr_dices.loc[gamma, "std"]:.3g}\n"\
-                f"IQR = [{tr_dices.loc[gamma,"q1"]:.3g}, "\
-                f"{tr_dices.loc[gamma,"q3"]:.3g}]")
+                f"{tr_dices.loc[gamma, 'mean']:.3g} ± "\
+                f"{tr_dices.loc[gamma, 'std']:.3g}\n"\
+                f"IQR = [{tr_dices.loc[gamma,'q1']:.3g}, "\
+                f"{tr_dices.loc[gamma,'q3']:.3g}]")
     
         tr_dices.to_pickle(os.path.join(results_folder, "tr_dices.pkl"))
 
@@ -693,16 +693,16 @@ def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores)
         print(f"{k} = {v}")
     
     print(f"Average DICE on training set for gamma = {best_gamma}: "\
-        f"{tr_dices.loc[best_gamma, "mean"]:.3g} ± "\
-        f"{tr_dices.loc[best_gamma, "std"]:.3g}\n"\
-        f"IQR = [{tr_dices.loc[best_gamma, "q1"]:.3g}, "\
-        f"{tr_dices.loc[best_gamma, "q3"]:.3g}]")
+        f"{tr_dices.loc[best_gamma, 'mean']:.3g} ± "\
+        f"{tr_dices.loc[best_gamma, 'std']:.3g}\n"\
+        f"IQR = [{tr_dices.loc[best_gamma, 'q1']:.3g}, "\
+        f"{tr_dices.loc[best_gamma, 'q3']:.3g}]")
     
     print(f"Average DICE on validation set for gamma = {best_gamma}: "\
-        f"{val_dices.loc[best_gamma, "mean"]:.3g} ± "\
-        f"{val_dices.loc[best_gamma, "std"]:.3g}\n"\
-        f"IQR = [{val_dices.loc[best_gamma, "q1"]:.3g}, "\
-        f"{val_dices.loc[best_gamma, "q3"]:.3g}]")
+        f"{val_dices.loc[best_gamma, 'mean']:.3g} ± "\
+        f"{val_dices.loc[best_gamma, 'std']:.3g}\n"\
+        f"IQR = [{val_dices.loc[best_gamma, 'q1']:.3g}, "\
+        f"{val_dices.loc[best_gamma, 'q3']:.3g}]")
     
 
 if __name__ == '__main__':
