@@ -537,7 +537,7 @@ def test_train_val_test_split_valid_return(fake_data):
     assert all(isinstance(p, str) for p in ts)
 
 
-def test_no_overlap(fake_data):
+def test_train_val_test_split_no_overlap(fake_data):
     """
     Given:
         - a temporary dataset containing multiple patients
@@ -560,7 +560,7 @@ def test_no_overlap(fake_data):
     assert set_tr.isdisjoint(set_ts)
     assert set_val.isdisjoint(set_ts)
 
-def test_raise_all_errors():
+def test_train_val_test_split_raise_all_errors():
     """
     Given:
         - invalid folder
