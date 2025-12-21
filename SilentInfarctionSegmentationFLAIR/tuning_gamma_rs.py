@@ -466,7 +466,7 @@ def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores)
 
     def dice_obj(extend_dilation_radius, n_std, min_diameter,
                  surround_dilation_radius, min_points,
-                 gamma=gamma, data=None, train_patients=[]):
+                 gamma, data=None, train_patients=[]):
         """
         Compute DICE scores for multiple patients using refinement parameters.
 
