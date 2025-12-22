@@ -17,6 +17,7 @@ from bayes_opt import BayesianOptimization
 import time
 import multiprocessing as mp
 from functools import partial
+from datetime import datetime
 sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
 
 from SilentInfarctionSegmentationFLAIR.utils import (orient_image,
@@ -49,8 +50,8 @@ def parse_args():
                             action='store',
                             type=str,
                             required=False,
-                            default="tuning_alpha_beta",
-                            help='Path of the folder where data is located')
+                            default="tuning_gamma_rs",
+                            help='Path of the folder where results are stored')
 
     _ = parser.add_argument('--init_points',
                             dest='init_points',
@@ -82,7 +83,7 @@ def parse_args():
                             action='store',
                             type=float,
                             required=False,
-                            default=3,
+                            default=None,
                             help='Segmentation parameter alpha')
 
     _ = parser.add_argument('--beta',
@@ -90,16 +91,16 @@ def parse_args():
                             action='store',
                             type=float,
                             required=False,
-                            default=0,
+                            default=None,
                             help='Segmentation parameter beta')
     
     _ = parser.add_argument('--gammas',
-                        dest='gammas',
-                        nargs='+',
-                        type=float,
-                        required=False,
-                        default=[1.0, 2.0, 3.0, 4.0],
-                        help='List of gamma values to evaluate (e.g. --gammas 1 2 3 4)')
+                            dest='gammas',
+                            nargs='+',
+                            type=float,
+                            required=False,
+                            default=[1.0, 2.0, 3.0, 4.0],
+                            help='List of gamma values to evaluate (e.g. --gammas 1 2 3 4)')
 
     args = parser.parse_args()
 
@@ -129,6 +130,21 @@ pbounds = {
     "surround_dilation_radius": (1, 10),
     "min_points": (1, 5)
 }
+
+def load_alpha_beta_from_yaml(results_folder):
+    yaml_path = "params_alpha_beta.yaml"
+    if not os.path.isfile(yaml_path):
+        raise FileNotFoundError(
+            f"{yaml_path} not found but alpha/beta were not provided via CLI"
+        )
+
+    with open(yaml_path, "r") as f:
+        params = yaml.safe_load(f)
+
+    if params.get("alpha") is None or params.get("beta") is None:
+        raise ValueError("params_alpha_beta.yaml must contain alpha and beta")
+
+    return params["alpha"], params["beta"]
 
 def load_subjects(data_folder, patients=None, paths_only=False):
     """
@@ -577,6 +593,15 @@ def main(data_folder, alpha, beta, gammas, results_folder,
                                 **kwargs)
         return np.mean(tr_dice_list)
 
+    # resolve alpha / beta
+    if alpha is None or beta is None:
+        yaml_alpha, yaml_beta = load_alpha_beta_from_yaml(results_folder)
+
+        if alpha is None:
+            alpha = yaml_alpha
+        if beta is None:
+            beta = yaml_beta
+
     # create results folder
     os.makedirs(results_folder, exist_ok=True)
     
@@ -708,6 +733,7 @@ def main(data_folder, alpha, beta, gammas, results_folder,
     else:
         best_params = pd.read_pickle(os.path.join(results_folder,
                                                   "best_params.pkl")).iloc[0].to_dict()
+        best_gamma = best_params["gamma"]
     
     # training performance
     if os.path.isfile(os.path.join(results_folder, "tr_dices.pkl")):
@@ -755,11 +781,32 @@ def main(data_folder, alpha, beta, gammas, results_folder,
         f"IQR = [{tr_dices.loc[best_gamma, 'q1']:.3g}, "\
         f"{tr_dices.loc[best_gamma, 'q3']:.3g}]")
     
+    val_dices = pd.read_pickle(os.path.join(results_folder, "val_dices.pkl"))
     print(f"Average DICE on validation set for gamma = {best_gamma}: "\
         f"{val_dices.loc[best_gamma, 'mean']:.3g} ± "\
         f"{val_dices.loc[best_gamma, 'std']:.3g}\n"\
         f"IQR = [{val_dices.loc[best_gamma, 'q1']:.3g}, "\
         f"{val_dices.loc[best_gamma, 'q3']:.3g}]")
+    
+    # save parameters
+    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
+    yaml_path = f"params_{timestamp}.yaml"
+
+    params_yaml = {
+        "alpha": alpha,
+        "beta": beta,
+        "gamma": best_gamma,
+        "extend_dilation_radius": best_params["extend_dilation_radius"],
+        "n_std": best_params["n_std"],
+        "min_diameter": best_params["min_diameter"],
+        "surround_dilation_radius": best_params["surround_dilation_radius"],
+        "min_points": int(best_params["min_points"]),
+    }
+
+    with open(yaml_path, "w") as f:
+        yaml.safe_dump(params_yaml, f, sort_keys=False)
+
+    print(f"Saved parameters to {yaml_path}")
     
 
 if __name__ == '__main__':

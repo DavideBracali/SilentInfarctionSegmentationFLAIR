@@ -14,7 +14,6 @@ import argparse
 import gc
 import yaml
 from bayes_opt import BayesianOptimization
-from scipy.stats import mode
 import time
 import multiprocessing as mp
 
@@ -80,8 +79,7 @@ def parse_args():
                             default=1,
                             help='Number of CPU cores to use during optimization \
                                 (improves computational time but increases RAM and CPU usage)')
-
-
+    
     args = parser.parse_args()
 
     return args
@@ -390,7 +388,7 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
 
     print("\nBest parameters: ")
     for k, v in best_params.items():
-        print(f"{k} = {v}")
+        print(f"{k} = {v:.3g}")
     
     print("Average separation on training set: "\
           f"{np.mean(tr_separation_list):.3g} ± {np.std(tr_separation_list):.3g}")
@@ -398,11 +396,34 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
     print("Average separation on validation set: "\
           f"{np.mean(val_separation_list):.3g} ± {np.std(val_separation_list):.3g}")
     
+    # save alpha and beta
+    params_yaml = {
+        "alpha": float(best_params["alpha"]),
+        "beta": float(best_params["beta"]),
+        "gamma": None,
+        "extend_dilation_radius": None,
+        "n_std": None,
+        "min_diameter": None,
+        "surround_dilation_radius": None,
+        "min_points": None}
+    
+    yaml_path = "params_alpha_beta.yaml"
+    with open(yaml_path, "w") as f:
+        yaml.safe_dump(params_yaml, f, sort_keys=False)
+
+    print(f"Saved parameters to {yaml_path} (still not ready for use, "\
+          "please tune the other parameters by running "\
+          f"{os.path.join(
+              'SilentInfarctionSegmentationFLAIR',
+              'tuning_gamma_rs.py'
+              )}")
+
 
 if __name__ == '__main__':
 
     args = parse_args()
 
     start_time = time.time()
-    main(args.data_folder, args.results_folder, args.init_points, args.n_iter, args.n_cores)
+    main(args.data_folder, args.results_folder, args.init_points,
+         args.n_iter, args.n_cores)
     print(f"Elapsed time: {(time.time()-start_time):.3g} s")
