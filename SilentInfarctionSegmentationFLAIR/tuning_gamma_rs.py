@@ -14,21 +14,16 @@ import argparse
 import gc
 import yaml
 from bayes_opt import BayesianOptimization
-from scipy.stats import mode
 import time
 import multiprocessing as mp
 from functools import partial
+sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
 
 from SilentInfarctionSegmentationFLAIR.utils import (orient_image,
                                                      resample_to_reference,
-                                                     get_array_from_image,
-                                                     get_image_from_array,
-                                                     label_names,
-                                                     train_val_test_split,
-                                                     cliffs_delta)
+                                                     train_val_test_split)
 from SilentInfarctionSegmentationFLAIR.segmentation import (get_mask_from_segmentation,
                                                             evaluate_voxel_wise)
-from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histograms
 from SilentInfarctionSegmentationFLAIR import (flair_t1_sum,
                                                threshold,
                                                refinement_step)
@@ -81,7 +76,30 @@ def parse_args():
                             default=1,
                             help='Number of CPU cores to use during optimization \
                                 (improves computational time but increases RAM and CPU usage)')
+    
+    _ = parser.add_argument('--alpha',
+                            dest='alpha',
+                            action='store',
+                            type=float,
+                            required=False,
+                            default=3,
+                            help='Segmentation parameter alpha')
 
+    _ = parser.add_argument('--beta',
+                            dest='beta',
+                            action='store',
+                            type=float,
+                            required=False,
+                            default=0,
+                            help='Segmentation parameter beta')
+    
+    _ = parser.add_argument('--gammas',
+                        dest='gammas',
+                        nargs='+',
+                        type=float,
+                        required=False,
+                        default=[1.0, 2.0, 3.0, 4.0],
+                        help='List of gamma values to evaluate (e.g. --gammas 1 2 3 4)')
 
     args = parser.parse_args()
 
@@ -197,8 +215,150 @@ def load_subjects(data_folder, patients=None, paths_only=False):
 
     return data, paths_df
 
+def process_patient_images(args_tuple, results_folder):
+    """
+    Process a single patient's images to compute the combined FLAIR+T1 image.
 
-def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores):
+    Parameters
+    ----------
+    args_tuple : tuple
+        Contains:
+        - data : dict
+            Patient's imaging data and masks
+        - patient : str
+            Patient ID
+        - alpha : float
+            Segmentation parameter
+        - beta : float
+            Segmentation parameter
+
+    Returns
+    -------
+    None
+        Saves the computed image to disk if not already present.
+    """
+    data, patient, alpha, beta = args_tuple
+
+    flair = data["flair"]
+    t1 = data["t1"]
+    gt = data["gt"]
+    gm_mask = data["gm_mask"]
+    wm_mask = data["wm_mask"]
+
+    image_path = os.path.join(results_folder, "images", f"{patient}.nii")
+    if not os.path.isfile(image_path):
+        image = flair_t1_sum.main(flair, t1, alpha, beta, wm_mask=wm_mask,
+                                                        gm_mask=gm_mask,
+                                                        gt=gt,
+                                                        verbose=False)
+        sitk.WriteImage(image, image_path)
+
+def process_patient_thr(args_tuple, results_folder):
+    """
+    Process a single patient's image to compute threshold mask for a given gamma.
+
+    Parameters
+    ----------
+    args_tuple : tuple
+        Contains:
+        - data : dict
+            Patient's imaging data and masks
+        - patient : str
+            Patient ID
+        - gamma : int
+            Thresholding parameter
+
+    Returns
+    -------
+    None
+        Saves threshold mask to disk.
+    """
+    data, patient, gamma = args_tuple
+
+    thr_path = os.path.join(results_folder,
+                                f"thr_mask_g{gamma}",
+                                f"{patient}.nii")
+    if not os.path.isfile(thr_path):
+        image = sitk.ReadImage(os.path.join(results_folder,
+                                            "images",
+                                            f"{patient}.nii"))
+        gm_mask = resample_to_reference(data["gm_mask"],
+                                        image,
+                                        sitk.sitkNearestNeighbor)
+        thr_mask = threshold.main(image,
+                                gm_mask,
+                                gamma=gamma,
+                                show=False,
+                                verbose=False)
+        sitk.WriteImage(thr_mask, thr_path)
+        
+def process_patient_rs(args_tuple, results_folder):
+    """
+    Process a single patient's image through the refinement step and evaluate DICE.
+
+    Parameters
+    ----------
+    args_tuple : tuple
+        Contains:
+        - data : dict
+            Patient's imaging data, masks, and PVEs
+        - patient : str
+            Patient ID
+        - gamma : int
+            Threshold parameter used to generate threshold mask
+        - extend_dilation_radius : float
+            Refinement parameter
+        - n_std : float
+            Refinement parameter
+        - min_diameter : float
+            Refinement parameter
+        - surround_dilation_radius : float
+            Refinement parameter
+        - min_points : float
+            Refinement parameter
+
+    Returns
+    -------
+    float
+        Voxel-wise DICE coefficient between refined mask and ground truth.
+    """
+
+    data, patient, gamma, extend_dilation_radius, n_std,\
+    min_diameter, surround_dilation_radius, min_points = args_tuple
+
+    image = sitk.ReadImage(os.path.join(results_folder,
+                                        "images",
+                                        f"{patient}.nii"))
+    thr_mask = sitk.ReadImage(os.path.join(results_folder,
+                                            f"thr_mask_g{gamma}",
+                                            f"{patient}.nii"))
+    segm = resample_to_reference(data["segm"], image, sitk.sitkNearestNeighbor)
+    thr_mask = resample_to_reference(thr_mask,
+                                     image,
+                                     sitk.sitkNearestNeighbor)
+    pves = [data["wm_pve"], data["gm_pve"], data["csf_pve"]]
+    pves = [resample_to_reference(p, image, sitk.sitkLinear)
+            for p in pves]
+    ref_mask = refinement_step.main(
+        thr_mask, image,
+        pves=pves,
+        segm=segm,
+        min_diameter=min_diameter,
+        surround_dilation_radius=surround_dilation_radius,
+        n_std=n_std,
+        extend_dilation_radius=extend_dilation_radius,
+        min_points=int(min_points),     # truncate to integer
+        keywords_to_remove=keywords_to_remove,
+        label_name_file=label_name_file,
+        verbose=False,
+        show=False)
+    
+    dsc = evaluate_voxel_wise(ref_mask, data["gt"])["vw-DSC"]
+
+    return dsc
+
+def main(data_folder, alpha, beta, gammas, results_folder,
+         init_points, n_iter, n_cores):
     """
     Main pipeline for Bayesian optimization of segmentation parameters.
 
@@ -226,46 +386,6 @@ def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores)
     -------
     None
     """
-    gammas = range(1, 11)
-
-    def process_patient_images(args_tuple):
-        """
-        Process a single patient's images to compute the combined FLAIR+T1 image.
-
-        Parameters
-        ----------
-        args_tuple : tuple
-            Contains:
-            - data : dict
-                Patient's imaging data and masks
-            - patient : str
-                Patient ID
-            - alpha : float
-                Segmentation parameter
-            - beta : float
-                Segmentation parameter
-
-        Returns
-        -------
-        None
-            Saves the computed image to disk if not already present.
-        """
-        data, patient, alpha, beta = args_tuple
-
-        flair = data["flair"]
-        t1 = data["t1"]
-        gt = data["gt"]
-        gm_mask = data["gm_mask"]
-        wm_mask = data["wm_mask"]
-
-        image_path = os.path.join(results_folder, "images", f"{patient}.nii")
-        if not os.path.isfile(image_path):
-            image = flair_t1_sum.main(flair, t1, alpha, beta, wm_mask=wm_mask,
-                                                            gm_mask=gm_mask,
-                                                            gt=gt,
-                                                            verbose=False)
-            sitk.WriteImage(image, image_path)
-    
 
     def compute_images(alpha, beta, data=None, train_patients=[]):
         """
@@ -314,50 +434,13 @@ def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores)
 
             if n_cores > 1:
                 with mp.Pool(n_cores) as pool:
-                    _ = pool.map(process_patient_images, args_list)
+                    _ = pool.starmap(process_patient_images, [(a, results_folder)
+                                                              for a in args_list])
             else:
-                _ = [process_patient_images(a) for a in args_list]
+                _ = [process_patient_images(a, results_folder) for a in args_list]
             
         print(f"Elapsed time: {(time.time()-start):.3g} s")
-
-
-    def process_patient_thr(args_tuple):
-        """
-        Process a single patient's image to compute threshold mask for a given gamma.
-
-        Parameters
-        ----------
-        args_tuple : tuple
-            Contains:
-            - data : dict
-                Patient's imaging data and masks
-            - patient : str
-                Patient ID
-            - gamma : int
-                Thresholding parameter
-
-        Returns
-        -------
-        None
-            Saves threshold mask to disk.
-        """
-        data, patient, gamma = args_tuple
-
-        thr_path = os.path.join(results_folder,
-                                  f"thr_mask_g{gamma}",
-                                  f"{patient}.nii")
-        if not os.path.isfile(thr_path):
-            image = sitk.ReadImage(os.path.join(results_folder,
-                                                "images",
-                                                f"{patient}.nii"))
-            thr_mask = threshold.main(image,
-                                    data["gm_mask"],
-                                    gamma=gamma,
-                                    show=False,
-                                    verbose=False)
-            sitk.WriteImage(thr_mask, thr_path)
-                
-
+              
     def compute_thr(gamma, data=None, train_patients=[]):
         """
         Compute threshold masks for a list of patients in parallel chunks.
@@ -403,66 +486,12 @@ def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores)
 
             if n_cores > 1:
                 with mp.Pool(n_cores) as pool:
-                    _ = pool.map(process_patient_thr, args_list)
+                    _ = pool.starmap(process_patient_thr, [(a, results_folder)
+                                                              for a in args_list])
             else:
-                _ = [process_patient_thr(a) for a in args_list]
+                _ = [process_patient_thr(a, results_folder) for a in args_list]
             
         print(f"Elapsed time: {(time.time()-start):.3g} s")
-
-    def process_patient_rs(args_tuple):
-        """
-        Process a single patient's image through the refinement step and evaluate DICE.
-
-        Parameters
-        ----------
-        args_tuple : tuple
-            Contains:
-            - data : dict
-                Patient's imaging data, masks, and PVEs
-            - patient : str
-                Patient ID
-            - gamma : int
-                Threshold parameter used to generate threshold mask
-            - extend_dilation_radius : float
-                Refinement parameter
-            - n_std : float
-                Refinement parameter
-            - min_diameter : float
-                Refinement parameter
-            - surround_dilation_radius : float
-                Refinement parameter
-            - min_points : float
-                Refinement parameter
-
-        Returns
-        -------
-        float
-            Voxel-wise DICE coefficient between refined mask and ground truth.
-        """
-        data, patient, gamma, extend_dilation_radius, n_std,\
-        min_diameter, surround_dilation_radius, min_points = args_tuple
-
-        image = sitk.ReadImage(os.path.join(results_folder,
-                                            "images",
-                                            f"{patient}.nii"))
-        thr_mask = sitk.ReadImage(os.path.join(results_folder,
-                                               f"thr_mask_g{gamma}",
-                                               f"{patient}.nii"))
-        ref_mask = refinement_step.main(
-            thr_mask, image,
-            pves=[data["wm_pve"], data["gm_pve"], data["csf_pve"]],
-            segm=data["segm"],
-            min_diameter=min_diameter,
-            surround_dilation_radius=surround_dilation_radius,
-            n_std=n_std,
-            extend_dilation_radius=extend_dilation_radius,
-            min_points=min_points,
-            keywords_to_remove=keywords_to_remove,
-            label_name_file=label_name_file,
-            verbose=False,
-            show=False)
-        return evaluate_voxel_wise(ref_mask, data["gt"])
-
 
     def dice_obj(extend_dilation_radius, n_std, min_diameter,
                  surround_dilation_radius, min_points,
@@ -518,9 +547,10 @@ def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores)
 
             if n_cores > 1:
                 with mp.Pool(n_cores) as pool:
-                    results = pool.map(process_patient_rs, args_list)
+                    results = pool.starmap(process_patient_rs, [(a, results_folder)
+                                                              for a in args_list])
             else:
-                results = [process_patient_rs(a) for a in args_list]
+                results = [process_patient_rs(a, results_folder) for a in args_list]
 
             dice_list.extend(results)  
             
@@ -565,28 +595,47 @@ def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores)
 
     # optimization
     if not os.path.isfile(os.path.join(results_folder, "best_params.pkl")):
-        
+
         # compute images for ALL patients        
-        if len(tr_patients + val_patients) <= n_cores:
-            print(f"{len(tr_patients)} training patients and {n_cores} avalible cores. " \
-                        "Preloading data in advance...")
-            preloaded_data, _ = load_subjects(data_folder, patients=tr_patients + val_patients)
-        else:   # light on RAM, but slower in time
-            preloaded_data = None
-            print(f"{len(tr_patients)} training patients and {n_cores} avalible cores. " \
-                    "Data will be loaded at each iteration...")
-        
-        os.makedirs(os.path.join(results_folder, "images"), exist_ok=True)
-        compute_images(alpha, beta, data=preloaded_data,
-                       train_patients=tr_patients + val_patients)
+        patients_to_do = []
+        for patient in tr_patients + val_patients:
+            if not os.path.isfile(os.path.join(results_folder,
+                                               "images",
+                                               f"{patient}.nii")):
+                patients_to_do.append(patient)
+
+        if len(patients_to_do) != 0:
+            if len(patients_to_do) <= n_cores:
+                preloaded_data, _ = load_subjects(data_folder, patients=patients_to_do)
+            else:   # light on RAM, but slower in time
+                preloaded_data = None
+            
+            os.makedirs(os.path.join(results_folder, "images"), exist_ok=True)
+            print("Computing FLAIR + T1 images for all patients...")
+            compute_images(alpha, beta, data=preloaded_data,
+                        train_patients=patients_to_do)
         
         # compute threshold masks for ALL patients
         for gamma in gammas:
-            os.makedirs(os.path.join(results_folder, f"thr_mask_g{gamma}"),
-                        exist_ok=True)
-            compute_thr(gamma, data=preloaded_data,
-                       train_patients=tr_patients + val_patients)
-            
+            patients_to_do = []
+            for patient in tr_patients + val_patients:
+                if not os.path.isfile(os.path.join(results_folder,
+                                                f"thr_mask_g{gamma}",
+                                                f"{patient}.nii")):
+                    patients_to_do.append(patient)
+
+            if len(patients_to_do) != 0:
+                if len(patients_to_do) <= n_cores:
+                    preloaded_data, _ = load_subjects(data_folder, patients=patients_to_do)
+                else:   # light on RAM, but slower in time
+                    preloaded_data = None
+                
+                os.makedirs(os.path.join(results_folder, f"thr_mask_g{gamma}"),
+                            exist_ok=True)
+                print(f"Computing threshold masks for all patients (gamma = {gamma})...")
+                compute_thr(gamma, data=preloaded_data,
+                            train_patients=patients_to_do)
+                    
         # optimize refinement step
         for gamma in gammas:
             rs_dir = os.path.join(results_folder, f"rs_g{gamma}")
@@ -596,6 +645,11 @@ def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores)
             else:
                 print(f"Optimizing parameters for gamma = {gamma}...")
                 os.makedirs(rs_dir, exist_ok=True)
+
+                if len(tr_patients) <= n_cores:
+                    preloaded_data, _ = load_subjects(data_folder, patients=tr_patients)
+                else:   # light on RAM, but slower in time
+                    preloaded_data = None
 
                 optimizer = BayesianOptimization(partial(dice_obj_mean, gamma=gamma),
                                                 pbounds=pbounds,
@@ -614,7 +668,7 @@ def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores)
         else:
             val_dices = pd.DataFrame(index=gammas, columns=["mean", "std", "q1", "q3"])
             for gamma in gammas:
-                print(f"Evaluating gamma={gamma} on validation set...")
+                print(f"Evaluating gamma = {gamma} on validation set...")
                 
                 rs_dir = os.path.join(results_folder, f"rs_g{gamma}")
                 best_params = pd.read_pickle(
@@ -642,8 +696,8 @@ def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores)
             val_dices.to_pickle(os.path.join(results_folder, "val_dices.pkl"))
 
         best_gamma = val_dices["mean"].idxmax()
-        print(f"Best gamma on validation set: {best_gamma}, \
-              mean DICE = {val_dices.loc[best_gamma, 'mean']:.3g}")
+        print(f"Best gamma on validation set: {best_gamma} \
+              (mean DICE = {val_dices.loc[best_gamma, 'mean']:.3g})")
         best_params = pd.read_pickle(os.path.join(results_folder,
                                                   f"rs_g{best_gamma}",
                                                   "best_params.pkl")).iloc[0].to_dict()
@@ -661,7 +715,7 @@ def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores)
     else:
         tr_dices = pd.DataFrame(index=gammas, columns=["mean", "std", "q1", "q3"])
         for gamma in gammas:
-            print(f"Evaluating gamma={gamma} on validation set...")
+            print(f"Evaluating gamma={gamma} on training set...")
             
             rs_dir = os.path.join(results_folder, f"rs_g{gamma}")
             best_params = pd.read_pickle(
@@ -690,7 +744,10 @@ def main(data_folder, alpha, beta, results_folder, init_points, n_iter, n_cores)
 
     print("\nBest parameters: ")
     for k, v in best_params.items():
-        print(f"{k} = {v}")
+        if k == "min_points":
+            print(f"{k} = {int(v)}")       # truncate to integer
+        else:
+            print(f"{k} = {v:.3g}")
     
     print(f"Average DICE on training set for gamma = {best_gamma}: "\
         f"{tr_dices.loc[best_gamma, 'mean']:.3g} ± "\
@@ -710,5 +767,6 @@ if __name__ == '__main__':
     args = parse_args()
 
     start_time = time.time()
-    main(args.data_folder, args.results_folder, args.init_points, args.n_iter, args.n_cores)
+    main(args.data_folder, args.alpha, args.beta, args.gammas,
+         args.results_folder, args.init_points, args.n_iter, args.n_cores)
     print(f"Elapsed time: {(time.time()-start_time):.3g} s")
