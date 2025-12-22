@@ -12,6 +12,7 @@ import os
 import argparse
 import numpy as np
 import yaml
+import matplotlib
 
 
 from SilentInfarctionSegmentationFLAIR.histograms import (plot_histogram,
@@ -93,6 +94,8 @@ def parse_args():
 
 def main(image, gm_mask, gamma, show=False, verbose=True, save_dir=None):
 
+    if show==False:
+        matplotlib.use("Agg")
     # initialize figure
     fig, ax = plt.subplots()
 
