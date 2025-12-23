@@ -18,6 +18,7 @@ import time
 import multiprocessing as mp
 from functools import partial
 from datetime import datetime
+import matplotlib.pyplot as plt
 sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
 
 from SilentInfarctionSegmentationFLAIR.utils import (orient_image,
@@ -373,6 +374,41 @@ def process_patient_rs(args_tuple, results_folder):
 
     return dsc
 
+def process_patient_thr_dice(args_tuple, results_folder):
+    """
+    Compute voxel-wise DICE between threshold mask and ground truth.
+
+    Parameters
+    ----------
+    args_tuple : tuple
+        Contains:
+        - data : dict
+            Patient data (must contain gt)
+        - patient : str
+            Patient ID
+        - gamma : float
+            Threshold parameter
+
+    Returns
+    -------
+    float
+        Voxel-wise DICE coefficient.
+    """
+    data, patient, gamma = args_tuple
+
+    thr_mask = sitk.ReadImage(
+        os.path.join(results_folder,
+                     f"thr_mask_g{gamma}",
+                     f"{patient}.nii")
+    )
+
+    gt = data["gt"]
+
+    thr_mask = resample_to_reference(thr_mask, gt, sitk.sitkNearestNeighbor)
+
+    dsc = evaluate_voxel_wise(thr_mask, gt)["vw-DSC"]
+    return dsc
+
 def main(data_folder, alpha, beta, gammas, results_folder,
          init_points, n_iter, n_cores):
     """
@@ -508,6 +544,48 @@ def main(data_folder, alpha, beta, gammas, results_folder,
                 _ = [process_patient_thr(a, results_folder) for a in args_list]
             
         print(f"Elapsed time: {(time.time()-start):.3g} s")
+
+    def evaluate_thr_dice(gamma, data=None, val_patients=[]):
+        nonlocal n_cores
+
+        gc.collect()
+        dice_list = []
+
+        if n_cores > len(val_patients):
+            n_cores = len(val_patients)
+
+        n_chunks = (len(val_patients) + n_cores - 1) // n_cores
+
+        for chunk in range(n_chunks):
+            gc.collect()
+
+            chunk_patients = val_patients[chunk*n_cores:(chunk+1)*n_cores]
+
+            if data is None:
+                chunk_data, _ = load_subjects(data_folder, patients=chunk_patients)
+            else:
+                chunk_data = data
+
+            args_list = [
+                (chunk_data[patient], patient, gamma)
+                for patient in chunk_patients
+            ]
+
+            if n_cores > 1:
+                with mp.Pool(n_cores) as pool:
+                    results = pool.starmap(
+                        process_patient_thr_dice,
+                        [(a, results_folder) for a in args_list]
+                    )
+            else:
+                results = [
+                    process_patient_thr_dice(a, results_folder)
+                    for a in args_list
+                ]
+
+            dice_list.extend(results)
+
+        return dice_list
 
     def dice_obj(extend_dilation_radius, n_std, min_diameter,
                  surround_dilation_radius, min_points,
@@ -660,7 +738,45 @@ def main(data_folder, alpha, beta, gammas, results_folder,
                 print(f"Computing threshold masks for all patients (gamma = {gamma})...")
                 compute_thr(gamma, data=preloaded_data,
                             train_patients=patients_to_do)
-                    
+                
+        # evaluate on validation set after threshold (no refinement)
+        thr_val_path = os.path.join(results_folder, "val_dices_thr.pkl")
+        if os.path.isfile(thr_val_path):
+            val_dices_thr = pd.read_pickle(thr_val_path)
+        else:
+            val_dices_thr = pd.DataFrame(
+                index=gammas, columns=["mean", "std", "q1", "q3"])
+
+            for gamma in gammas:
+                print(f"Evaluating DICE after threshold on validation set "
+                      f"(gamma = {gamma})...")
+
+                if len(val_patients) <= n_cores:
+                    preloaded_data, _ = load_subjects(data_folder, patients=val_patients)
+                else:
+                    preloaded_data = None
+
+                dice_list = evaluate_thr_dice(
+                    gamma=gamma,
+                    val_patients=val_patients,
+                    data=preloaded_data
+                )
+
+                val_dices_thr.loc[gamma, "mean"] = np.mean(dice_list)
+                val_dices_thr.loc[gamma, "std"]  = np.std(dice_list)
+                val_dices_thr.loc[gamma, "q1"]   = np.quantile(dice_list, 0.25)
+                val_dices_thr.loc[gamma, "q3"]   = np.quantile(dice_list, 0.75)
+
+                print(
+                    f"THR DICE (gamma={gamma}): "
+                    f"{val_dices_thr.loc[gamma,'mean']:.3g} ± "
+                    f"{val_dices_thr.loc[gamma,'std']:.3g} | "
+                    f"IQR = [{val_dices_thr.loc[gamma,'q1']:.3g}, "
+                    f"{val_dices_thr.loc[gamma,'q3']:.3g}]"
+                )
+
+            val_dices_thr.to_pickle(thr_val_path)
+
         # optimize refinement step
         for gamma in gammas:
             rs_dir = os.path.join(results_folder, f"rs_g{gamma}")
@@ -808,6 +924,32 @@ def main(data_folder, alpha, beta, gammas, results_folder,
 
     print(f"Saved parameters to {yaml_path}")
     
+    # plot DICE
+    plt.plot(gammas, val_dices["mean"], color="red",
+             label="After threshold")
+    plt.fill_between(
+        gammas,
+        val_dices["q1"],
+        val_dices["q3"],
+        alpha=0.25,
+        color="red"
+    )
+    plt.plot(gammas, val_dices_thr["mean"], color="blue",
+             label="After refinement step")
+    plt.fill_between(
+        gammas,
+        val_dices["q1"],
+        val_dices["q3"],
+        alpha=0.25,
+        color="blue"
+    )
+    plt.xlabel("Gamma")
+    plt.ylabel("DICE")
+    plt.title("Validation mean DICE with IQR")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(os.path.join(results_folder, "val_dices.png"))
+
 
 if __name__ == '__main__':
 
