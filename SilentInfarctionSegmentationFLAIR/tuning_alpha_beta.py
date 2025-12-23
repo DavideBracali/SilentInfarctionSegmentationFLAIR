@@ -411,8 +411,8 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
     with open(yaml_path, "w") as f:
         yaml.safe_dump(params_yaml, f, sort_keys=False)
 
-    print(f"Saved parameters to {yaml_path} (still not ready for use, "\
-          "please tune the other parameters by running "\
+    print(f"Saved parameters to {yaml_path} (still not ready for use, "
+          "please tune the other parameters by running "
           f"{os.path.join(
               'SilentInfarctionSegmentationFLAIR',
               'tuning_gamma_rs.py'
