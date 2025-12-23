@@ -23,7 +23,10 @@ __email__ = ['davide.bracali@studio.unibo.it']
 
 def parse_args():
     description = (
-        'SilentInfarctionSegmentationFLAIR - !!!!! aggiungere descrizione'
+        "SilentInfarctionSegmentationFLAIR - "\
+        "Pipeline for the segmentation of silent cerebral infarctions"
+        "from MRI images based on FLAIR and T1 integration, "\
+        "adaptive thresholding and refinement step."
     )
 
     parser = argparse.ArgumentParser(
@@ -46,19 +49,19 @@ def parse_args():
         help='Get the current version installed'
     )
     parser.add_argument(
-        '--patient-folder', '-p',
+        '--patient_folder', '-p',
         type=str,
         required=True,
         help='Path to the patient folder containing all input images'
     )
     parser.add_argument(
-        '--params-path',
+        '--params_path',
         type=str,
         default="params.yaml",
         help='Path to the .yaml file containing segmentation parameters'
     )
     parser.add_argument(
-        '--results-folder', '-o',
+        '--results_folder', '-o',
         type=str,
         default="results",
         help='Output directory where results will be saved'
@@ -77,6 +80,41 @@ def parse_args():
 
 
 def main(patient_folder, params_path, results_folder, verbose, show):
+    """
+    Run the full FLAIR+T1 segmentation pipeline for a single patient.
+
+    This function performs:
+    1. Loading and orienting FLAIR and T1 images.
+    2. Loading the segmentation and generating GM/WM masks.
+    3. Loading probabilistic tissue maps (PVE) and ground-truth lesion mask (if available).
+    4. Computing the weighted sum of FLAIR and Gaussian-transformed T1.
+    5. Thresholding and refinement of the lesion mask.
+    6. Returns all intermediate and final masks along with the ground truth.
+
+    Parameters
+    ----------
+    patient_folder : str
+        Path to the folder containing the patient's images.
+    params_path : str
+        Path to the YAML file with segmentation parameters (alpha, beta, gamma, etc.).
+    results_folder : str
+        Folder where results (images, masks) will be saved.
+    verbose : bool
+        Whether to print progress messages.
+    show : bool
+        Whether to display intermediate plots interactively.
+
+    Returns
+    -------
+    image : SimpleITK.Image
+        Weighted sum of FLAIR and Gaussian-transformed T1.
+    thr_mask : SimpleITK.Image
+        Mask obtained after thresholding.
+    ref_mask : SimpleITK.Image
+        Mask obtained after the refinement step.
+    gt : SimpleITK.Image or None
+        Ground-truth lesion mask if available, otherwise None.
+    """
     patient = os.path.basename(patient_folder)
 
     with open("config.yaml", "r") as f:

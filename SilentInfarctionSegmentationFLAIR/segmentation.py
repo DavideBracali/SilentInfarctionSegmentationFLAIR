@@ -17,124 +17,152 @@ from SilentInfarctionSegmentationFLAIR.utils import get_image_from_array
 
 def get_mask_from_segmentation(segm, labels=1):
     """
-    Returns a binary mask from a FreeSurfer segmentation image.
-    
+    Generate a binary mask from a segmentation image.
+
     Parameters
     ----------
-    segm (SimpleITK.Image): Any segmentation image where each pixel is represented by a numeric label.
-    labels (numeric or iterable): Iterable of labels to include in the mask.
-    
+    segm : SimpleITK.Image
+        Segmentation image where each voxel contains an integer label.
+    labels : int, float, iterable, or dict
+        Labels to include in the mask. If a dict is provided, its values
+        are used.
+
     Returns
     -------
-    mask (SimpleITK.Image): Binary mask.
+    mask : SimpleITK.Image
+        Binary mask where selected labels are set to 1.
     """
-    # if labels is not a list, make it a list
-    if isinstance(labels, (int,float)):      
-        labels = [labels]            
+    if isinstance(labels, (int, float)):
+        labels = [labels]
     if isinstance(labels, dict):
         labels = list(labels.values())
-    
-    mask = segm == labels[0]         # first label
-    for i in range(1,len(labels)):   # other labels (if present)
-        mask = sitk.Or(mask, segm == labels[i])     # union
-    
-    if not np.any(get_array_from_image(mask)):       # empty mask
-        warnings.warn(f"Labels {labels} are not present in the segmentation image. Returned mask will be empty.")
-    
+
+    mask = segm == labels[0]
+    for i in range(1, len(labels)):
+        mask = sitk.Or(mask, segm == labels[i])
+
+    if not np.any(get_array_from_image(mask)):
+        warnings.warn(
+            f"Labels {labels} are not present in the segmentation image. "
+            "Returned mask will be empty."
+        )
+
     return mask
 
 
 def get_mask_from_pve(pve, thr=1e-12):
     """
-    Returns a binary mask from a partial volume estimation (PVE) map.
+    Generate a binary mask from a partial volume estimation (PVE) map.
 
     Parameters
     ----------
-        pve (SimpleITK.Image): The partial volume estimation map.
-        thr (float): Voxels >= thr will be set to 1, otherwise to 0.
-    
+    pve : SimpleITK.Image
+        Partial volume estimation map.
+    thr : float, optional
+        Threshold value. Voxels >= thr are set to 1. Default is 1e-12.
+
     Returns
     -------
-        mask (SimpleITK.Image): Binary mask.
+    mask : SimpleITK.Image
+        Binary mask.
     """
-
-    mask = pve >= thr
-
-    return mask
+    return pve >= thr
 
 
 def apply_threshold(image, thr, ax=None):
     """
-    Applies a binary lower threshold to a SimpleITK image.
-    Voxels with gray level >= thr will be set to 1, otherwise to 0.
-    Optionally plots a vertical green dashed line.
+    Apply a binary lower threshold to an image.
+
+    Voxels with intensity >= ``thr`` are set to 1, otherwise to 0.
+    Optionally draws a vertical threshold line on a provided axis.
 
     Parameters
     ----------
-        - image (SimpleITK.image): The image to threshold.
-        - thr (float): The gray level threshold to apply. 
-    
+    image : SimpleITK.Image
+        Input image.
+    thr : float
+        Lower threshold value.
+    ax : matplotlib.axes.Axes, optional
+        Axis on which to draw the threshold line.
+
     Returns
     -------
-        - thr_image (SimpleITK.image): The thresholded binary image.
+    thr_image : SimpleITK.Image
+        Binary thresholded image.
     """
     arr = get_array_from_image(image)
     max_gl = np.max(arr)
-    # set upper threshold higher than maximum gl because default value is 255
+
     if thr > max_gl:
-        warnings.warn(f"Lower threshold ({thr}) is higher than maximum gray level ({max_gl}).")
+        warnings.warn(
+            f"Lower threshold ({thr}) is higher than maximum gray level "
+            f"({max_gl})."
+        )
         empty_arr = np.zeros(arr.shape)
         return get_image_from_array(empty_arr, image)
 
     upper_thr = float(max_gl)
-    thr_mask = sitk.BinaryThreshold(image, lowerThreshold=thr,
-                        upperThreshold=upper_thr)
+    thr_mask = sitk.BinaryThreshold(
+        image,
+        lowerThreshold=thr,
+        upperThreshold=upper_thr
+    )
 
     if ax is not None:
-        ax.axvline(thr, linestyle='--', color='lime',
-                linewidth=2, label=f"Threshold ({thr:.1f})")
+        ax.axvline(
+            thr,
+            linestyle="--",
+            color="lime",
+            linewidth=2,
+            label=f"Threshold ({thr:.1f})"
+        )
 
     return thr_mask
 
 
-
 def evaluate_voxel_wise(mask, gt):
     """
-    Returns voxel-wise evaluation parameters from two binary images.
+    Compute voxel-wise evaluation metrics between prediction and ground truth.
+
+    Metrics include:
+    - True Positive Fraction (TPF)
+    - False Positive Fraction (FPF)
+    - Dice Similarity Coefficient (DSC)
+    - Matthews Correlation Coefficient (MCC)
 
     Parameters
     ----------
-        mask (SimpleITK.image): The binary image to evaluate.
-        gt (SimpleITK.image): The binary image containing the ground truth.
-    
+    mask : SimpleITK.Image
+        Binary prediction mask.
+    gt : SimpleITK.Image
+        Binary ground-truth mask.
+
     Returns
     -------
-        metrics (dict): A dict containing true/false positive fractions,
-        the DICE coefficient and the Mattheus correlation coefficient
-        (floats).
+    metrics : dict
+        Dictionary containing voxel-wise metrics.
     """
     mask_arr = get_array_from_image(mask)
     gt_arr = get_array_from_image(gt)
 
-    # true/false positives/negatives    
     tp = np.sum((mask_arr > 0) & (gt_arr > 0))
     tn = np.sum((mask_arr == 0) & (gt_arr == 0))
     fp = np.sum((mask_arr > 0) & (gt_arr == 0))
-    fn = np.sum((mask_arr == 0) & (gt_arr > 0)) 
+    fn = np.sum((mask_arr == 0) & (gt_arr > 0))
 
-    # DICE
-    if 2*tp + fp + fn == 0:   # do not divide by 0
+    if 2 * tp + fp + fn == 0:
         dice = 1.0 if np.array_equal(mask_arr, gt_arr) else 0.0
     else:
-        dice = 2*tp / (2*tp + fp + fn)
+        dice = 2 * tp / (2 * tp + fp + fn)
 
-    # Matthews coefficient
-    denom = np.sqrt(float(tp + fp)*float(tp + fn)*
-                    float(tn + fp)*float(tn + fn))   # float to avoid overflow
-    if denom == 0:
-        mcc = 0
-    else:
-        mcc = (tp*tn - fp*fn)/denom
+    denom = np.sqrt(
+        float(tp + fp)
+        * float(tp + fn)
+        * float(tn + fp)
+        * float(tn + fn)
+    )
+
+    mcc = 0.0 if denom == 0 else (tp * tn - fp * fn) / denom
 
     pos = tp + fn
     neg = tn + fp
@@ -143,9 +171,7 @@ def evaluate_voxel_wise(mask, gt):
         "vw-TPF": tp / pos if pos > 0 else 0.0,
         "vw-FPF": fp / neg if neg > 0 else 0.0,
         "vw-DSC": dice,
-        "vw-MCC": mcc}
-    
-    metrics = {k: float(v) for k,v in metrics.items()}
+        "vw-MCC": mcc,
+    }
 
-
-    return metrics
+    return {k: float(v) for k, v in metrics.items()}

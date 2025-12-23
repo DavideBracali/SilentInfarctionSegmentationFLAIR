@@ -1,11 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Created on Fri May 23 20:16:28 2025
+Utility functions for 3D SimpleITK image handling and visualization.
 
+Created on Fri May 23 20:16:28 2025
 @author: david
 """
-
 
 import numpy as np
 import SimpleITK as sitk
@@ -17,180 +17,203 @@ import pandas as pd
 
 
 class DimensionError(Exception):
+    """Custom exception for non‑3D images."""
     pass
 
 
 def check_3d(image):
     """
-    Checks is the SimpleITK image is 3-dimensional, otherwise raises a DimensionError.
-    
+    Ensure that a SimpleITK image is 3‑dimensional.
+
     Parameters
     ----------
-        image (SimpleITK.Image): SimpleITK image object.
+    image : SimpleITK.Image
+        Input image.
+
+    Raises
+    ------
+    DimensionError
+        If the image is not 3‑dimensional.
     """
     if image.GetDimension() != 3:
-        raise DimensionError("Image must be 3-dimensional.")
+        raise DimensionError("Image must be 3‑dimensional.")
 
 
 def get_info(image):
     """
-    Extracts size, spacing, origin and direction matrix from a SimpleITK 3D image.
-    
+    Extract metadata from a SimpleITK 3D image.
+
     Parameters
     ----------
-        image (SimpleITK.Image): The image to get information from.
-        
+    image : SimpleITK.Image
+        Input image.
+
     Returns
     -------
-        info (dict): Size, spacing, origin and direction matrix.
-    """ 
-    info = {
-       "size": image.GetSize(),           
-       "spacing": image.GetSpacing(),     
-       "origin": image.GetOrigin(),       
-       "direction": image.GetDirection()} 
-    
-    return info
+    dict
+        Dictionary containing size, spacing, origin and direction.
+    """
+    return {
+        "size": image.GetSize(),
+        "spacing": image.GetSpacing(),
+        "origin": image.GetOrigin(),
+        "direction": image.GetDirection(),
+    }
 
 
 def get_array_from_image(image):
-    
     """
-    Extracts Numpy array from a SimpleITK 3D image.
-    Trasposes it in a format so that:
-        Axial plane is xy plane;
-        Sagittal plane is yz plane;
-        Coronal plane is xz plane;
-    
+    Convert a SimpleITK 3D image into a NumPy array.
+
+    The returned array is transposed so that:
+    - axial plane   → xy
+    - sagittal plane → yz
+    - coronal plane → xz
+
     Parameters
     ----------
-        image (SimpleITK.Image): SimpleITK image object
-        
+    image : SimpleITK.Image
+        Input 3D image.
+
     Returns
     -------
-        image_array (np.array): NumPy array of the image
-        
+    np.ndarray
+        Array with shape (x, y, z).
     """
-
     check_3d(image)
-    
-    image_array = sitk.GetArrayFromImage(image)
-    image_array = np.transpose(image_array, (2,1,0))       # SimpleITK returns zyx
-        
-    return image_array
+    arr = sitk.GetArrayFromImage(image)      # z, y, x
+    return np.transpose(arr, (2, 1, 0))      # x, y, z
 
 
-def get_image_from_array(image_array, reference_image=None, cast_to_reference=True):
+def get_image_from_array(image_array, reference_image=None,
+                         cast_to_reference=True):
     """
-    Converts a NumPy array back to a SimpleITK image.
-    Assumes the input array has axes:
-        Axial plane = xy plane
-        Sagittal plane = yz plane
-        Coronal plane = xz plane
-    
+    Convert a NumPy array into a SimpleITK image.
+
+    The input array must follow the convention:
+    - axial plane   → xy
+    - sagittal plane → yz
+    - coronal plane → xz
+
     Parameters
     ----------
-        image_array (np.array): NumPy array with shape (x, y, z)
-        reference_image (SimpleITK.Image, optional): 
-            If provided, copy spacing, origin, and direction from this image.
-        cast_to_reference (bool, optional):
-            Whether to set voxel data type to reference image.
-            If True, inherits voxel type from reference image if provided.
-            If False, sets voxel type automatically from array. 
-    
+    image_array : np.ndarray
+        Array with shape (x, y, z).
+    reference_image : SimpleITK.Image, optional
+        If provided, copy spacing, origin and direction.
+    cast_to_reference : bool, optional
+        If True, cast voxel type to match ``reference_image``.
+
     Returns
     -------
-        image (SimpleITK.Image): SimpleITK image from array.
+    SimpleITK.Image
+        Output image.
     """
-    
-    sitk_array = np.transpose(image_array, (2, 1, 0))       # SimpleITK expects zyx
-    
-    image = sitk.GetImageFromArray(sitk_array)
-    
+    sitk_arr = np.transpose(image_array, (2, 1, 0))  # z, y, x
+    image = sitk.GetImageFromArray(sitk_arr)
+
     if reference_image is not None:
         image.CopyInformation(reference_image)
-        
         if cast_to_reference:
             image = sitk.Cast(image, reference_image.GetPixelID())
-    
+
     return image
 
-
-def plot_image(image, xyz=None, mask=None, 
-               title=None, show=True, save_path=None):
+def plot_image(image, xyz=None, mask=None, title=None,
+               show=True, save_path=None):
     """
-    Plots a 3D image using SimpleITK, Matplotlib.pyplot, Seaborn.
-    You can specify the intersection between the three planes. By default it is
-    set to the center of the image.
-    
+    Plot three orthogonal slices (axial, sagittal, coronal) of a 3D image.
+
     Parameters
     ----------
-        image (SimpleITK.Image): The image to be plotted.
-        xyz (tuple): Intersection between the three planes of the 3D image.
-    
+    image : SimpleITK.Image
+        Input 3D image.
+    xyz : tuple of int, optional
+        Coordinates of the slice intersection (x, y, z). If None, the
+        center of the image is used.
+    mask : SimpleITK.Image, optional
+        Binary mask to overlay on the image. Masked voxels are shown in
+        red.
+    title : str, optional
+        Title of the figure.
+    show : bool, optional
+        Whether to display the figure.
+    save_path : str, optional
+        Path where the figure is saved.
+
     Returns
     -------
-        array_info (dict): Array size, spacing and aspects.
-
+    dict
+        Dictionary containing array size, spacing and aspect ratios.
     """
     image_array = get_array_from_image(image)
 
-    # default values: center of the image
-    if xyz == None:
-        xyz = tuple(int(np.round(image_array.shape[i] / 2)) for i in range(3))
+    if xyz is None:
+        xyz = tuple(int(round(image_array.shape[i] / 2))
+                    for i in range(3))
 
-    # get spacing
-    
     sx, sy, sz = image.GetSpacing()
-    
+
     sagittal_aspect = sz / sy
     axial_aspect = sy / sx
     coronal_aspect = sz / sx
-    
-    # plot
-    with sns.plotting_context('notebook'):
-    
-        fig, (ax0, ax1, ax2) = plt.subplots(nrows=1, ncols=3, figsize=(7, 14))
-    
-        _ = ax0.axis('off')
-        _ = ax1.axis('off')
-        _ = ax2.axis('off')
-        
-        if mask is not None:    # rgb
+
+    with sns.plotting_context("notebook"):
+        fig, (ax0, ax1, ax2) = plt.subplots(
+            nrows=1, ncols=3, figsize=(7, 14)
+        )
+
+        ax0.axis("off")
+        ax1.axis("off")
+        ax2.axis("off")
+
+        if mask is not None:
             mask_arr = get_array_from_image(mask).astype(bool)
-            rgb_arr = np.zeros(image_array.shape + (3,))
-            rgb_arr = np.stack([image_array,
-                                image_array*(~mask_arr),
-                                image_array*(~mask_arr)],
-                                axis=-1)
 
-            
-            xy = np.transpose(rgb_arr[:,:,xyz[2],:], (1,0,2))
-            yz = np.transpose(rgb_arr[xyz[0],:,:,:], (1,0,2))
-            xz = np.transpose(rgb_arr[:,xyz[1],:,:], (1,0,2))
+            rgb_arr = np.stack(
+                [
+                    image_array,
+                    image_array * (~mask_arr),
+                    image_array * (~mask_arr),
+                ],
+                axis=-1,
+            )
 
-            _ = ax0.imshow(xy,       
-                        origin='lower', aspect=axial_aspect)        #xy
-            _ = ax1.imshow(yz,
-                        origin='lower', aspect=sagittal_aspect)     #yz
-            _ = ax2.imshow(xz,
-                        origin='lower', aspect=coronal_aspect)      #xz
-            
-        else:                   # shades of gray
-            _ = ax0.imshow(image_array[:,:,xyz[2]].T, cmap='gray', 
-                        origin='lower', aspect=axial_aspect)        #xy
-            _ = ax1.imshow(image_array[xyz[0],:,:].T, cmap='gray',
-                        origin='lower', aspect=sagittal_aspect)     #yz
-            _ = ax2.imshow(image_array[:,xyz[1],:].T, cmap='gray',
-                        origin='lower', aspect=coronal_aspect)      #xz
+            xy = np.transpose(rgb_arr[:, :, xyz[2], :], (1, 0, 2))
+            yz = np.transpose(rgb_arr[xyz[0], :, :, :], (1, 0, 2))
+            xz = np.transpose(rgb_arr[:, xyz[1], :, :], (1, 0, 2))
 
-        _ = ax0.set_title('Axial')
-        _ = ax1.set_title('Sagittal')
-        _ = ax2.set_title('Coronal')
+            ax0.imshow(xy, origin="lower", aspect=axial_aspect)
+            ax1.imshow(yz, origin="lower", aspect=sagittal_aspect)
+            ax2.imshow(xz, origin="lower", aspect=coronal_aspect)
+
+        else:
+            ax0.imshow(
+                image_array[:, :, xyz[2]].T,
+                cmap="gray",
+                origin="lower",
+                aspect=axial_aspect,
+            )
+            ax1.imshow(
+                image_array[xyz[0], :, :].T,
+                cmap="gray",
+                origin="lower",
+                aspect=sagittal_aspect,
+            )
+            ax2.imshow(
+                image_array[:, xyz[1], :].T,
+                cmap="gray",
+                origin="lower",
+                aspect=coronal_aspect,
+            )
+
+        ax0.set_title("Axial")
+        ax1.set_title("Sagittal")
+        ax2.set_title("Coronal")
 
     if title is not None:
         plt.suptitle(title, y=0.65)
-    
+
     if save_path is not None:
         plt.savefig(save_path)
 
@@ -198,97 +221,116 @@ def plot_image(image, xyz=None, mask=None,
         plt.show()
 
     plt.close()
-        
-    # plot info
-    plot_info = {
-       "size": image_array.shape,           
-       "spacing": (sx, sy, sz),     
-       "aspects": (axial_aspect, sagittal_aspect, coronal_aspect)}
-    
-    return plot_info
 
+    return {
+        "size": image_array.shape,
+        "spacing": (sx, sy, sz),
+        "aspects": (axial_aspect, sagittal_aspect, coronal_aspect),
+    }
 
 def orient_image(image, orientation):
-    
     """
-    Orients a SimpleITK image to a specified coordinate orientation system.
-    
+    Reorient a SimpleITK image to a given coordinate system.
+
     Parameters
     ----------
-        image (SimpleITK.Image): The input image to be reoriented.
-        orientation (str): The desired coordinate orientation, such as 'RAS' or 'LPS'.
-    
+    image : SimpleITK.Image
+        Input 3D image.
+    orientation : str
+        Desired orientation code (e.g., 'RAS', 'LPS').
+
     Returns
     -------
-        oriented_image (SimpleITK.Image): The image reoriented to the specified system.
+    SimpleITK.Image
+        Reoriented image.
     """
     check_3d(image)
-    orient_filter = sitk.DICOMOrientImageFilter()           
-    orient_filter.SetDesiredCoordinateOrientation(orientation) 
-    oriented_image = orient_filter.Execute(image)
-    
-    return oriented_image
+    orient_filter = sitk.DICOMOrientImageFilter()
+    orient_filter.SetDesiredCoordinateOrientation(orientation)
+    return orient_filter.Execute(image)
 
-
-def resample_to_reference(image, reference, interpolator=sitk.sitkNearestNeighbor, default_value=0):
-    
+def resample_to_reference(image, reference,
+                          interpolator=sitk.sitkNearestNeighbor,
+                          default_value=0):
     """
-    Resamples moving_image onto the space of reference_image.
+    Resample an image into the space of a reference image.
 
     Parameters
     ----------
-        moving_image (SimpleITK.Image): The image to be resampled.
-        reference_image (SimpleITK.Image): The target space.
-        interpolator (SimpleITK interpolator): e.g., sitk.sitkLinear, sitk.sitkNearestNeighbor.
-        default_value (float): Value for areas outside original image.
+    image : SimpleITK.Image
+        Image to resample.
+    reference : SimpleITK.Image
+        Target reference image.
+    interpolator : SimpleITK interpolator, optional
+        Interpolation method (e.g., sitk.sitkLinear).
+    default_value : float, optional
+        Value assigned outside the original image domain.
 
     Returns
     -------
-        resampled_image (SimpleITK.Image): The resampled image in reference space.
+    SimpleITK.Image
+        Resampled image.
     """
     check_3d(image)
     resampler = sitk.ResampleImageFilter()
     resampler.SetReferenceImage(reference)
     resampler.SetInterpolator(interpolator)
     resampler.SetDefaultPixelValue(default_value)
-    image_rs = resampler.Execute(image)
-    return image_rs
-
+    return resampler.Execute(image)
 
 def downsample_array(arr, perc=0.01):
     """
-    Returns an evenly spaced subsample of a 1D array.
-    Useful to reduce memory and computational complexity on very large arrays.
+    Evenly downsample a 1D NumPy array.
+
+    Useful for reducing memory and computation on very large arrays by
+    selecting regularly spaced samples.
 
     Parameters
     ----------
-        arr (np.ndarray): Input 1D array.
-        perc (float): Percentage of elements to keep (as a decimal, e.g. 0.01 = 1%).
+    arr : np.ndarray
+        Input 1D array.
+    perc : float, optional
+        Fraction of elements to keep (e.g., 0.01 = 1%). Must be in
+        (0, 1]. Default is 0.01.
 
     Returns
     -------
-        arr_ds (np.ndarray): Evenly spaced downsampled array.
+    np.ndarray
+        Downsampled array.
+
+    Raises
+    ------
+    ValueError
+        If ``perc`` is <= 0.
     """
     if arr.size == 0 or perc >= 1.0:
         return arr
     if perc <= 0:
         raise ValueError("Invalid downsample percentage.")
-    step = max(1, int(1/perc))
+
+    step = max(1, int(1 / perc))
     return arr[::step]
 
 
 def get_paths_df(folder, extensions=""):
     """
-    Returns paths DataFrame containing all files paths in a folder.
+    Build a DataFrame containing paths of files inside a folder.
 
     Parameters
     ----------
-        - folder (str): Path of the folder to collect file paths.
-    
+    folder : str
+        Path to the folder to scan.
+    extensions : str or list of str, optional
+        File extensions to include. If a single string is provided, it is
+        converted to a list.
+
     Returns
     -------
-        - paths_df (pandas.DataFrame): DataFrame containing folder paths as indexes
-            and file types as columns.
+    pandas.DataFrame
+        DataFrame where:
+        - index = folder paths
+        - columns = filenames
+        - values = full file paths
     """
     if not isinstance(extensions, list):
         extensions = [extensions]
@@ -298,34 +340,35 @@ def get_paths_df(folder, extensions=""):
         for file in files:
             for ext in extensions:
                 if file.endswith(ext):
-                    paths_list.append((root,file))
+                    paths_list.append((root, file))
 
     paths_df = pd.DataFrame()
     for root, file in paths_list:
-        paths_df.loc[root,file] = os.path.join(root,file)
+        paths_df.loc[root, file] = os.path.join(root, file)
 
     return paths_df
 
-
 def label_names(label_name_file_path):
     """
-    Reads a .txt file and assigns a string label to each numeric label.
+    Read a text file and map numeric labels to string names.
 
-    File format:
-        - Each line should start with a number followed by the label name.
-        - Lines not starting with a number are ignored.
-        - Only the first word after the number is used as the label name.
-          For example:
-            '1 Left-Thalamus' -> label 1 is 'Left-Thalamus'
-            '2 Left Thalamus' -> label 2 is 'Left' (only the first word is taken)
+    The file must contain lines beginning with an integer followed by a
+    label name. Only the first word after the number is used.
+
+    Examples
+    --------
+    '1 Left-Thalamus' → {1: 'Left-Thalamus'}
+    '2 Left Thalamus' → {2: 'Left'}
 
     Parameters
     ----------
-        label_name_file_path (str): Path to the label .txt file.
+    label_name_file_path : str
+        Path to the label text file.
 
     Returns
     -------
-        label_dict (dict): Mapping from integer label numbers to string names.
+    dict
+        Mapping from integer labels to string names.
     """
     label_dict = {}
     with open(label_name_file_path) as f:
@@ -337,78 +380,83 @@ def label_names(label_name_file_path):
             num = int(parts[0])
             name = parts[1]
             label_dict[num] = name
-    
     return label_dict
 
 
 def progress_bar(iteration, total, start_time=None, prefix="", length=40):
     """
-    Displays or updates a textual progress bar in the console.
+    Display or update a textual progress bar in the console.
 
     Parameters
     ----------
-        iteration (int): Current iteration (0-based).
-        total (int): Total number of iterations.
-        start_time (float, optional): Start time of the operation, e.g., time.time().
-            If provided, an estimated remaining time (ETA) is displayed.
-        prefix (str, optional): Text to display before the progress bar.
-        length (int, optional): Character length of the progress bar.
+    iteration : int
+        Current iteration (0‑based).
+    total : int
+        Total number of iterations.
+    start_time : float, optional
+        Start time (e.g., ``time.time()``). If provided, an ETA is shown.
+    prefix : str, optional
+        Text displayed before the bar.
+    length : int, optional
+        Length of the bar in characters.
 
     Notes
     -----
-        - The progress bar is updated in-place using carriage return.
-        - At the last iteration, a newline is printed to end the bar.
-        - Handles edge cases where iteration >= total or total <= 0.
+    - The bar updates in place using carriage return.
+    - A newline is printed at the last iteration.
+    - Handles cases where ``iteration >= total`` or ``total <= 0``.
     """
-    
     if total <= 0:
         total = 1
     iteration = min(iteration, total - 1)
 
     percent = f"{100 * ((iteration + 1) / float(total)):.1f}"
-    filled_length = int(length * (iteration + 1) // total)
-    bar = "█" * filled_length + "-" * (length - filled_length)
+    filled = int(length * (iteration + 1) // total)
+    bar = "█" * filled + "-" * (length - filled)
 
     eta_str = ""
     if start_time is not None:
         elapsed = time.time() - start_time
-        avg_time = elapsed / (iteration + 1)
-        remaining = int(round(avg_time * (total - (iteration + 1))))
+        avg = elapsed / (iteration + 1)
+        remaining = int(round(avg * (total - (iteration + 1))))
         h = remaining // 3600
         m = (remaining % 3600) // 60
         s = remaining % 60
         eta_str = f" ETA: {h:d}:{m:02d}:{s:02d}"
 
-    line = f"\r{prefix} |{bar}| {percent}% ({iteration+1}/{total}){eta_str}"
+    line = (
+        f"\r{prefix} |{bar}| {percent}% "
+        f"({iteration+1}/{total}){eta_str}"
+    )
     print(line.ljust(120), end="\r")
 
     if iteration + 1 >= total:
         print()
 
-
 def normalize(image, n_bits=8):
     """
-    Normalize an image to 0..(2^n_bits - 1) using a min-max rescaling.
-    If n_bits == 0 and cast to float64, else cast to unsigned integer.
+    Normalize an image using min‑max rescaling.
+
+    If ``n_bits == 0``, the output is float64 in [0, 1].
+    Otherwise, the output is cast to an unsigned integer type.
 
     Parameters
     ----------
     image : SimpleITK.Image
-        Input image (can be float or integer)
-    n_bits : int
-        Number of bits for output image (default 8)
+        Input image.
+    n_bits : int, optional
+        Number of bits for the output image. Default is 8.
 
     Returns
     -------
     SimpleITK.Image
-        Image normalized and cast to UInt{8,16,32} or float32 depending on n_bits
+        Normalized image with preserved metadata.
     """
     stats = sitk.StatisticsImageFilter()
     stats.Execute(image)
     min_val = stats.GetMinimum()
     max_val = stats.GetMaximum()
-    
-    # data type
+
     if n_bits <= 1:
         voxel_type = sitk.sitkFloat64
         dtype = np.float64
@@ -422,123 +470,137 @@ def normalize(image, n_bits=8):
         voxel_type = sitk.sitkUInt32
         dtype = np.uint32
 
-    # uniform image
     if max_val == min_val:
         scaled = sitk.Image(image.GetSize(), voxel_type)
         scaled.CopyInformation(image)
         return scaled
 
     arr = sitk.GetArrayFromImage(image)
-    arr = (arr - min_val) / (max_val - min_val)  # 0..1
-    
+    arr = (arr - min_val) / (max_val - min_val)
+
     if n_bits > 1:
-        arr = arr * (2**n_bits - 1)                 # 0..2^n_bits-1
+        arr = arr * (2**n_bits - 1)
         arr = np.round(arr).astype(dtype)
-    
+
     is_vector = image.GetNumberOfComponentsPerPixel() > 1
-    image_uint = sitk.GetImageFromArray(arr, isVector=is_vector)
-    image_uint.CopyInformation(image)
-    
-    return image_uint
+    out = sitk.GetImageFromArray(arr, isVector=is_vector)
+    out.CopyInformation(image)
 
-def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0, 
-                        gt_file="GT.nii", show=False, save_series=True, title=None):
+    return out
 
+def train_val_test_split(
+    data_folder,
+    validation_fraction=0,
+    test_fraction=0,
+    gt_file="GT.nii",
+    show=False,
+    save_series=True,
+    title=None,
+):
     """
-    Split patients into train, validation and test sets based on imaging files found
-    in the given folder, optionally stratifying according to the ratio of positive/negative
-    labels in the ground-truth image.
+    Split patients into train/validation/test sets based on ground‑truth
+    lesion ratios.
+
+    Patients are grouped by quartiles of the positive‑label ratio and
+    sampled proportionally within each quartile.
 
     Parameters
     ----------
     data_folder : str
-        Path to the root folder containing patient subdirectories, each holding
-        `.nii` files including the ground truth file.
+        Root folder containing patient subdirectories with `.nii` files.
     validation_fraction : float, optional
-        Fraction of patients to include in the validation set. Default is 0.
+        Fraction of patients assigned to validation. Default is 0.
     test_fraction : float, optional
-        Fraction of patients to include in the test set. Default is 0.
-    pos_neg_stratify : bool, optional
-        If True, perform stratified sampling based on quartiles of the positive-label
-        ratio. Default is False.
+        Fraction of patients assigned to test. Default is 0.
     gt_file : str, optional
-        Filename of the ground truth image inside each patient directory. Default is "GT.nii".
+        Name of the ground‑truth file inside each patient folder.
     show : bool, optional
-        Whether to show the ratio distribution plot. Default is False.
+        Whether to display the ratio distribution plot.
+    save_series : bool, optional
+        Whether to save train/val/test patient lists as pickle files.
+    title : str, optional
+        Title for the ratio distribution plot.
 
     Returns
     -------
     tr_patients : list of str
-        List of patient directory names assigned to the training set.
+        Patients assigned to the training set.
     val_patients : list of str
-        List of patient directory names assigned to the validation set.
+        Patients assigned to the validation set.
     ts_patients : list of str
-        List of patient directory names assigned to the test set.
+        Patients assigned to the test set.
 
     Notes
     -----
-    - Patients missing one of the required `.nii` files are discarded.
-    - Positive/negative ratio is defined as:
+    - Patients missing required `.nii` files are discarded.
+    - Positive ratio is defined as::
 
-      ``ratio = count(label == 1) / (count(label == 0) + count(label == 1))``
+          ratio = count(label == 1) / (count(label == 0) + count(label == 1))
 
-    - If `pos_neg_stratify=True`, the stratification is computed by dividing
-      patient ratios into quartiles and splitting proportionally within each group.
-    - A `ratios.png` file is saved one directory above `data_folder`, showing the
-      distributions of positive-label ratios for train/validation/test sets.
+    - Quartile‑based stratification ensures balanced sampling.
+    - A plot ``ratios.png`` is saved in ``data_folder``.
     """
-
     if not os.path.isdir(data_folder):
         raise FileNotFoundError(f"data_folder not found: {data_folder}")
 
     if not (0 <= validation_fraction < 1):
-        raise ValueError("validation_fraction must be in [0, 1)")
+        raise ValueError("validation_fraction must be in [0, 1).")
 
     if not (0 <= test_fraction < 1):
-        raise ValueError("test_fraction must be in [0, 1)")
+        raise ValueError("test_fraction must be in [0, 1).")
 
     if validation_fraction + test_fraction >= 1:
-        raise ValueError("validation_fraction + test_fraction must be < 1")
+        raise ValueError("validation_fraction + test_fraction must be < 1.")
 
-    # organize all images in a df
+    # ------------------------------------------------------------
+    # Collect all .nii files
+    # ------------------------------------------------------------
     paths_list = []
     for root, _, files in os.walk(data_folder):
         for file in files:
             if file.endswith(".nii"):
                 paths_list.append((root, file))
 
+    if len(paths_list) == 0:
+        raise RuntimeError("No .nii files found inside data_folder.")
+
     paths_df = pd.DataFrame()
     for root, file in paths_list:
         patient = os.path.basename(root)
         paths_df.loc[patient, file] = os.path.join(root, file)
 
-    if len(paths_list) == 0:
-        raise RuntimeError("No .nii files found inside data_folder")
-
-    # drop NaN
-    dropped_patients = paths_df.index[paths_df.isna().any(axis=1)]
-    if len(dropped_patients) > 0:
-       print("WARNING!!! The following patients will be removed because " \
-                      f"one of the required images is missing: {list(dropped_patients)}")
+    # Remove patients missing required files
+    dropped = paths_df.index[paths_df.isna().any(axis=1)]
+    if len(dropped) > 0:
+        print(
+            "WARNING: Removing patients missing required images: "
+            f"{list(dropped)}"
+        )
     paths_df = paths_df.dropna(how="any")
 
     all_patients = list(paths_df.index)
 
+    # ------------------------------------------------------------
+    # Compute positive/negative ratios
+    # ------------------------------------------------------------
     ratios = {}
-    excluded_patients = []
+    excluded = []
+
     for patient in all_patients:
         gt = sitk.ReadImage(paths_df.loc[patient, gt_file])
-        label_stats = sitk.LabelStatisticsImageFilter()
-        label_stats.Execute(gt, gt)
+        stats = sitk.LabelStatisticsImageFilter()
+        stats.Execute(gt, gt)
 
-        count_0 = label_stats.GetCount(0)
-        count_1 = label_stats.GetCount(1) if label_stats.HasLabel(1) else 0
+        count_0 = stats.GetCount(0)
+        count_1 = stats.GetCount(1) if stats.HasLabel(1) else 0
 
         if count_0 + count_1 == 0:
-            raise ValueError(f"Ground truth for patient {patient} has no valid labels.")
+            raise ValueError(
+                f"Ground truth for patient {patient} has no valid labels."
+            )
 
         if count_1 == 0:
-            excluded_patients.append(patient)
+            excluded.append(patient)
             continue
 
         ratios[patient] = count_1 / (count_0 + count_1)
@@ -546,12 +608,15 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0,
     ratios = pd.Series(ratios)
     all_patients = list(ratios.index)
 
-    if len(excluded_patients) > 0:
+    if len(excluded) > 0:
         print(
-            f"[INFO] Excluding {len(excluded_patients)} patients with zero lesion ratio: "
-            f"{excluded_patients}"
+            f"[INFO] Excluding {len(excluded)} patients with zero lesions: "
+            f"{excluded}"
         )
-        
+
+    # ------------------------------------------------------------
+    # Quartile assignment
+    # ------------------------------------------------------------
     q1 = ratios.quantile(0.25)
     q2 = ratios.quantile(0.50)
     q3 = ratios.quantile(0.75)
@@ -574,7 +639,9 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0,
     assigned_ts = 0
     remaining_pool = []
 
-    # proportional allocation per quartile
+    # ------------------------------------------------------------
+    # Proportional allocation per quartile
+    # ------------------------------------------------------------
     for q in sorted(quartiles.unique()):
         group = list(quartiles[quartiles == q].index)
         n = len(group)
@@ -585,11 +652,9 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0,
         n_val_q = int(round(total_val * prop))
         n_ts_q = int(round(total_ts * prop))
 
-        # cap by remaining budgets
         n_val_q = min(n_val_q, total_val - assigned_val)
         n_ts_q = min(n_ts_q, total_ts - assigned_ts)
 
-        # cap by group size
         if n_val_q + n_ts_q > n:
             excess = (n_val_q + n_ts_q) - n
             reduce_ts = min(excess, n_ts_q)
@@ -609,7 +674,9 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0,
 
         remaining_pool.extend(group[n_val_q + n_ts_q:])
 
-    # fix rounding leftovers
+    # ------------------------------------------------------------
+    # Fix rounding leftovers
+    # ------------------------------------------------------------
     np.random.shuffle(remaining_pool)
 
     need_val = total_val - assigned_val
@@ -624,7 +691,9 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0,
 
     tr_patients.extend(remaining_pool)
 
-    # enforce exact totals
+    # ------------------------------------------------------------
+    # Enforce exact totals
+    # ------------------------------------------------------------
     if len(val_patients) < total_val:
         diff = total_val - len(val_patients)
         move = tr_patients[:diff]
@@ -637,73 +706,92 @@ def train_val_test_split(data_folder, validation_fraction=0, test_fraction=0,
         ts_patients.extend(move)
         tr_patients = tr_patients[diff:]
 
-    # build plotting df
+    # ------------------------------------------------------------
+    # Plot distribution
+    # ------------------------------------------------------------
     df_plot = pd.DataFrame(
-        [{"Set": "Train", "Ratio": ratios[p]} for p in tr_patients] +
-        [{"Set": "Validation", "Ratio": ratios[p]} for p in val_patients] +
-        [{"Set": "Test", "Ratio": ratios[p]} for p in ts_patients]
+        [{"Set": "Train", "Ratio": ratios[p]} for p in tr_patients]
+        + [{"Set": "Validation", "Ratio": ratios[p]} for p in val_patients]
+        + [{"Set": "Test", "Ratio": ratios[p]} for p in ts_patients]
     )
 
     plt.figure(figsize=(8, 6))
-    sns.boxplot(data=df_plot,
+    sns.boxplot(
+        data=df_plot,
         x="Set",
         y="Ratio",
         showcaps=False,
         showfliers=False,
-        boxprops={'facecolor':'none'},
-        whiskerprops={'linewidth':1},
-        medianprops={'linewidth':1}
+        boxprops={"facecolor": "none"},
+        whiskerprops={"linewidth": 1},
+        medianprops={"linewidth": 1},
     )
     sns.stripplot(data=df_plot, x="Set", y="Ratio", jitter=0.1, size=8)
-    plt.grid(axis='y', alpha=0.3)
-    if show:    plt.show()
-    if title is not None: plt.title(title)
-    plt.ylabel("positive/total voxels ratio")
+    plt.grid(axis="y", alpha=0.3)
+
+    if title is not None:
+        plt.title(title)
+
+    plt.ylabel("positive / total voxels ratio")
+
+    if show:
+        plt.show()
+
     plt.savefig(os.path.join(data_folder, "ratios.png"))
     plt.close()
 
+    # ------------------------------------------------------------
+    # Save patient lists
+    # ------------------------------------------------------------
     if save_series:
-        pd.Series(tr_patients).to_pickle(os.path.join(data_folder, "train_patients.pkl"))
-        pd.Series(val_patients).to_pickle(os.path.join(data_folder, "validation_patients.pkl"))
-        pd.Series(ts_patients).to_pickle(os.path.join(data_folder, "test_patients.pkl"))
+        pd.Series(tr_patients).to_pickle(
+            os.path.join(data_folder, "train_patients.pkl")
+        )
+        pd.Series(val_patients).to_pickle(
+            os.path.join(data_folder, "validation_patients.pkl")
+        )
+        pd.Series(ts_patients).to_pickle(
+            os.path.join(data_folder, "test_patients.pkl")
+        )
 
     return tr_patients, val_patients, ts_patients
 
-
-def gaussian_transform(image, mean, std, return_float = False, normalized = False):
+def gaussian_transform(image, mean, std, return_float=False,
+                       normalized=False):
     """
-    Apply a Gaussian weighting to the voxel intensities of a SimpleITK image.
+    Apply a Gaussian weighting to voxel intensities.
 
-    Each voxel intensity `I` is transformed according to:
-        G(I) = exp(-0.5 * ((I - mean) / std)²) * I
-    If `return_float=True` and `normalized=True`, the result is further scaled by:
+    Each voxel intensity ``I`` is transformed as::
+
+        G(I) = exp(-0.5 * ((I - mean) / std)**2) * I
+
+    If ``return_float=True`` and ``normalized=True``, the result is
+    additionally scaled by::
+
         1 / (std * sqrt(2π))
 
     Parameters
     ----------
     image : SimpleITK.Image
-        Input image with non-negative voxel intensities.
+        Input image with non‑negative voxel intensities.
     mean : float
-        Mean of the Gaussian distribution (center of enhancement).
+        Mean of the Gaussian distribution.
     std : float
-        Standard deviation of the Gaussian (controls the enhancement width).
-    return_float : bool, optional (default=False)
-        If True, return a float-valued image between 0 and 1.
-        If False, the result is cast back to the original voxel type.
-    normalized : bool, optional (default=False)
-        If True and `return_float=True`, apply the normalization factor
-        1 / (std * sqrt(2π)).
+        Standard deviation of the Gaussian.
+    return_float : bool, optional
+        If True, return a float image in [0, 1].
+    normalized : bool, optional
+        If True and ``return_float=True``, apply Gaussian normalization.
 
     Returns
     -------
     SimpleITK.Image
-        The Gaussian-weighted image. Spacing, origin and direction are
-        preserved from the input image.
+        Gaussian‑weighted image with preserved metadata.
 
     Raises
     ------
     ValueError
-        If the input image contains negative voxel intensities.
+        If the input image contains negative voxel values.
     """
     arr = get_array_from_image(image)
 
@@ -711,19 +799,41 @@ def gaussian_transform(image, mean, std, return_float = False, normalized = Fals
         raise ValueError("The input image contains negative values.")
 
     if return_float:
-        if normalized:
-            norm = 1 / (std * np.sqrt(2*np.pi))
-        else:
-            norm = 1
-        # return transformed image of floats between 0 and 1 
-        gaussian_arr = norm * np.exp(-0.5 * ((arr - mean) / std)**2)
-        return get_image_from_array(gaussian_arr, image, cast_to_reference=False)
+        norm = 1 / (std * np.sqrt(2 * np.pi)) if normalized else 1
+        gaussian_arr = norm * np.exp(-0.5 * ((arr - mean) / std) ** 2)
+        return get_image_from_array(
+            gaussian_arr, image, cast_to_reference=False
+        )
 
-    else:
-        gaussian_arr = np.exp(-0.5 * ((arr - mean) / std)**2) * arr
-        # return transformed image with the same voxel type 
-        return get_image_from_array(gaussian_arr, image, cast_to_reference=True)
+    gaussian_arr = np.exp(-0.5 * ((arr - mean) / std) ** 2) * arr
+    return get_image_from_array(
+        gaussian_arr, image, cast_to_reference=True
+    )
 
 def cliffs_delta(x, y):
+    """
+    Compute Cliff's delta effect size between two 1D samples.
+
+    Cliff's delta measures how often values in ``x`` exceed values in
+    ``y`` minus how often they are smaller, normalized by the total
+    number of pairwise comparisons.
+
+    The statistic ranges from -1 to +1:
+    - +1  → all values in ``x`` > all values in ``y``
+    -  0  → distributions largely overlap
+    - -1 → all values in ``x`` < all values in ``y``
+
+    Parameters
+    ----------
+    x : np.ndarray
+        First 1D sample.
+    y : np.ndarray
+        Second 1D sample.
+
+    Returns
+    -------
+    float
+        Cliff's delta effect size.
+    """
     diff = x[:, None] - y[None, :]
     return (np.sum(diff > 0) - np.sum(diff < 0)) / (x.size * y.size)

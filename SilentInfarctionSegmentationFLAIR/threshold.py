@@ -14,18 +14,21 @@ import numpy as np
 import yaml
 import matplotlib
 
+from SilentInfarctionSegmentationFLAIR.histograms import (
+    plot_histogram,
+    gaussian_smooth_histogram,
+    mode_and_rhwhm
+)
+from SilentInfarctionSegmentationFLAIR.segmentation import (
+    apply_threshold,
+    get_mask_from_segmentation
+)
+from SilentInfarctionSegmentationFLAIR.utils import (
+    orient_image,
+    resample_to_reference,
+    plot_image
+)
 
-from SilentInfarctionSegmentationFLAIR.histograms import (plot_histogram,
-                                                          gaussian_smooth_histogram,
-                                                          mode_and_rhwhm)
-from SilentInfarctionSegmentationFLAIR.segmentation import (apply_threshold,
-                                                            get_mask_from_segmentation)
-from SilentInfarctionSegmentationFLAIR.utils import (orient_image,
-                                                     resample_to_reference,
-                                                     plot_image,
-                                                     get_array_from_image)
-
-# load constants from yaml file
 with open("config.yaml", "r") as f:
     config = yaml.safe_load(f)
 
@@ -41,6 +44,7 @@ csf_pve_file = config["files"]["csf_pve"]
 gt_file = config["files"]["gt"]
 label_name_file = config["files"]["label_name"]
 
+
 def parse_args():
     description = (
         "Computes a GM-based threshold using histogram mode and RHWHM. "
@@ -49,78 +53,109 @@ def parse_args():
 
     parser = argparse.ArgumentParser(description=description)
 
-    _ = parser.add_argument('--image',
-                            dest='image',
-                            action='store',
-                            type=str,
-                            required=True,
-                            help='Path to input image')
+    _ = parser.add_argument(
+        '--image',
+        dest='image',
+        action='store',
+        type=str,
+        required=True,
+        help='Path to input image'
+    )
 
-    _ = parser.add_argument('--segm',
-                            dest='segm',
-                            action='store',
-                            type=str,
-                            required=True,
-                            help='Path to segmentation image')
+    _ = parser.add_argument(
+        '--segm',
+        dest='segm',
+        action='store',
+        type=str,
+        required=True,
+        help='Path to segmentation image'
+    )
 
-    _ = parser.add_argument('--gamma',
-                            dest='gamma',
-                            action='store',
-                            type=float,
-                            required=True,
-                            help='Gamma multiplier for RHWHM')
+    _ = parser.add_argument(
+        '--gamma',
+        dest='gamma',
+        action='store',
+        type=float,
+        required=True,
+        help='Gamma multiplier for RHWHM'
+    )
 
-    _ = parser.add_argument('--no_show',
-                            dest='show',
-                            action='store_false',
-                            help='Disable plot visualization')
+    _ = parser.add_argument(
+        '--no_show',
+        dest='show',
+        action='store_false',
+        help='Disable plot visualization'
+    )
 
-    _ = parser.add_argument('--no_verbose',
-                            dest='verbose',
-                            action='store_false',
-                            help='Disable verbose output')
+    _ = parser.add_argument(
+        '--no_verbose',
+        dest='verbose',
+        action='store_false',
+        help='Disable verbose output'
+    )
 
-    _ = parser.add_argument('--save_dir',
-                            dest='save_dir',
-                            action='store',
-                            type=str,
-                            required=False,
-                            default=None,
-                            help='Directory where the figure and the segmentation mask will be saved')
+    _ = parser.add_argument(
+        '--save_dir',
+        dest='save_dir',
+        action='store',
+        type=str,
+        required=False,
+        default=None,
+        help='Directory to save figure and segmentation mask'
+    )
 
     args = parser.parse_args()
     return args
 
 
 def main(image, gm_mask, gamma, show=False, verbose=True, save_dir=None):
+    """
+    Compute a gray-matter-based threshold using histogram mode and RHWHM,
+    apply it to the input image, and optionally plot/save the results.
 
-    if show==False:
+    Parameters
+    ----------
+    image : SimpleITK.Image
+        Input image to be thresholded.
+    gm_mask : SimpleITK.Image
+        Gray matter mask used to compute the histogram.
+    gamma : float
+        Multiplier for the right-side half-width at half-maximum (RHWHM)
+        to set the threshold.
+    show : bool, optional
+        Whether to display plots interactively (default: False).
+    verbose : bool, optional
+        Whether to print progress messages (default: True).
+    save_dir : str, optional
+        Directory to save histogram figure and thresholded mask (default: None).
+
+    Returns
+    -------
+    thr_mask : SimpleITK.Image
+        Thresholded binary mask of the input image.
+    """
+    if show == False:
         matplotlib.use("Agg")
-    # initialize figure
+
     fig, ax = plt.subplots()
 
-    # compute gm histogram
     gm = sitk.Mask(image, gm_mask)
     gm_hist = plot_histogram(gm, no_bkg=True, bins='fd', ax=ax, show=False)
     
-    # smooth histogram with gaussian filter
     gm_smooth_hist = gaussian_smooth_histogram(gm_hist, ax=ax)
 
-    # find mode and right-side half width at half maximum
     mode, rhwhm = mode_and_rhwhm(gm_smooth_hist, ax=ax)
 
-    # apply threshold
     thr = mode + gamma * rhwhm
     if verbose:
-        print(f"Applying threshold at gray level {thr:.1f} (gamma = {gamma:.1f})...")
+        print(f"Applying threshold at gray level {thr:.1f} "
+              f"(gamma = {gamma:.1f})...")
     thr_mask = apply_threshold(image, float(thr), ax=ax)
 
-    # plot additional details
     ax.legend()
     ax.set_title(f"GM histogram and threshold with γ={gamma}")
     plt.tight_layout()
     
-    # save histogram and segmentation
     if save_dir is not None:
         os.makedirs(save_dir, exist_ok=True)
         plt.savefig(os.path.join(save_dir, "thr.png"))
@@ -131,11 +166,14 @@ def main(image, gm_mask, gamma, show=False, verbose=True, save_dir=None):
     plt.close()
 
     if show or save_dir is not None:
-        _ = plot_image(image, mask=thr_mask,
-                title=f"Threshold segmented mask (γ = {gamma})",
-                show=show,
-                save_path=os.path.join(save_dir,"thr_mask.png")
-                    if save_dir else None)
+        _ = plot_image(
+            image,
+            mask=thr_mask,
+            title=f"Threshold segmented mask (γ = {gamma})",
+            show=show,
+            save_path=os.path.join(save_dir, "thr_mask.png")
+            if save_dir else None
+        )
 
     return thr_mask
 

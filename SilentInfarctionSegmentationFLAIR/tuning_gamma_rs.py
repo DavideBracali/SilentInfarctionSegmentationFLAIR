@@ -1,9 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Created on 2025-12-21 12:17:57
+Tune gamma and refinement-step parameters.
 
-@author: david
+This script optimizes refinement-step parameters for thresholded
+FLAIR+T1 images. It supports image precomputation, threshold mask
+generation for several `gamma` values, Bayesian optimization of the
+refinement step, and validation on a held-out set.
 """
 
 import SimpleITK as sitk
@@ -21,90 +24,127 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
 
-from SilentInfarctionSegmentationFLAIR.utils import (orient_image,
-                                                     resample_to_reference,
-                                                     train_val_test_split)
-from SilentInfarctionSegmentationFLAIR.segmentation import (get_mask_from_segmentation,
-                                                            evaluate_voxel_wise)
-from SilentInfarctionSegmentationFLAIR import (flair_t1_sum,
-                                               threshold,
-                                               refinement_step)
+from SilentInfarctionSegmentationFLAIR.utils import (
+    orient_image,
+    resample_to_reference,
+    train_val_test_split,
+)
+from SilentInfarctionSegmentationFLAIR.segmentation import (
+    get_mask_from_segmentation,
+    evaluate_voxel_wise,
+)
+from SilentInfarctionSegmentationFLAIR import (
+    flair_t1_sum,
+    threshold,
+    refinement_step,
+)
 
 
 def parse_args():
-    description="Optimizes all segmentation parameters (except gamma) on a training set, "\
-        "maximizing ROC-AUC using Bayesian optimization. Then chooses gamma maximizing "\
-        "average DICE coefficient on a validation set."
+    """
+    Parse command-line arguments.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed arguments with attributes: `data_folder`, `results_folder`,
+        `init_points`, `n_iter`, `n_cores`, `alpha`, `beta`, `gammas`.
+    """
+
+    description = (
+        "Optimizes refinement-step parameters for a set of gamma values. "
+        "Uses Bayesian optimization on a training set and validates on a "
+        "separate validation set."
+    )
 
     parser = argparse.ArgumentParser(description=description)
 
-    _ = parser.add_argument('--data_folder',
-                            dest='data_folder',
-                            action='store',
-                            type=str,
-                            required=False,
-                            default="data",
-                            help='Path of the folder where data is located')
-    
-    _ = parser.add_argument('--results_folder',
-                            dest='results_folder',
-                            action='store',
-                            type=str,
-                            required=False,
-                            default="tuning_gamma_rs",
-                            help='Path of the folder where results are stored')
+    _ = parser.add_argument(
+        "--data_folder",
+        dest="data_folder",
+        action="store",
+        type=str,
+        required=False,
+        default="data",
+        help="Path of the folder where data is located",
+    )
 
-    _ = parser.add_argument('--init_points',
-                            dest='init_points',
-                            action='store',
-                            type=int,
-                            required=False,
-                            default=5,
-                            help='Number of initial points for random search')
-    
-    _ = parser.add_argument('--n_iter',
-                            dest='n_iter',
-                            action='store',
-                            type=int,
-                            required=False,
-                            default=20,
-                            help='Number of Bayesian optimization iterations')
+    _ = parser.add_argument(
+        "--results_folder",
+        dest="results_folder",
+        action="store",
+        type=str,
+        required=False,
+        default="tuning_gamma_rs",
+        help="Path of the folder where results are stored",
+    )
 
-    _ = parser.add_argument('--n_cores',
-                            dest='n_cores',
-                            action='store',
-                            type=int,
-                            required=False,
-                            default=1,
-                            help='Number of CPU cores to use during optimization \
-                                (improves computational time but increases RAM and CPU usage)')
-    
-    _ = parser.add_argument('--alpha',
-                            dest='alpha',
-                            action='store',
-                            type=float,
-                            required=False,
-                            default=None,
-                            help='Segmentation parameter alpha')
+    _ = parser.add_argument(
+        "--init_points",
+        dest="init_points",
+        action="store",
+        type=int,
+        required=False,
+        default=5,
+        help="Number of initial points for random search",
+    )
 
-    _ = parser.add_argument('--beta',
-                            dest='beta',
-                            action='store',
-                            type=float,
-                            required=False,
-                            default=None,
-                            help='Segmentation parameter beta')
-    
-    _ = parser.add_argument('--gammas',
-                            dest='gammas',
-                            nargs='+',
-                            type=float,
-                            required=False,
-                            default=[1.0, 2.0, 3.0, 4.0],
-                            help='List of gamma values to evaluate (e.g. --gammas 1 2 3 4)')
+    _ = parser.add_argument(
+        "--n_iter",
+        dest="n_iter",
+        action="store",
+        type=int,
+        required=False,
+        default=20,
+        help="Number of Bayesian optimization iterations",
+    )
+
+    _ = parser.add_argument(
+        "--n_cores",
+        dest="n_cores",
+        action="store",
+        type=int,
+        required=False,
+        default=1,
+        help=(
+            "Number of CPU cores to use during optimization (improves "
+            "computational time but increases RAM and CPU usage)"
+        ),
+    )
+
+    _ = parser.add_argument(
+        "--alpha",
+        dest="alpha",
+        action="store",
+        type=float,
+        required=False,
+        default=None,
+        help="Segmentation parameter alpha",
+    )
+
+    _ = parser.add_argument(
+        "--beta",
+        dest="beta",
+        action="store",
+        type=float,
+        required=False,
+        default=None,
+        help="Segmentation parameter beta",
+    )
+
+    _ = parser.add_argument(
+        "--gammas",
+        dest="gammas",
+        nargs="+",
+        type=float,
+        required=False,
+        default=[1.0, 2.0, 3.0, 4.0],
+        help=(
+            "List of gamma values to evaluate (e.g. --gammas 1 2 3 4)"
+        ),
+    )
 
     args = parser.parse_args()
-
     return args
 
 # load constants from yaml file
@@ -132,7 +172,7 @@ pbounds = {
     "min_points": (1, 5)
 }
 
-def load_alpha_beta_from_yaml(results_folder):
+def load_alpha_beta_from_yaml():
     yaml_path = "params_alpha_beta.yaml"
     if not os.path.isfile(yaml_path):
         raise FileNotFoundError(
@@ -149,7 +189,7 @@ def load_alpha_beta_from_yaml(results_folder):
 
 def load_subjects(data_folder, patients=None, paths_only=False):
     """
-    Load imaging data for multiple subjects and organize into a dictionary.
+    Load imaging data for multiple subjects and organize into a dict.
 
     Parameters
     ----------
@@ -157,24 +197,19 @@ def load_subjects(data_folder, patients=None, paths_only=False):
         Path to folder containing patient subfolders with .nii files.
     patients : list of str, optional
         List of patient IDs to load; if None, loads all patients.
-    paths_only : bool, default=False
-        If True, only returns file paths without loading images.
+    paths_only : bool, optional
+        If True, only returns file paths without loading images. Default
+        is False.
 
     Returns
     -------
     data : dict
-        Dictionary where keys are patient IDs and values are dictionaries containing:
-        - flair : SimpleITK.Image
-        - t1 : SimpleITK.Image
-        - gt : SimpleITK.Image
-        - gm_mask : SimpleITK.Image
-        - wm_mask : SimpleITK.Image
-        - segm : SimpleITK.Image
-        - gm_pve : SimpleITK.Image
-        - wm_pve : SimpleITK.Image
-        - csf_pve : SimpleITK.Image
+        Keys are patient IDs and values are dicts with the following
+        images (SimpleITK.Image): ``flair``, ``t1``, ``gt``, ``gm_mask``,
+        ``wm_mask``, ``segm``, ``wm_pve``, ``gm_pve``, ``csf_pve``.
     paths_df : pandas.DataFrame
-        DataFrame mapping each patient to their corresponding file paths.
+        DataFrame mapping each patient to their corresponding file
+        paths.
     """
     # organize all images in a df
     paths_list = []
@@ -195,8 +230,11 @@ def load_subjects(data_folder, patients=None, paths_only=False):
     # drop NaN
     dropped_patients = paths_df.index[paths_df.isna().any(axis=1)]
     if len(dropped_patients) > 0:
-       print("WARNING!!! The following patients will be removed because " \
-                      f"one of the required images is missing: {list(dropped_patients)}")
+        msg = (
+            "WARNING!!! The following patients will be removed because "
+            f"one of the required images is missing: {list(dropped_patients)}"
+        )
+        print(msg)
     paths_df = paths_df.dropna(how="any")
 
     data = {}
@@ -209,12 +247,18 @@ def load_subjects(data_folder, patients=None, paths_only=False):
             t1 = resample_to_reference(t1, flair,
                                        sitk.sitkLinear)
 
-            gt = resample_to_reference(sitk.ReadImage(paths_df.loc[patient, gt_file]), flair,
-                                       sitk.sitkNearestNeighbor)
+            gt = resample_to_reference(
+                sitk.ReadImage(paths_df.loc[patient, gt_file]),
+                flair,
+                sitk.sitkNearestNeighbor,
+            )
             gt = sitk.Cast(gt, sitk.sitkUInt8)
 
-            segm = resample_to_reference(sitk.ReadImage(paths_df.loc[patient, segm_file]), flair,
-                                         sitk.sitkNearestNeighbor)
+            segm = resample_to_reference(
+                sitk.ReadImage(paths_df.loc[patient, segm_file]),
+                flair,
+                sitk.sitkNearestNeighbor,
+            )
             gm_mask = get_mask_from_segmentation(segm, gm_labels)
             wm_mask = get_mask_from_segmentation(segm, wm_labels)
 
@@ -226,28 +270,30 @@ def load_subjects(data_folder, patients=None, paths_only=False):
             csf_pve = resample_to_reference(csf_pve, flair, sitk.sitkLinear)
 
             data[patient] = {
-                "flair": flair, "t1": t1, "gt": gt,
-                "gm_mask": gm_mask, "wm_mask": wm_mask, "segm" : segm,
-                "wm_pve" : wm_pve, "gm_pve" : gm_pve, "csf_pve" : csf_pve}
+                "flair": flair,
+                "t1": t1,
+                "gt": gt,
+                "gm_mask": gm_mask,
+                "wm_mask": wm_mask,
+                "segm": segm,
+                "wm_pve": wm_pve,
+                "gm_pve": gm_pve,
+                "csf_pve": csf_pve,
+            }
 
     return data, paths_df
 
 def process_patient_images(args_tuple, results_folder):
     """
-    Process a single patient's images to compute the combined FLAIR+T1 image.
+    Process a single patient's images to compute the combined FLAIR+T1.
 
     Parameters
     ----------
     args_tuple : tuple
-        Contains:
-        - data : dict
-            Patient's imaging data and masks
-        - patient : str
-            Patient ID
-        - alpha : float
-            Segmentation parameter
-        - beta : float
-            Segmentation parameter
+        (data, patient, alpha, beta) where ``data`` contains patient
+        imaging data and masks.
+    results_folder : str
+        Directory where output images are written.
 
     Returns
     -------
@@ -264,26 +310,29 @@ def process_patient_images(args_tuple, results_folder):
 
     image_path = os.path.join(results_folder, "images", f"{patient}.nii")
     if not os.path.isfile(image_path):
-        image = flair_t1_sum.main(flair, t1, alpha, beta, wm_mask=wm_mask,
-                                                        gm_mask=gm_mask,
-                                                        gt=gt,
-                                                        verbose=False)
+        image = flair_t1_sum.main(
+            flair,
+            t1,
+            alpha,
+            beta,
+            wm_mask=wm_mask,
+            gm_mask=gm_mask,
+            gt=gt,
+            verbose=False,
+        )
         sitk.WriteImage(image, image_path)
 
 def process_patient_thr(args_tuple, results_folder):
     """
-    Process a single patient's image to compute threshold mask for a given gamma.
+    Process a single patient's image to compute threshold mask.
 
     Parameters
     ----------
     args_tuple : tuple
-        Contains:
-        - data : dict
-            Patient's imaging data and masks
-        - patient : str
-            Patient ID
-        - gamma : int
-            Thresholding parameter
+        (data, patient, gamma) where ``data`` contains patient images and
+        masks.
+    results_folder : str
+        Directory where threshold masks are written.
 
     Returns
     -------
@@ -292,86 +341,81 @@ def process_patient_thr(args_tuple, results_folder):
     """
     data, patient, gamma = args_tuple
 
-    thr_path = os.path.join(results_folder,
-                                f"thr_mask_g{gamma}",
-                                f"{patient}.nii")
+    thr_path = os.path.join(
+        results_folder, f"thr_mask_g{gamma}", f"{patient}.nii"
+    )
     if not os.path.isfile(thr_path):
-        image = sitk.ReadImage(os.path.join(results_folder,
-                                            "images",
-                                            f"{patient}.nii"))
-        gm_mask = resample_to_reference(data["gm_mask"],
-                                        image,
-                                        sitk.sitkNearestNeighbor)
-        thr_mask = threshold.main(image,
-                                gm_mask,
-                                gamma=gamma,
-                                show=False,
-                                verbose=False)
+        image = sitk.ReadImage(
+            os.path.join(results_folder, "images", f"{patient}.nii")
+        )
+        gm_mask = resample_to_reference(
+            data["gm_mask"], image, sitk.sitkNearestNeighbor
+        )
+        thr_mask = threshold.main(
+            image, gm_mask, gamma=gamma, show=False, verbose=False
+        )
         sitk.WriteImage(thr_mask, thr_path)
         
 def process_patient_rs(args_tuple, results_folder):
     """
-    Process a single patient's image through the refinement step and evaluate DICE.
+    Run refinement step on a patient's image and evaluate DICE.
 
     Parameters
     ----------
     args_tuple : tuple
-        Contains:
-        - data : dict
-            Patient's imaging data, masks, and PVEs
-        - patient : str
-            Patient ID
-        - gamma : int
-            Threshold parameter used to generate threshold mask
-        - extend_dilation_radius : float
-            Refinement parameter
-        - n_std : float
-            Refinement parameter
-        - min_diameter : float
-            Refinement parameter
-        - surround_dilation_radius : float
-            Refinement parameter
-        - min_points : float
-            Refinement parameter
+        (data, patient, gamma, extend_dilation_radius, n_std,
+         min_diameter, surround_dilation_radius, min_points)
+        where ``data`` contains patient imaging, masks and PVEs.
+    results_folder : str
+        Directory where intermediate images and masks are stored.
 
     Returns
     -------
     float
-        Voxel-wise DICE coefficient between refined mask and ground truth.
+        Voxel-wise DICE coefficient between refined mask and ground
+        truth.
     """
 
-    data, patient, gamma, extend_dilation_radius, n_std,\
-    min_diameter, surround_dilation_radius, min_points = args_tuple
+    (
+        data,
+        patient,
+        gamma,
+        extend_dilation_radius,
+        n_std,
+        min_diameter,
+        surround_dilation_radius,
+        min_points,
+    ) = args_tuple
 
-    image = sitk.ReadImage(os.path.join(results_folder,
-                                        "images",
-                                        f"{patient}.nii"))
-    thr_mask = sitk.ReadImage(os.path.join(results_folder,
-                                            f"thr_mask_g{gamma}",
-                                            f"{patient}.nii"))
+    image = sitk.ReadImage(
+        os.path.join(results_folder, "images", f"{patient}.nii")
+    )
+    thr_mask = sitk.ReadImage(
+        os.path.join(results_folder, f"thr_mask_g{gamma}", f"{patient}.nii")
+    )
     segm = resample_to_reference(data["segm"], image, sitk.sitkNearestNeighbor)
-    thr_mask = resample_to_reference(thr_mask,
-                                     image,
-                                     sitk.sitkNearestNeighbor)
+    thr_mask = resample_to_reference(
+        thr_mask, image, sitk.sitkNearestNeighbor
+    )
     pves = [data["wm_pve"], data["gm_pve"], data["csf_pve"]]
-    pves = [resample_to_reference(p, image, sitk.sitkLinear)
-            for p in pves]
+    pves = [resample_to_reference(p, image, sitk.sitkLinear) for p in pves]
     ref_mask = refinement_step.main(
-        thr_mask, image,
+        thr_mask,
+        image,
         pves=pves,
         segm=segm,
         min_diameter=min_diameter,
         surround_dilation_radius=surround_dilation_radius,
         n_std=n_std,
         extend_dilation_radius=extend_dilation_radius,
-        min_points=int(min_points),     # truncate to integer
+        min_points=int(min_points),  # truncate to integer
         keywords_to_remove=keywords_to_remove,
         label_name_file=label_name_file,
         verbose=False,
-        show=False)
-    
-    dsc = evaluate_voxel_wise(ref_mask, data["gt"])["vw-DSC"]
+        show=False,
+    )
 
+    dsc = evaluate_voxel_wise(ref_mask, data["gt"])["vw-DSC"]
     return dsc
 
 def process_patient_thr_dice(args_tuple, results_folder):
@@ -381,13 +425,10 @@ def process_patient_thr_dice(args_tuple, results_folder):
     Parameters
     ----------
     args_tuple : tuple
-        Contains:
-        - data : dict
-            Patient data (must contain gt)
-        - patient : str
-            Patient ID
-        - gamma : float
-            Threshold parameter
+        (data, patient, gamma) where ``data`` contains the ground truth
+        mask under key ``gt``.
+    results_folder : str
+        Directory where threshold masks are stored.
 
     Returns
     -------
@@ -397,22 +438,18 @@ def process_patient_thr_dice(args_tuple, results_folder):
     data, patient, gamma = args_tuple
 
     thr_mask = sitk.ReadImage(
-        os.path.join(results_folder,
-                     f"thr_mask_g{gamma}",
-                     f"{patient}.nii")
+        os.path.join(results_folder, f"thr_mask_g{gamma}", f"{patient}.nii")
     )
 
     gt = data["gt"]
-
     thr_mask = resample_to_reference(thr_mask, gt, sitk.sitkNearestNeighbor)
-
     dsc = evaluate_voxel_wise(thr_mask, gt)["vw-DSC"]
     return dsc
 
 def main(data_folder, alpha, beta, gammas, results_folder,
          init_points, n_iter, n_cores):
     """
-    Main pipeline for Bayesian optimization of segmentation parameters.
+    Main pipeline for Bayesian optimization of segmentation settings.
 
     Performs:
     - Train-validation split
@@ -425,12 +462,18 @@ def main(data_folder, alpha, beta, gammas, results_folder,
     ----------
     data_folder : str
         Path to the dataset directory.
+    alpha : float
+        Segmentation parameter alpha.
+    beta : float
+        Segmentation parameter beta.
+    gammas : sequence of float
+        Gamma values to evaluate.
     results_folder : str
         Directory to save outputs, logs, and metrics.
     init_points : int
-        Number of initial random exploration steps for Bayesian Optimization.
+        Number of initial random exploration steps for BO.
     n_iter : int
-        Number of Bayesian Optimization iterations.
+        Number of BO iterations.
     n_cores : int
         Number of CPU cores to use for multiprocessing.
 
@@ -441,7 +484,7 @@ def main(data_folder, alpha, beta, gammas, results_folder,
 
     def compute_images(alpha, beta, data=None, train_patients=[]):
         """
-        Compute preprocessed FLAIR+T1 images for a list of patients in parallel chunks.
+        Compute preprocessed FLAIR+T1 images for patients in chunks.
 
         Parameters
         ----------
@@ -476,20 +519,28 @@ def main(data_folder, alpha, beta, gammas, results_folder,
             chunk_patients = train_patients[chunk*n_cores:(chunk+1)*n_cores]
 
             if data is None:
-                chunk_data, _ = load_subjects(data_folder, patients=chunk_patients)
+                chunk_data, _ = load_subjects(
+                    data_folder, patients=chunk_patients
+                )
             else:
                 chunk_data = data
             
             args_list = [
                 (chunk_data[patient], patient, alpha, beta)
-                    for patient in chunk_patients]
+                for patient in chunk_patients
+            ]
 
             if n_cores > 1:
                 with mp.Pool(n_cores) as pool:
-                    _ = pool.starmap(process_patient_images, [(a, results_folder)
-                                                              for a in args_list])
+                    _ = pool.starmap(
+                        process_patient_images,
+                        [(a, results_folder) for a in args_list],
+                    )
             else:
-                _ = [process_patient_images(a, results_folder) for a in args_list]
+                _ = [
+                    process_patient_images(a, results_folder)
+                    for a in args_list
+                ]
             
         print(f"Elapsed time: {(time.time()-start):.3g} s")
               
@@ -528,18 +579,23 @@ def main(data_folder, alpha, beta, gammas, results_folder,
             chunk_patients = train_patients[chunk*n_cores:(chunk+1)*n_cores]
 
             if data is None:
-                chunk_data, _ = load_subjects(data_folder, patients=chunk_patients)
+                chunk_data, _ = load_subjects(
+                    data_folder, patients=chunk_patients
+                )
             else:
                 chunk_data = data
             
             args_list = [
                 (chunk_data[patient], patient, gamma)
-                    for patient in chunk_patients]
+                for patient in chunk_patients
+            ]
 
             if n_cores > 1:
                 with mp.Pool(n_cores) as pool:
-                    _ = pool.starmap(process_patient_thr, [(a, results_folder)
-                                                              for a in args_list])
+                    _ = pool.starmap(
+                        process_patient_thr,
+                        [(a, results_folder) for a in args_list],
+                    )
             else:
                 _ = [process_patient_thr(a, results_folder) for a in args_list]
             
@@ -562,7 +618,9 @@ def main(data_folder, alpha, beta, gammas, results_folder,
             chunk_patients = val_patients[chunk*n_cores:(chunk+1)*n_cores]
 
             if data is None:
-                chunk_data, _ = load_subjects(data_folder, patients=chunk_patients)
+                chunk_data, _ = load_subjects(
+                    data_folder, patients=chunk_patients
+                )
             else:
                 chunk_data = data
 
@@ -575,7 +633,7 @@ def main(data_folder, alpha, beta, gammas, results_folder,
                 with mp.Pool(n_cores) as pool:
                     results = pool.starmap(
                         process_patient_thr_dice,
-                        [(a, results_folder) for a in args_list]
+                        [(a, results_folder) for a in args_list],
                     )
             else:
                 results = [
@@ -621,44 +679,62 @@ def main(data_folder, alpha, beta, gammas, results_folder,
         # chunk structure to avoid RAM overload
         if n_cores > len(train_patients):
             n_cores = len(train_patients)
-            
+
         n_chunks = (len(train_patients) + n_cores - 1) // n_cores
 
         for chunk in range(n_chunks):
             gc.collect()
 
-            chunk_patients = train_patients[chunk*n_cores:(chunk+1)*n_cores]
+            chunk_patients = train_patients[
+                chunk * n_cores:(chunk + 1) * n_cores
+            ]
 
             if data is None:
-                chunk_data, _ = load_subjects(data_folder, patients=chunk_patients)
+                chunk_data, _ = load_subjects(
+                    data_folder, patients=chunk_patients
+                )
             else:
                 chunk_data = data
-            
+
             args_list = [
-                (chunk_data[patient], patient, gamma, extend_dilation_radius,
-                 n_std, min_diameter, surround_dilation_radius, min_points)
-                 for patient in chunk_patients]
+                (
+                    chunk_data[patient],
+                    patient,
+                    gamma,
+                    extend_dilation_radius,
+                    n_std,
+                    min_diameter,
+                    surround_dilation_radius,
+                    min_points,
+                )
+                for patient in chunk_patients
+            ]
 
             if n_cores > 1:
                 with mp.Pool(n_cores) as pool:
-                    results = pool.starmap(process_patient_rs, [(a, results_folder)
-                                                              for a in args_list])
+                    results = pool.starmap(
+                        process_patient_rs, [(a, results_folder)
+                                             for a in args_list]
+                    )
             else:
-                results = [process_patient_rs(a, results_folder) for a in args_list]
+                results = [process_patient_rs(a, results_folder)
+                           for a in args_list]
 
-            dice_list.extend(results)  
-            
+            dice_list.extend(results)
+
         print(f"Elapsed time: {(time.time()-start):.3g} s")
         return dice_list
 
 
     def dice_obj_mean(*args, **kwargs):
         """
-        Compute the mean DICE score for multiple patients, used as objective for Bayesian Optimization.
+        Compute the mean DICE score for multiple patients.
+
+        This is the objective used by the Bayesian optimizer.
 
         Parameters
         ----------
-        *args, **kwargs : passed to dice_obj
+        *args, **kwargs : passed to ``dice_obj``
 
         Returns
         -------
@@ -684,17 +760,36 @@ def main(data_folder, alpha, beta, gammas, results_folder,
     os.makedirs(results_folder, exist_ok=True)
     
     # train-val-test split
-    if os.path.isfile(os.path.join(data_folder, "train_patients.pkl")
-        ) and os.path.isfile(os.path.join(data_folder, "validation_patients.pkl")):
-        tr_patients = list(pd.read_pickle(os.path.join(data_folder, "train_patients.pkl")))
-        val_patients = list(pd.read_pickle(os.path.join(data_folder, "validation_patients.pkl")))
-        print(f"Found train-validation split in '{data_folder}'. " \
-            f"{len(tr_patients)} patients will be used for training, {len(val_patients)} for validation.")
+    if (
+        os.path.isfile(os.path.join(data_folder,
+                                    "train_patients.pkl"))
+        and os.path.isfile(os.path.join(data_folder,
+                                        "validation_patients.pkl"))
+    ):
+        tr_patients = list(
+            pd.read_pickle(os.path.join(data_folder,
+                                        "train_patients.pkl"))
+        )
+        val_patients = list(
+            pd.read_pickle(os.path.join(data_folder,
+                                        "validation_patients.pkl"))
+        )
+        print(
+            f"Found train-validation split in '{data_folder}'. "
+            f"{len(tr_patients)} patients will be used for training, "
+            f"{len(val_patients)} for validation."
+        )
     else:
-        tr_patients, val_patients, _ = train_val_test_split(data_folder,
-                                                validation_fraction=0.3, test_fraction=0.1,
-                                                show=False,
-            title="Stratification of train–validation–test split according to positive-to-total ratio")
+        tr_patients, val_patients, _ = train_val_test_split(
+            data_folder,
+            validation_fraction=0.3,
+            test_fraction=0.1,
+            show=False,
+            title=(
+                "Stratification of train–validation–test split according to "
+                "positive-to-total ratio"
+            ),
+        )
 
     # optimization
     if not os.path.isfile(os.path.join(results_folder, "best_params.pkl")):
@@ -709,7 +804,8 @@ def main(data_folder, alpha, beta, gammas, results_folder,
 
         if len(patients_to_do) != 0:
             if len(patients_to_do) <= n_cores:
-                preloaded_data, _ = load_subjects(data_folder, patients=patients_to_do)
+                preloaded_data, _ = load_subjects(data_folder,
+                                                  patients=patients_to_do)
             else:   # light on RAM, but slower in time
                 preloaded_data = None
             
@@ -722,22 +818,32 @@ def main(data_folder, alpha, beta, gammas, results_folder,
         for gamma in gammas:
             patients_to_do = []
             for patient in tr_patients + val_patients:
-                if not os.path.isfile(os.path.join(results_folder,
-                                                f"thr_mask_g{gamma}",
-                                                f"{patient}.nii")):
+                thr_path = os.path.join(
+                    results_folder, f"thr_mask_g{gamma}", f"{patient}.nii"
+                )
+                if not os.path.isfile(thr_path):
                     patients_to_do.append(patient)
 
             if len(patients_to_do) != 0:
                 if len(patients_to_do) <= n_cores:
-                    preloaded_data, _ = load_subjects(data_folder, patients=patients_to_do)
-                else:   # light on RAM, but slower in time
+                    preloaded_data, _ = load_subjects(
+                        data_folder, patients=patients_to_do
+                    )
+                else:  # light on RAM, but slower in time
                     preloaded_data = None
-                
-                os.makedirs(os.path.join(results_folder, f"thr_mask_g{gamma}"),
-                            exist_ok=True)
-                print(f"Computing threshold masks for all patients (gamma = {gamma})...")
-                compute_thr(gamma, data=preloaded_data,
-                            train_patients=patients_to_do)
+
+                os.makedirs(
+                    os.path.join(results_folder, f"thr_mask_g{gamma}"),
+                    exist_ok=True,
+                )
+                msg = (
+                    "Computing threshold masks for all patients "
+                    "(gamma = {})...".format(gamma)
+                )
+                print(msg)
+                compute_thr(
+                    gamma, data=preloaded_data, train_patients=patients_to_do
+                )
                 
         # evaluate on validation set after threshold (no refinement)
         thr_val_path = os.path.join(results_folder, "val_dices_thr.pkl")
@@ -745,27 +851,30 @@ def main(data_folder, alpha, beta, gammas, results_folder,
             val_dices_thr = pd.read_pickle(thr_val_path)
         else:
             val_dices_thr = pd.DataFrame(
-                index=gammas, columns=["mean", "std", "q1", "q3"])
+                index=gammas, columns=["mean", "std", "q1", "q3"]
+            )
 
             for gamma in gammas:
-                print(f"Evaluating DICE after threshold on validation set "
-                      f"(gamma = {gamma})...")
+                print(
+                    f"Evaluating DICE after threshold on validation set "
+                    f"(gamma = {gamma})..."
+                )
 
                 if len(val_patients) <= n_cores:
-                    preloaded_data, _ = load_subjects(data_folder, patients=val_patients)
+                    preloaded_data, _ = load_subjects(
+                        data_folder, patients=val_patients
+                    )
                 else:
                     preloaded_data = None
 
                 dice_list = evaluate_thr_dice(
-                    gamma=gamma,
-                    val_patients=val_patients,
-                    data=preloaded_data
+                    gamma=gamma, val_patients=val_patients, data=preloaded_data
                 )
 
                 val_dices_thr.loc[gamma, "mean"] = np.mean(dice_list)
-                val_dices_thr.loc[gamma, "std"]  = np.std(dice_list)
-                val_dices_thr.loc[gamma, "q1"]   = np.quantile(dice_list, 0.25)
-                val_dices_thr.loc[gamma, "q3"]   = np.quantile(dice_list, 0.75)
+                val_dices_thr.loc[gamma, "std"] = np.std(dice_list)
+                val_dices_thr.loc[gamma, "q1"] = np.quantile(dice_list, 0.25)
+                val_dices_thr.loc[gamma, "q3"] = np.quantile(dice_list, 0.75)
 
                 print(
                     f"THR DICE (gamma={gamma}): "
@@ -788,40 +897,57 @@ def main(data_folder, alpha, beta, gammas, results_folder,
                 os.makedirs(rs_dir, exist_ok=True)
 
                 if len(tr_patients) <= n_cores:
-                    preloaded_data, _ = load_subjects(data_folder, patients=tr_patients)
-                else:   # light on RAM, but slower in time
+                    preloaded_data, _ = load_subjects(
+                        data_folder, patients=tr_patients
+                    )
+                else:  # light on RAM, but slower in time
                     preloaded_data = None
 
-                optimizer = BayesianOptimization(partial(dice_obj_mean, gamma=gamma),
-                                                pbounds=pbounds,
-                                                random_state=42)
+                optimizer = BayesianOptimization(
+                    partial(dice_obj_mean, gamma=gamma), pbounds=pbounds,
+                    random_state=42
+                )
                 optimizer.maximize(init_points=init_points, n_iter=n_iter)
-                
+
                 best_params = optimizer.max["params"]
                 pd.DataFrame(best_params, index=[0]).to_pickle(
-                    os.path.join(rs_dir, "best_params.pkl"))
+                    os.path.join(rs_dir, "best_params.pkl")
+                )
                 history = optimizer.res
-                pd.DataFrame(history).to_pickle(os.path.join(rs_dir, "history.pkl"))
+                pd.DataFrame(history).to_pickle(
+                    os.path.join(rs_dir, "history.pkl")
+                )
         
         # choose best parameters from validation set
         if os.path.isfile(os.path.join(results_folder, "val_dices.pkl")):
-            val_dices = pd.read_pickle(os.path.join(results_folder, "val_dices.pkl"))
+            val_dices = pd.read_pickle(
+                os.path.join(results_folder, "val_dices.pkl")
+            )
         else:
-            val_dices = pd.DataFrame(index=gammas, columns=["mean", "std", "q1", "q3"])
+            val_dices = pd.DataFrame(
+                index=gammas, columns=["mean", "std", "q1", "q3"]
+            )
             for gamma in gammas:
                 print(f"Evaluating gamma = {gamma} on validation set...")
                 
                 rs_dir = os.path.join(results_folder, f"rs_g{gamma}")
                 best_params = pd.read_pickle(
-                    os.path.join(rs_dir, "best_params.pkl")).iloc[0].to_dict()
+                    os.path.join(rs_dir, "best_params.pkl")
+                ).iloc[0].to_dict()
                 
-                val_dice_list = dice_obj(extend_dilation_radius=best_params["extend_dilation_radius"],
-                                        n_std=best_params["n_std"],
-                                        min_diameter=best_params["min_diameter"],
-                                        surround_dilation_radius=best_params["surround_dilation_radius"],
-                                        min_points=best_params["min_points"],
-                                        gamma=gamma,
-                                        train_patients=val_patients)
+                val_dice_list = dice_obj(
+                    extend_dilation_radius=best_params[
+                        "extend_dilation_radius"
+                    ],
+                    n_std=best_params["n_std"],
+                    min_diameter=best_params["min_diameter"],
+                    surround_dilation_radius=best_params[
+                        "surround_dilation_radius"
+                    ],
+                    min_points=best_params["min_points"],
+                    gamma=gamma,
+                    train_patients=val_patients,
+                )
                 
                 val_dices.loc[gamma, "mean"] = np.mean(val_dice_list)
                 val_dices.loc[gamma, "std"]  = np.std(val_dice_list)
@@ -834,54 +960,77 @@ def main(data_folder, alpha, beta, gammas, results_folder,
                     f"IQR = [{val_dices.loc[gamma, 'q1']:.3g}, "\
                     f"{val_dices.loc[gamma, 'q3']:.3g}]")
             
-            val_dices.to_pickle(os.path.join(results_folder, "val_dices.pkl"))
+            val_dices.to_pickle(
+                os.path.join(results_folder, "val_dices.pkl")
+            )
 
         best_gamma = val_dices["mean"].idxmax()
-        print(f"Best gamma on validation set: {best_gamma} \
-              (mean DICE = {val_dices.loc[best_gamma, 'mean']:.3g})")
-        best_params = pd.read_pickle(os.path.join(results_folder,
-                                                  f"rs_g{best_gamma}",
-                                                  "best_params.pkl")).iloc[0].to_dict()
+        print(
+            f"Best gamma on validation set: {best_gamma} "
+            f"(mean DICE = {val_dices.loc[best_gamma, 'mean']:.3g})"
+        )
+        best_params = pd.read_pickle(
+            os.path.join(
+                results_folder,
+                f"rs_g{best_gamma}",
+                "best_params.pkl",
+            )
+        ).iloc[0].to_dict()
         best_params["gamma"] = best_gamma
         pd.DataFrame(best_params, index=[0]).to_pickle(
-            os.path.join(results_folder, "best_params.pkl"))
+            os.path.join(results_folder, "best_params.pkl")
+        )
     
     else:
-        best_params = pd.read_pickle(os.path.join(results_folder,
-                                                  "best_params.pkl")).iloc[0].to_dict()
+        best_params = pd.read_pickle(
+            os.path.join(results_folder, "best_params.pkl")
+        ).iloc[0].to_dict()
         best_gamma = best_params["gamma"]
     
     # training performance
     if os.path.isfile(os.path.join(results_folder, "tr_dices.pkl")):
-        tr_dices = pd.read_pickle(os.path.join(results_folder, "tr_dices.pkl"))
+        tr_dices = pd.read_pickle(
+            os.path.join(results_folder, "tr_dices.pkl")
+        )
     else:
-        tr_dices = pd.DataFrame(index=gammas, columns=["mean", "std", "q1", "q3"])
+        tr_dices = pd.DataFrame(
+            index=gammas, columns=["mean", "std", "q1", "q3"]
+        )
         for gamma in gammas:
             print(f"Evaluating gamma={gamma} on training set...")
-            
+
             rs_dir = os.path.join(results_folder, f"rs_g{gamma}")
             best_params = pd.read_pickle(
-                os.path.join(rs_dir, "best_params.pkl")).iloc[0].to_dict()
-            
-            tr_dice_list = dice_obj(extend_dilation_radius=best_params["extend_dilation_radius"],
-                                    n_std=best_params["n_std"],
-                                    min_diameter=best_params["min_diameter"],
-                                    surround_dilation_radius=best_params["surround_dilation_radius"],
-                                    min_points=best_params["min_points"],
-                                    gamma=gamma,
-                                    train_patients=tr_patients)
-            
-            tr_dices.loc[gamma, "mean"] = np.mean(tr_dice_list)
-            tr_dices.loc[gamma, "std"]  = np.std(tr_dice_list)
-            tr_dices.loc[gamma, "q1"]   = np.quantile(tr_dice_list, 0.25)
-            tr_dices.loc[gamma, "q3"]   = np.quantile(tr_dice_list, 0.75)
+                os.path.join(rs_dir, "best_params.pkl")
+            ).iloc[0].to_dict()
 
-            print(f"Average DICE on training set for gamma = {gamma}: "\
-                f"{tr_dices.loc[gamma, 'mean']:.3g} ± "\
-                f"{tr_dices.loc[gamma, 'std']:.3g}\n"\
-                f"IQR = [{tr_dices.loc[gamma,'q1']:.3g}, "\
-                f"{tr_dices.loc[gamma,'q3']:.3g}]")
-    
+            tr_dice_list = dice_obj(
+                extend_dilation_radius=best_params[
+                    "extend_dilation_radius"
+                ],
+                n_std=best_params["n_std"],
+                min_diameter=best_params["min_diameter"],
+                surround_dilation_radius=best_params[
+                    "surround_dilation_radius"
+                ],
+                min_points=best_params["min_points"],
+                gamma=gamma,
+                train_patients=tr_patients,
+            )
+
+            tr_dices.loc[gamma, "mean"] = np.mean(tr_dice_list)
+            tr_dices.loc[gamma, "std"] = np.std(tr_dice_list)
+            tr_dices.loc[gamma, "q1"] = np.quantile(tr_dice_list, 0.25)
+            tr_dices.loc[gamma, "q3"] = np.quantile(tr_dice_list, 0.75)
+
+            print(
+                f"Average DICE on training set for gamma = {gamma}: "
+                f"{tr_dices.loc[gamma, 'mean']:.3g} ± "
+                f"{tr_dices.loc[gamma, 'std']:.3g}\n"
+                f"IQR = [{tr_dices.loc[gamma,'q1']:.3g}, "
+                f"{tr_dices.loc[gamma,'q3']:.3g}]"
+            )
+
         tr_dices.to_pickle(os.path.join(results_folder, "tr_dices.pkl"))
 
     print("\nBest parameters: ")
@@ -890,19 +1039,22 @@ def main(data_folder, alpha, beta, gammas, results_folder,
             print(f"{k} = {int(v)}")       # truncate to integer
         else:
             print(f"{k} = {v:.3g}")
-    
-    print(f"Average DICE on training set for gamma = {best_gamma}: "\
-        f"{tr_dices.loc[best_gamma, 'mean']:.3g} ± "\
-        f"{tr_dices.loc[best_gamma, 'std']:.3g}\n"\
-        f"IQR = [{tr_dices.loc[best_gamma, 'q1']:.3g}, "\
-        f"{tr_dices.loc[best_gamma, 'q3']:.3g}]")
-    
+    print(
+        f"Average DICE on training set for gamma = {best_gamma}: "
+        f"{tr_dices.loc[best_gamma, 'mean']:.3g} ± "
+        f"{tr_dices.loc[best_gamma, 'std']:.3g}\n"
+        f"IQR = [{tr_dices.loc[best_gamma, 'q1']:.3g}, "
+        f"{tr_dices.loc[best_gamma, 'q3']:.3g}]"
+    )
+
     val_dices = pd.read_pickle(os.path.join(results_folder, "val_dices.pkl"))
-    print(f"Average DICE on validation set for gamma = {best_gamma}: "\
-        f"{val_dices.loc[best_gamma, 'mean']:.3g} ± "\
-        f"{val_dices.loc[best_gamma, 'std']:.3g}\n"\
-        f"IQR = [{val_dices.loc[best_gamma, 'q1']:.3g}, "\
-        f"{val_dices.loc[best_gamma, 'q3']:.3g}]")
+    print(
+        f"Average DICE on validation set for gamma = {best_gamma}: "
+        f"{val_dices.loc[best_gamma, 'mean']:.3g} ± "
+        f"{val_dices.loc[best_gamma, 'std']:.3g}\n"
+        f"IQR = [{val_dices.loc[best_gamma, 'q1']:.3g}, "
+        f"{val_dices.loc[best_gamma, 'q3']:.3g}]"
+    )
     
     # save parameters
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
@@ -925,24 +1077,13 @@ def main(data_folder, alpha, beta, gammas, results_folder,
     print(f"Saved parameters to {yaml_path}")
     
     # plot DICE
-    plt.plot(gammas, val_dices["mean"], color="red",
-             label="After threshold")
-    plt.fill_between(
-        gammas,
-        val_dices["q1"],
-        val_dices["q3"],
-        alpha=0.25,
-        color="red"
-    )
+    plt.plot(gammas, val_dices["mean"], color="red", label="After threshold")
+    plt.fill_between(gammas, val_dices["q1"], val_dices["q3"], alpha=0.25,
+                     color="red")
     plt.plot(gammas, val_dices_thr["mean"], color="blue",
              label="After refinement step")
-    plt.fill_between(
-        gammas,
-        val_dices["q1"],
-        val_dices["q3"],
-        alpha=0.25,
-        color="blue"
-    )
+    plt.fill_between(gammas, val_dices["q1"], val_dices["q3"], alpha=0.25,
+                     color="blue")
     plt.xlabel("Gamma")
     plt.ylabel("DICE")
     plt.title("Validation mean DICE with IQR")
