@@ -49,7 +49,7 @@ dependencies = [
 'Bug Tracker' = 'https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/issues'
 
 [project.scripts]
-SilentInfarctionSegmentationFLAIR = "SilentInfarctionSegmentationFLAIR.__main__:main"
+SilentInfarctionSegmentationFLAIR = "SilentInfarctionSegmentationFLAIR.__main__:cli"
 
 [build-system]
 requires = ['setuptools>=42']

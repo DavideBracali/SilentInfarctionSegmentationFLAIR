@@ -1,21 +1,30 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from __version__ import __version__
+from .__version__ import __version__
 import argparse
 import os
 import yaml
 import SimpleITK as sitk
+import time
 
 from SilentInfarctionSegmentationFLAIR.segmentation import (
-    get_mask_from_segmentation, evaluate_voxel_wise
+    get_mask_from_segmentation,
+    evaluate_voxel_wise
 )
 from SilentInfarctionSegmentationFLAIR.utils import (
-    orient_image, resample_to_reference
+    orient_image,
+    resample_to_reference,
+    get_paths_df,
+    normalize
 )
 from SilentInfarctionSegmentationFLAIR import (
-    flair_t1_sum, threshold, refinement_step
+    flair_t1_sum,
+    threshold,
+    refinement_step
 )
+sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
+
 
 __author__ = ['Davide Bracali']
 __email__ = ['davide.bracali@studio.unibo.it']
@@ -49,10 +58,10 @@ def parse_args():
         help='Get the current version installed'
     )
     parser.add_argument(
-        '--patient_folder', '-p',
+        '--data_folder', '-p',
         type=str,
         required=True,
-        help='Path to the patient folder containing all input images'
+        help='Path to the folder containing all input images'
     )
     parser.add_argument(
         '--params_path',
@@ -78,6 +87,21 @@ def parse_args():
     )
     return parser.parse_args()
 
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
+
+gm_labels = config['labels']['gm']
+wm_labels = config['labels']['wm']
+keywords_to_remove = config['labels']['keywords_to_remove']
+
+flair_file = config['files']['flair']
+t1_file = config['files']['t1']
+segm_file = config['files']['segmentation']
+gm_pve_file = config['files']['gm_pve']
+wm_pve_file = config['files']['wm_pve']
+csf_pve_file = config['files']['csf_pve']
+gt_file = config['files']['gt']
+label_name_file = config['files']['label_name']
 
 def main(patient_folder, params_path, results_folder, verbose, show):
     """
@@ -114,29 +138,19 @@ def main(patient_folder, params_path, results_folder, verbose, show):
         Mask obtained after the refinement step.
     gt : SimpleITK.Image or None
         Ground-truth lesion mask if available, otherwise None.
-    """
+    """    
     patient = os.path.basename(patient_folder)
-
-    with open("config.yaml", "r") as f:
-        config = yaml.safe_load(f)
-
-    gm_labels = config['labels']['gm']
-    wm_labels = config['labels']['wm']
-    keywords_to_remove = config['labels']['keywords_to_remove']
-
-    flair_file = config['files']['flair']
-    t1_file = config['files']['t1']
-    segm_file = config['files']['segmentation']
-    gm_pve_file = config['files']['gm_pve']
-    wm_pve_file = config['files']['wm_pve']
-    csf_pve_file = config['files']['csf_pve']
-    gt_file = config['files']['gt']
-    label_name_file = config['files']['label_name']
+    if verbose:
+        print(f"\n\nProcessing {patient}...\n")
 
     flair = sitk.ReadImage(os.path.join(patient_folder, flair_file))
     flair = orient_image(flair, "RAS")
-    t1 = sitk.ReadImage(os.path.join(patient_folder, t1_file))
-    t1 = resample_to_reference(t1, flair, sitk.sitkLinear)
+
+    if os.path.isfile(os.path.join(patient_folder, t1_file)):
+        t1 = sitk.ReadImage(os.path.join(patient_folder, t1_file))
+        t1 = resample_to_reference(t1, flair, sitk.sitkLinear)
+    else:
+        t1 = None
 
     segm = sitk.ReadImage(os.path.join(patient_folder, segm_file))
     segm = resample_to_reference(segm, flair, sitk.sitkNearestNeighbor)
@@ -161,22 +175,38 @@ def main(patient_folder, params_path, results_folder, verbose, show):
     with open(params_path, "r") as f:
         params = yaml.safe_load(f)
 
-    image = flair_t1_sum.main(
-        flair, t1, params['alpha'], params['beta'],
-        wm_mask=wm_mask, gm_mask=gm_mask, gt=gt,
-        verbose=verbose, show=show,
-        save_dir=os.path.join(results_folder, patient)
-    )
+    if t1 is None:
+        print("WARNING!!! No T1 image was found. "
+              "FLAIR image will be processed directly")
+        image = normalize(flair, 8)
+    else:
+        image = flair_t1_sum.main(
+            flair,
+            t1,
+            params["alpha"],
+            params["beta"],
+            wm_mask=wm_mask,
+            gm_mask=gm_mask,
+            gt=gt,
+            verbose=verbose,
+            show=show,
+            save_dir=os.path.join(results_folder, patient)
+        )
 
     thr_mask = threshold.main(
-        image, gm_mask=gm_mask, gamma=params['gamma'],
-        verbose=verbose, show=show,
+        image,
+        gm_mask=gm_mask,
+        gamma=params['gamma'],
+        verbose=verbose,
+        show=show,
         save_dir=os.path.join(results_folder, patient)
     )
 
     ref_mask = refinement_step.main(
-        thr_mask, image,
-        pves=[wm_pve, gm_pve, csf_pve], segm=segm,
+        thr_mask,
+        image,
+        pves=[wm_pve, gm_pve, csf_pve],
+        segm=segm,
         min_diameter=params['min_diameter'],
         surround_dilation_radius=params['surround_dilation_radius'],
         n_std=params['n_std'],
@@ -190,41 +220,53 @@ def main(patient_folder, params_path, results_folder, verbose, show):
 
     return image, thr_mask, ref_mask, gt
 
+def cli():
+    
+    start_time = time.time()
 
-if __name__ == '__main__':
     args = parse_args()
 
     if args.version:
         print(__version__)
         raise SystemExit(0)
+    
+    paths_df = get_paths_df(args.data_folder, extensions=".nii")
+    for patient_folder in paths_df.index:
 
-    image, thr_mask, ref_mask, gt = main(
-        args.patient_folder,
-        args.params_path,
-        args.results_folder,
-        args.verbose,
-        args.show
-    )
+        _, thr_mask, ref_mask, gt = main(
+            patient_folder,
+            args.params_path,
+            args.results_folder,
+            args.verbose,
+            args.show
+        )
 
-    if gt is not None:
-        print("Computing evaluation metrics AFTER THRESHOLDING...")
-        thr_results = evaluate_voxel_wise(thr_mask, gt)
-        print(f"  - True positives fraction: \
-              {thr_results['vw-TPF']:.3g}")
-        print(f"  - False positives fraction: \
-              {thr_results['vw-FPF']:.3g}")
-        print(f"  - DICE coefficient: \
-              {thr_results['vw-DSC']:.3g}")
-        print(f"  - Mattheus correlation coefficient: \
-              {thr_results['vw-MCC']:.3g}")
+        if gt is not None:
+            print("Computing evaluation metrics AFTER THRESHOLDING...")
+            thr_results = evaluate_voxel_wise(thr_mask, gt)
+            print(f"  - True positives fraction: "
+                f"{thr_results['vw-TPF']:.3g}")
+            print(f"  - False positives fraction: "
+                f"{thr_results['vw-FPF']:.3g}")
+            print(f"  - DICE coefficient: "
+                f"{thr_results['vw-DSC']:.3g}")
+            print(f"  - Mattheus correlation coefficient: "
+                f"{thr_results['vw-MCC']:.3g}")
 
-        print("Computing evaluation metrics AFTER REFINEMENT STEP:")
-        ref_results = evaluate_voxel_wise(ref_mask, gt)
-        print(f"  - True positives fraction: \
-              {ref_results['vw-TPF']:.3g}")
-        print(f"  - False positives fraction: \
-              {ref_results['vw-FPF']:.3g}")
-        print(f"  - DICE coefficient: \
-              {ref_results['vw-DSC']:.3g}")
-        print(f"  - Mattheus correlation coefficient: \
-              {ref_results['vw-MCC']:.3g}")
+            print("Computing evaluation metrics AFTER REFINEMENT STEP:")
+            ref_results = evaluate_voxel_wise(ref_mask, gt)
+            print(f"  - True positives fraction: "
+                f"{ref_results['vw-TPF']:.3g}")
+            print(f"  - False positives fraction: "
+                f"{ref_results['vw-FPF']:.3g}")
+            print(f"  - DICE coefficient: "
+                f"{ref_results['vw-DSC']:.3g}")
+            print(f"  - Mattheus correlation coefficient: "
+                f"{ref_results['vw-MCC']:.3g}")
+
+    elapsed_time = time.time() - start_time
+    print(f"Elapsed time: {elapsed_time:.1f} s")
+
+    
+if __name__ == '__main__': 
+    cli()
