@@ -1,17 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Tune alpha and beta segmentation parameters.
+Created on 2025-11-01 13:21:28
 
-This module provides a CLI and helper functions to optimize segmentation
-parameters with Bayesian optimization. It loads subject images, computes
-a per-patient separation score and runs optimization on a training set,
-then validates the best parameters on a validation set.
-
-Notes
------
-The script writes best parameters to `params_alpha_beta.yaml` but leaves
-other parameters unset for further tuning.
+@author: david
 """
 
 import SimpleITK as sitk
@@ -27,99 +19,68 @@ import multiprocessing as mp
 
 sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
 
-from SilentInfarctionSegmentationFLAIR.utils import (
-    orient_image,
-    resample_to_reference,
-    get_array_from_image,
-    get_image_from_array,
-    label_names,
-    train_val_test_split,
-    cliffs_delta,
-)
-from SilentInfarctionSegmentationFLAIR.segmentation import (
-    get_mask_from_segmentation,
-    evaluate_voxel_wise,
-)
-from SilentInfarctionSegmentationFLAIR.histograms import (
-    plot_multiple_histograms,
-)
+from SilentInfarctionSegmentationFLAIR.utils import (orient_image,
+                                                     resample_to_reference,
+                                                     get_array_from_image,
+                                                     get_image_from_array,
+                                                     label_names,
+                                                     train_val_test_split,
+                                                     cliffs_delta)
+from SilentInfarctionSegmentationFLAIR.segmentation import (get_mask_from_segmentation,
+                                                            evaluate_voxel_wise)
+from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histograms
 from SilentInfarctionSegmentationFLAIR import flair_t1_sum
 
 
 def parse_args():
-    """
-    Parse command-line arguments.
-
-    Returns
-    -------
-    argparse.Namespace
-        Parsed arguments with attributes: `data_folder`, `results_folder`,
-        `init_points`, `n_iter`, `n_cores`.
-    """
-
-    description = (
-        "Optimizes all segmentation parameters (except gamma) on a "
-        "training set, maximizing ROC-AUC using Bayesian optimization. "
-        "Then chooses gamma maximizing average DICE coefficient on a "
-        "validation set."
-    )
+    description="Optimizes alpha and beta parameters on a training set, "\
+        "maximizing separation between histograms of different tissues."
 
     parser = argparse.ArgumentParser(description=description)
 
-    _ = parser.add_argument(
-        "--data_folder",
-        dest="data_folder",
-        action="store",
-        type=str,
-        required=False,
-        default="data",
-        help="Path of the folder where data is located",
-    )
+    _ = parser.add_argument('--data_folder',
+                            dest='data_folder',
+                            action='store',
+                            type=str,
+                            required=False,
+                            default="data",
+                            help='Path of the folder where data is located')
+    
+    _ = parser.add_argument('--results_folder',
+                            dest='results_folder',
+                            action='store',
+                            type=str,
+                            required=False,
+                            default="tuning_alpha_beta",
+                            help='Path of the folder where data is located')
 
-    _ = parser.add_argument(
-        "--results_folder",
-        dest="results_folder",
-        action="store",
-        type=str,
-        required=False,
-        default="tuning_alpha_beta",
-        help="Path of the folder where data is located",
-    )
+    _ = parser.add_argument('--init_points',
+                            dest='init_points',
+                            action='store',
+                            type=int,
+                            required=False,
+                            default=5,
+                            help='Number of initial points for random search')
+    
+    _ = parser.add_argument('--n_iter',
+                            dest='n_iter',
+                            action='store',
+                            type=int,
+                            required=False,
+                            default=20,
+                            help='Number of Bayesian optimization iterations')
 
-    _ = parser.add_argument(
-        "--init_points",
-        dest="init_points",
-        action="store",
-        type=int,
-        required=False,
-        default=5,
-        help="Number of initial points for random search",
-    )
-
-    _ = parser.add_argument(
-        "--n_iter",
-        dest="n_iter",
-        action="store",
-        type=int,
-        required=False,
-        default=20,
-        help="Number of Bayesian optimization iterations",
-    )
-
-    _ = parser.add_argument(
-        "--n_cores",
-        dest="n_cores",
-        action="store",
-        type=int,
-        required=False,
-        default=1,
-        help=(
-            "Number of CPU cores to use during optimization (improves "
-            "computational time but increases RAM and CPU usage)"
-        ),
-    )
-
+    _ = parser.add_argument('--n_cores',
+                            dest='n_cores',
+                            action='store',
+                            type=int,
+                            required=False,
+                            default=1,
+                            help='Number of CPU cores to use during optimization \
+                                (improves computational time but increases RAM and CPU usage)')
+    
     args = parser.parse_args()
+
     return args
 
 
@@ -145,7 +106,7 @@ label_name_file = config["files"]["label_name"]
 
 def load_subjects(data_folder, patients=None, paths_only=False):
     """
-    Load imaging data for multiple subjects and organize into a dict.
+    Load imaging data for multiple subjects and organize into a dictionary.
 
     Parameters
     ----------
@@ -153,19 +114,20 @@ def load_subjects(data_folder, patients=None, paths_only=False):
         Path to folder containing patient subfolders with .nii files.
     patients : list of str, optional
         List of patient IDs to load; if None, loads all patients.
-    paths_only : bool, optional
-        If True, only returns file paths without loading images into
-        memory. Default is False.
+    paths_only : bool, default=False
+        If True, only returns file paths without loading images into memory.
 
     Returns
     -------
     data : dict
-        Keys are patient IDs and values are dicts with the following
-        images (SimpleITK.Image): ``flair``, ``t1``, ``gt``, ``gm_mask``,
-        ``wm_mask``. If ``paths_only`` is True, ``data`` will be empty.
+        Dictionary where keys are patient IDs and values are dictionaries containing:
+            - flair : SimpleITK.Image, FLAIR image
+            - t1 : SimpleITK.Image, T1-weighted image
+            - gt : SimpleITK.Image, ground truth mask
+            - gm_mask : SimpleITK.Image, GM mask from segmentation
+            - wm_mask : SimpleITK.Image, WM mask from segmentation
     paths_df : pandas.DataFrame
-        DataFrame mapping each patient to their corresponding file
-        paths. Rows with missing images are dropped.
+        DataFrame mapping each patient to their corresponding file paths.
     """
     # organize all images in a df
     paths_list = []
@@ -186,11 +148,8 @@ def load_subjects(data_folder, patients=None, paths_only=False):
     # drop NaN
     dropped_patients = paths_df.index[paths_df.isna().any(axis=1)]
     if len(dropped_patients) > 0:
-        msg = (
-            "WARNING!!! The following patients will be removed because "
-            f"one of the required images is missing: {list(dropped_patients)}"
-        )
-        print(msg)
+       print("WARNING!!! The following patients will be removed because " \
+                      f"one of the required images is missing: {list(dropped_patients)}")
     paths_df = paths_df.dropna(how="any")
 
     data = {}
@@ -213,35 +172,36 @@ def load_subjects(data_folder, patients=None, paths_only=False):
             wm_mask = get_mask_from_segmentation(segm, wm_labels)
 
             data[patient] = {
-                "flair": flair,
-                "t1": t1,
-                "gt": gt,
-                "gm_mask": gm_mask,
-                "wm_mask": wm_mask,
-            }
+                "flair": flair, "t1": t1, "gt": gt,
+                "gm_mask": gm_mask, "wm_mask": wm_mask}
 
     return data, paths_df
 
 
 def process_patient(args_tuple):
     """
-    Compute the separation score for one patient.
+    Process a single patient's data and compute the separation score.
 
-    The score rewards separation between gray matter (GM) and lesions
-    while penalizing overlap between white matter (WM) and GM. Higher
-    values indicate better separation and fewer false positives.
+    The score is designed to:
+        - Maximize separation between GM and lesions (true positives)
+        - Penalize overlap between WM and GM (false positives)
 
     Parameters
     ----------
     args_tuple : tuple
-        (data, alpha, beta) where ``data`` is a dict with keys:
-        ``flair``, ``t1``, ``gt``, ``gm_mask``, ``wm_mask``. ``alpha``
-        and ``beta`` are floats controlling the `flair_t1_sum` behavior.
+        Tuple containing:
+            - data : dict
+                Dictionary with patient images and masks.
+            - alpha : float
+                Segmentation parameter alpha.
+            - beta : float
+                Segmentation parameter beta.
 
     Returns
     -------
     float
-        Separation score (reward minus penalty). Larger is better.
+        Separation score: larger values indicate better GM-lesion separation
+        and minimal WM overlap.
     """
     data, alpha, beta = args_tuple
 
@@ -251,23 +211,18 @@ def process_patient(args_tuple):
     gm_mask = data["gm_mask"]
     wm_mask = data["wm_mask"]
 
-    image = flair_t1_sum.main(
-        flair,
-        t1,
-        alpha,
-        beta,
-        wm_mask=wm_mask,
-        gm_mask=gm_mask,
-        gt=gt,
-        verbose=False,
-    )
-
+    image = flair_t1_sum.main(flair, t1, alpha, beta,
+                                                      wm_mask=wm_mask,
+                                                      gm_mask=gm_mask,
+                                                      gt=gt,
+                                                      verbose=False)
+    
     gm_arr = get_array_from_image(sitk.Mask(image, gm_mask))
     wm_arr = get_array_from_image(sitk.Mask(image, wm_mask))
     lesions_arr = get_array_from_image(sitk.Mask(image, gt))
-    gm_gl = gm_arr[gm_arr > 0]
-    wm_gl = wm_arr[wm_arr > 0]
-    lesions_gl = lesions_arr[lesions_arr > 0]
+    gm_gl = gm_arr[gm_arr>0]
+    wm_gl = wm_arr[wm_arr>0]
+    lesions_gl = lesions_arr[lesions_arr>0]
     
     les_low = np.quantile(lesions_gl, 0.25)
     gm_high = np.quantile(gm_gl, 0.75)
@@ -291,26 +246,23 @@ def process_patient(args_tuple):
 
 def main(data_folder, results_folder, init_points, n_iter, n_cores):
     """
-    Run Bayesian optimization to tune ``alpha`` and ``beta``.
+    Main pipeline for Bayesian optimization of segmentation parameters.
 
-    Workflow
-    --------
-    - Load patient file paths or images
-    - Create a train/validation split
-    - Optimize parameters on the training set using Bayesian
-      optimization
-    - Evaluate best parameters on training and validation sets
-    - Save results and a minimal `params_alpha_beta.yaml` file with
-      ``alpha`` and ``beta`` set.
+    Steps:
+    - Load patient data
+    - Split into training and validation sets
+    - Optimize alpha and beta using Bayesian Optimization
+    - Save best parameters and separation metrics
+    - Validate the best parameters on the validation set
 
     Parameters
     ----------
     data_folder : str
         Path to the dataset directory.
     results_folder : str
-        Directory where output files will be saved.
+        Path to save outputs, logs, and metrics.
     init_points : int
-        Number of initial random exploration steps for BO.
+        Number of initial random exploration steps for Bayesian Optimization.
     n_iter : int
         Number of BO iterations.
     n_cores : int
@@ -373,122 +325,75 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
     os.makedirs(results_folder, exist_ok=True)
     
     # train-val-test split
-    if (
-        os.path.isfile(os.path.join(data_folder, "train_patients.pkl"))
-        and os.path.isfile(os.path.join(data_folder, "validation_patients.pkl"))
-    ):
-        tr_patients = list(
-            pd.read_pickle(os.path.join(data_folder, "train_patients.pkl"))
-        )
-        val_patients = list(
-            pd.read_pickle(os.path.join(data_folder, "validation_patients.pkl"))
-        )
-        print(
-            f"Found train-validation split in '{data_folder}'. "
-            f"{len(tr_patients)} patients will be used for training, "
-            f"{len(val_patients)} for validation."
-        )
+    if os.path.isfile(os.path.join(data_folder, "train_patients.pkl")
+        ) and os.path.isfile(os.path.join(data_folder, "validation_patients.pkl")):
+        tr_patients = list(pd.read_pickle(os.path.join(data_folder, "train_patients.pkl")))
+        val_patients = list(pd.read_pickle(os.path.join(data_folder, "validation_patients.pkl")))
+        print(f"Found train-validation split in '{data_folder}'. " \
+            f"{len(tr_patients)} patients will be used for training, {len(val_patients)} for validation.")
     else:
-        tr_patients, val_patients, _ = train_val_test_split(
-            data_folder,
-            validation_fraction=0.3,
-            test_fraction=0.1,
-            show=False,
-            title=(
-                "Stratification of train–validation–test split according to "
-                "positive-to-total ratio"
-            ),
-        )
+        tr_patients, val_patients, _ = train_val_test_split(data_folder,
+                                                validation_fraction=0.3, test_fraction=0.1,
+                                                show=False,
+            title="Stratification of train–validation–test split according to positive-to-total ratio")
 
     # optimization
     if not os.path.isfile(os.path.join(results_folder, "best_params.pkl")):
-
-        if len(tr_patients) <= n_cores:  # preload data (faster but heavy in RAM)
-            print(
-                f"{len(tr_patients)} training patients and {n_cores} "
-                "avalible cores. Preloading data in advance..."
-            )
-            preloaded_data, _ = load_subjects(
-                data_folder, patients=tr_patients
-            )
-        else:  # light on RAM, but slower in time
+        
+        if len(tr_patients) <= n_cores: # preload data (faster but heavy in RAM) 
+            print(f"{len(tr_patients)} training patients and {n_cores} avalible cores. " \
+                        "Preloading data in advance...")
+            preloaded_data, _ = load_subjects(data_folder, patients=tr_patients)
+        else:   # light on RAM, but slower in time
             preloaded_data = None
-            print(
-                f"{len(tr_patients)} training patients and {n_cores} "
-                "avalible cores. Data will be loaded at each iteration..."
-            )
+            print(f"{len(tr_patients)} training patients and {n_cores} avalible cores. " \
+                    "Data will be loaded at each iteration...")
 
-        # maximize training separation
-        optimizer = BayesianOptimization(
-            f=separation_obj_mean, pbounds=pbounds, random_state=42
-        )
+        # maximize training separation    
+        optimizer = BayesianOptimization(f=separation_obj_mean, pbounds=pbounds, random_state=42)
         optimizer.maximize(init_points=init_points, n_iter=n_iter)
         best_params = optimizer.max["params"]
-        pd.DataFrame(best_params, index=[0]).to_pickle(
-            os.path.join(results_folder, "best_params.pkl")
-        )
+        pd.DataFrame(best_params, index=[0]).to_pickle(os.path.join(results_folder, "best_params.pkl"))
         history = optimizer.res
         pd.DataFrame(history).to_pickle(os.path.join(results_folder, "history.pkl"))
 
     else:
-        best_params = pd.read_pickle(
-            os.path.join(results_folder, "best_params.pkl")
-        ).iloc[0].to_dict()
+        best_params = pd.read_pickle(os.path.join(results_folder, "best_params.pkl")).iloc[0].to_dict()
     
     # training performance
     if os.path.isfile(os.path.join(results_folder, "tr_separation.npy")):
-        tr_separation_list = np.load(
-            os.path.join(results_folder, "tr_separation.npy")
-        )
+        tr_separation_list = np.load(os.path.join(results_folder, "tr_separation.npy"))
     else:
         print("Evaluating best parameters on training set...")
-        tr_separation_list = separation_obj(
-            alpha=best_params["alpha"],
-            beta=best_params["beta"],
-            train_patients=tr_patients,
-            data=None,
-        )
-        np.save(
-            os.path.join(results_folder, "tr_separation.npy"),
-            tr_separation_list,
-        )
+        tr_separation_list = separation_obj(alpha=best_params["alpha"],
+                                            beta=best_params["beta"],
+                                            train_patients=tr_patients,
+                                            data=None)
+        np.save(os.path.join(results_folder, "tr_separation.npy"), tr_separation_list)
 
             
 
     # validation
     print("Validating best parameters on validation set...")
     if os.path.isfile(os.path.join(results_folder, "val_separation.npy")):
-        val_separation_list = np.load(
-            os.path.join(results_folder, "val_separation.npy")
-        )
+        val_separation_list = np.load(os.path.join(results_folder, "val_separation.npy"))
     else:
         val_data, _ = load_subjects(data_folder, patients=val_patients)
-        val_separation_list = [
-            process_patient(
-                (val_data[patient],)
-                + tuple(best_params[k] for k in list(pbounds.keys()))
-            )
-            for patient in val_patients
-        ]
-        np.save(
-            os.path.join(results_folder, "val_separation.npy"),
-            np.array(val_separation_list),
-        )
+        val_separation_list = [process_patient((val_data[patient],) + tuple(best_params[k]
+                                                                for k in list(pbounds.keys())))
+                        for patient in val_patients]
+        np.save(os.path.join(results_folder, "val_separation.npy"), np.array(val_separation_list))
 
 
     print("\nBest parameters: ")
     for k, v in best_params.items():
         print(f"{k} = {v:.3g}")
     
-    print(
-        "Average separation on training set: "
-        f"{np.mean(tr_separation_list):.3g} ± {np.std(tr_separation_list):.3g}"
-    )
-
-    print(
-        "Average separation on validation set: "
-        f"{np.mean(val_separation_list):.3g} ± {np.std(val_separation_list):.3g}"
-    )
+    print("Average separation on training set: "\
+          f"{np.mean(tr_separation_list):.3g} ± {np.std(tr_separation_list):.3g}")
+    
+    print("Average separation on validation set: "\
+          f"{np.mean(val_separation_list):.3g} ± {np.std(val_separation_list):.3g}")
     
     # save alpha and beta
     params_yaml = {
@@ -499,16 +404,18 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
         "n_std": None,
         "min_diameter": None,
         "surround_dilation_radius": None,
-        "min_points": None,
-    }
+        "min_points": None}
     
     yaml_path = "params_alpha_beta.yaml"
     with open(yaml_path, "w") as f:
         yaml.safe_dump(params_yaml, f, sort_keys=False)
 
-    print(f"Saved parameters to {yaml_path} (still not ready for use, "
-          "please tune the other parameters by running "
-          "SilentInfarctionSegmentationFLAIR/tuning_gamma_rs.py")
+    print(f"Saved parameters to {yaml_path} (still not ready for use, "\
+          "please tune the other parameters by running "\
+          f"{os.path.join(
+              'SilentInfarctionSegmentationFLAIR',
+              'tuning_gamma_rs.py'
+              )}")
 
 
 if __name__ == '__main__':

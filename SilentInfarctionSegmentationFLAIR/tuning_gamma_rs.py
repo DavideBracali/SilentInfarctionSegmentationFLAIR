@@ -22,6 +22,9 @@ import multiprocessing as mp
 from functools import partial
 from datetime import datetime
 import matplotlib.pyplot as plt
+import matplotlib
+import seaborn as sns
+matplotlib.use("Agg")
 sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
 
 from SilentInfarctionSegmentationFLAIR.utils import (
@@ -51,12 +54,10 @@ def parse_args():
         `init_points`, `n_iter`, `n_cores`, `alpha`, `beta`, `gammas`.
     """
 
-    description = (
-        "Optimizes refinement-step parameters for a set of gamma values. "
-        "Uses Bayesian optimization on a training set and validates on a "
-        "separate validation set."
-    )
-
+    description="Optimizes gamma and refinement parameters on a training set. "\
+        "Maximises DICE coefficient after refinement step, then chooses gamma "\
+        "maximizing DICE over validation set."
+    
     parser = argparse.ArgumentParser(description=description)
 
     _ = parser.add_argument(
@@ -418,6 +419,67 @@ def process_patient_rs(args_tuple, results_folder):
     dsc = evaluate_voxel_wise(ref_mask, data["gt"])["vw-DSC"]
     return dsc
 
+def plot_validation_distributions(gammas, results_folder):
+
+    all_thr = {}
+    all_ref = {}
+
+    for gamma in gammas:
+        rs_dir = os.path.join(results_folder, f"rs_g{gamma}")
+
+        thr_path = os.path.join(rs_dir, "val_dice_thr.pkl")
+        ref_path = os.path.join(rs_dir, "val_dice.pkl")
+
+        if os.path.isfile(thr_path):
+            all_thr[gamma] = pd.read_pickle(thr_path)
+        else:
+            print(f"WARNING!!! Missing: {thr_path}")
+
+        if os.path.isfile(ref_path):
+            all_ref[gamma] = pd.read_pickle(ref_path)
+        else:
+            print(f"WARNING!!! Missing: {ref_path}")
+
+    df_plot = []
+
+    for gamma in gammas:
+        if gamma in all_thr:
+            df_plot.append(pd.DataFrame({
+                "gamma": gamma,
+                "DICE": all_thr[gamma],
+                "type": "After threshold"
+            }))
+
+        if gamma in all_ref:
+            df_plot.append(pd.DataFrame({
+                "gamma": gamma,
+                "DICE": all_ref[gamma],
+                "type": "After refinement"
+            }))
+
+    df_plot = pd.concat(df_plot, ignore_index=True)
+
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(
+        data=df_plot,
+        x="gamma",
+        y="DICE",
+        hue="type",
+        palette=["#1f77b4", "#ff7f0e"]
+    )
+
+    plt.title("Validation DICE distribution")
+    plt.xlabel("γ")
+    plt.ylabel("DICE")
+    plt.legend(title="")
+    plt.tight_layout()
+
+    out_path = os.path.join(results_folder, "validation_dice_boxplot.png")
+    plt.savefig(out_path, dpi=200)
+    plt.close()
+
+
+
 def process_patient_thr_dice(args_tuple, results_folder):
     """
     Compute voxel-wise DICE between threshold mask and ground truth.
@@ -508,15 +570,13 @@ def main(data_folder, alpha, beta, gammas, results_folder,
         gc.collect()
 
         # chunk structure to avoid RAM overload
-        if n_cores > len(train_patients):
-            n_cores = len(train_patients)
-            
-        n_chunks = (len(train_patients) + n_cores - 1) // n_cores
+        cores = min(n_cores, len(train_patients))    
+        n_chunks = (len(train_patients) + cores - 1) // cores
 
         for chunk in range(n_chunks):
             gc.collect()
 
-            chunk_patients = train_patients[chunk*n_cores:(chunk+1)*n_cores]
+            chunk_patients = train_patients[chunk*cores:(chunk+1)*cores]
 
             if data is None:
                 chunk_data, _ = load_subjects(
@@ -530,8 +590,8 @@ def main(data_folder, alpha, beta, gammas, results_folder,
                 for patient in chunk_patients
             ]
 
-            if n_cores > 1:
-                with mp.Pool(n_cores) as pool:
+            if cores > 1:
+                with mp.Pool(cores) as pool:
                     _ = pool.starmap(
                         process_patient_images,
                         [(a, results_folder) for a in args_list],
@@ -749,7 +809,7 @@ def main(data_folder, alpha, beta, gammas, results_folder,
 
     # resolve alpha / beta
     if alpha is None or beta is None:
-        yaml_alpha, yaml_beta = load_alpha_beta_from_yaml(results_folder)
+        yaml_alpha, yaml_beta = load_alpha_beta_from_yaml()
 
         if alpha is None:
             alpha = yaml_alpha
@@ -845,47 +905,6 @@ def main(data_folder, alpha, beta, gammas, results_folder,
                     gamma, data=preloaded_data, train_patients=patients_to_do
                 )
                 
-        # evaluate on validation set after threshold (no refinement)
-        thr_val_path = os.path.join(results_folder, "val_dices_thr.pkl")
-        if os.path.isfile(thr_val_path):
-            val_dices_thr = pd.read_pickle(thr_val_path)
-        else:
-            val_dices_thr = pd.DataFrame(
-                index=gammas, columns=["mean", "std", "q1", "q3"]
-            )
-
-            for gamma in gammas:
-                print(
-                    f"Evaluating DICE after threshold on validation set "
-                    f"(gamma = {gamma})..."
-                )
-
-                if len(val_patients) <= n_cores:
-                    preloaded_data, _ = load_subjects(
-                        data_folder, patients=val_patients
-                    )
-                else:
-                    preloaded_data = None
-
-                dice_list = evaluate_thr_dice(
-                    gamma=gamma, val_patients=val_patients, data=preloaded_data
-                )
-
-                val_dices_thr.loc[gamma, "mean"] = np.mean(dice_list)
-                val_dices_thr.loc[gamma, "std"] = np.std(dice_list)
-                val_dices_thr.loc[gamma, "q1"] = np.quantile(dice_list, 0.25)
-                val_dices_thr.loc[gamma, "q3"] = np.quantile(dice_list, 0.75)
-
-                print(
-                    f"THR DICE (gamma={gamma}): "
-                    f"{val_dices_thr.loc[gamma,'mean']:.3g} ± "
-                    f"{val_dices_thr.loc[gamma,'std']:.3g} | "
-                    f"IQR = [{val_dices_thr.loc[gamma,'q1']:.3g}, "
-                    f"{val_dices_thr.loc[gamma,'q3']:.3g}]"
-                )
-
-            val_dices_thr.to_pickle(thr_val_path)
-
         # optimize refinement step
         for gamma in gammas:
             rs_dir = os.path.join(results_folder, f"rs_g{gamma}")
@@ -948,7 +967,9 @@ def main(data_folder, alpha, beta, gammas, results_folder,
                     gamma=gamma,
                     train_patients=val_patients,
                 )
-                
+                pd.Series(val_dice_list).to_pickle(
+                    os.path.join(rs_dir, f"val_dice.pkl"))
+
                 val_dices.loc[gamma, "mean"] = np.mean(val_dice_list)
                 val_dices.loc[gamma, "std"]  = np.std(val_dice_list)
                 val_dices.loc[gamma, "q1"]   = np.quantile(val_dice_list, 0.25)
@@ -963,6 +984,7 @@ def main(data_folder, alpha, beta, gammas, results_folder,
             val_dices.to_pickle(
                 os.path.join(results_folder, "val_dices.pkl")
             )
+            
 
         best_gamma = val_dices["mean"].idxmax()
         print(
@@ -1033,6 +1055,51 @@ def main(data_folder, alpha, beta, gammas, results_folder,
 
         tr_dices.to_pickle(os.path.join(results_folder, "tr_dices.pkl"))
 
+    # evaluate on validation set after threshold (no refinement)
+    thr_val_path = os.path.join(results_folder, "val_dices_thr.pkl")
+    if os.path.isfile(thr_val_path):
+        val_dices_thr = pd.read_pickle(thr_val_path)
+    else:
+        val_dices_thr = pd.DataFrame(
+            index=gammas, columns=["mean", "std", "q1", "q3"]
+        )
+
+        for gamma in gammas:
+            rs_dir = os.path.join(results_folder, f"rs_g{gamma}")
+            print(
+                f"Evaluating DICE after threshold on validation set "
+                f"(gamma = {gamma})..."
+            )
+
+            if len(val_patients) <= n_cores:
+                preloaded_data, _ = load_subjects(
+                    data_folder, patients=val_patients
+                )
+            else:
+                preloaded_data = None
+
+            val_dice_list_thr = evaluate_thr_dice(
+                gamma=gamma, val_patients=val_patients, data=preloaded_data
+            )
+
+            pd.Series(val_dice_list_thr).to_pickle(
+                os.path.join(rs_dir, f"val_dice_thr.pkl"))
+
+            val_dices_thr.loc[gamma, "mean"] = np.mean(val_dice_list_thr)
+            val_dices_thr.loc[gamma, "std"] = np.std(val_dice_list_thr)
+            val_dices_thr.loc[gamma, "q1"] = np.quantile(val_dice_list_thr, 0.25)
+            val_dices_thr.loc[gamma, "q3"] = np.quantile(val_dice_list_thr, 0.75)
+
+            print(
+                f"THR DICE (gamma={gamma}): "
+                f"{val_dices_thr.loc[gamma,'mean']:.3g} ± "
+                f"{val_dices_thr.loc[gamma,'std']:.3g} | "
+                f"IQR = [{val_dices_thr.loc[gamma,'q1']:.3g}, "
+                f"{val_dices_thr.loc[gamma,'q3']:.3g}]"
+            )
+
+        val_dices_thr.to_pickle(thr_val_path)
+
     print("\nBest parameters: ")
     for k, v in best_params.items():
         if k == "min_points":
@@ -1063,7 +1130,7 @@ def main(data_folder, alpha, beta, gammas, results_folder,
     params_yaml = {
         "alpha": alpha,
         "beta": beta,
-        "gamma": best_gamma,
+        "gamma": float(best_gamma),
         "extend_dilation_radius": best_params["extend_dilation_radius"],
         "n_std": best_params["n_std"],
         "min_diameter": best_params["min_diameter"],
@@ -1076,20 +1143,8 @@ def main(data_folder, alpha, beta, gammas, results_folder,
 
     print(f"Saved parameters to {yaml_path}")
     
-    # plot DICE
-    plt.plot(gammas, val_dices["mean"], color="red", label="After threshold")
-    plt.fill_between(gammas, val_dices["q1"], val_dices["q3"], alpha=0.25,
-                     color="red")
-    plt.plot(gammas, val_dices_thr["mean"], color="blue",
-             label="After refinement step")
-    plt.fill_between(gammas, val_dices["q1"], val_dices["q3"], alpha=0.25,
-                     color="blue")
-    plt.xlabel("Gamma")
-    plt.ylabel("DICE")
-    plt.title("Validation mean DICE with IQR")
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(os.path.join(results_folder, "val_dices.png"))
+    # plot validation dices before and after refinement
+    plot_validation_distributions(gammas, results_folder)
 
 
 if __name__ == '__main__':
