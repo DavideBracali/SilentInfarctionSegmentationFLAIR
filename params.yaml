@@ -1,8 +1,8 @@
-alpha: 1.8
-beta: 5.0
-gamma: 2.0
-extend_dilation_radius: 5
-n_std: 1
-min_diameter: 2
-surround_dilation_radius: 1
-min_points: 3
+alpha: 3.1322951032318302
+beta: 0.5051086376588003
+gamma: 2.5
+extend_dilation_radius: 1.0
+n_std: 10.0
+min_diameter: 3.474784431476366
+surround_dilation_radius: 1.0
+min_points: 4
