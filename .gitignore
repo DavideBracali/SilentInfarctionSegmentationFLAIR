@@ -4,9 +4,10 @@ data/
 Examples/
 SilentInfarctionSegmentationFLAIR/prove.py
 analysis/
-prove/
+evaluate_test_set/
 results/
 tuning/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
