@@ -23,7 +23,10 @@ from SilentInfarctionSegmentationFLAIR.utils import (
 from SilentInfarctionSegmentationFLAIR.segmentation import get_mask_from_segmentation
 from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histograms
 
-with open("config.yaml", "r") as f:
+MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(os.path.dirname(MODULE_DIR), "config.yaml")
+
+with open(CONFIG_PATH, "r") as f:
     config = yaml.safe_load(f)
 
 gm_labels = config["labels"]["gm"]

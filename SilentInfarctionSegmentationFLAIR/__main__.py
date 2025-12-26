@@ -58,7 +58,7 @@ def parse_args():
         help='Get the current version installed'
     )
     parser.add_argument(
-        '--data_folder', '-p',
+        '--data_folder', '-i',
         type=str,
         required=True,
         help='Path to the folder containing all input images'
@@ -140,8 +140,7 @@ def main(patient_folder, params_path, results_folder, verbose, show):
         Ground-truth lesion mask if available, otherwise None.
     """    
     patient = os.path.basename(patient_folder)
-    if verbose:
-        print(f"\n\nProcessing {patient}...\n")
+    print(f"\n\nProcessing {patient}...\n")
 
     flair = sitk.ReadImage(os.path.join(patient_folder, flair_file))
     flair = orient_image(flair, "RAS")

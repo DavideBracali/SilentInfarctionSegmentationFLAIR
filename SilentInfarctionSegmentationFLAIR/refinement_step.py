@@ -30,9 +30,12 @@ from SilentInfarctionSegmentationFLAIR.utils import (
     plot_image
 )
 
-with open("config.yaml", "r") as f:
-    config = yaml.safe_load(f)
+MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(os.path.dirname(MODULE_DIR), "config.yaml")
 
+with open(CONFIG_PATH, "r") as f:
+    config = yaml.safe_load(f)
+    
 gm_labels = config["labels"]["gm"]
 wm_labels = config["labels"]["wm"]
 keywords_to_remove = config["labels"]["keywords_to_remove"]
