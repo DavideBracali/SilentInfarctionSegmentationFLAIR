@@ -71,8 +71,7 @@ def parse_args():
         dest="data_folder",
         action="store",
         type=str,
-        required=False,
-        default="data",
+        required=True,
         help="Path of the folder where data is located",
     )
 
@@ -83,7 +82,7 @@ def parse_args():
         type=str,
         required=False,
         default="tuning_alpha_beta",
-        help="Path of the folder where data is located",
+        help="Path of the folder where intermediate results are stored",
     )
 
     _ = parser.add_argument(
@@ -92,7 +91,7 @@ def parse_args():
         action="store",
         type=int,
         required=False,
-        default=5,
+        default=30,
         help="Number of initial points for random search",
     )
 
@@ -102,7 +101,7 @@ def parse_args():
         action="store",
         type=int,
         required=False,
-        default=20,
+        default=70,
         help="Number of Bayesian optimization iterations",
     )
 

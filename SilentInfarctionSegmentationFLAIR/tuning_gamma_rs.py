@@ -64,8 +64,7 @@ def parse_args():
         dest="data_folder",
         action="store",
         type=str,
-        required=False,
-        default="data",
+        required=True,
         help="Path of the folder where data is located",
     )
 
@@ -76,7 +75,7 @@ def parse_args():
         type=str,
         required=False,
         default="tuning_gamma_rs",
-        help="Path of the folder where results are stored",
+        help="Path of the folder where intermediate results are stored",
     )
 
     _ = parser.add_argument(
