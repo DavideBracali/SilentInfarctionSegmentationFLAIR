@@ -38,37 +38,44 @@ def parse_args():
 
     parser = argparse.ArgumentParser(description=description)
 
-    _ = parser.add_argument('--data_folder',
-                            dest='data_folder',
-                            action='store',
-                            type=str,
-                            required=False,
-                            default="data",
-                            help='Path of the folder where data is located')
-    
-    _ = parser.add_argument('--results_folder',
-                            dest='results_folder',
-                            action='store',
-                            type=str,
-                            required=False,
-                            default="tuning_alpha_beta",
-                            help='Path of the folder where data is located')
+    _ = parser.add_argument(
+        "--data_folder",
+        dest="data_folder",
+        action="store",
+        type=str,
+        required=True,
+        help="Path of the folder where data is located",
+    )
 
-    _ = parser.add_argument('--init_points',
-                            dest='init_points',
-                            action='store',
-                            type=int,
-                            required=False,
-                            default=5,
-                            help='Number of initial points for random search')
-    
-    _ = parser.add_argument('--n_iter',
-                            dest='n_iter',
-                            action='store',
-                            type=int,
-                            required=False,
-                            default=20,
-                            help='Number of Bayesian optimization iterations')
+    _ = parser.add_argument(
+        "--results_folder",
+        dest="results_folder",
+        action="store",
+        type=str,
+        required=False,
+        default="tuning_alpha_beta",
+        help="Path of the folder where intermediate results are stored",
+    )
+
+    _ = parser.add_argument(
+        "--init_points",
+        dest="init_points",
+        action="store",
+        type=int,
+        required=False,
+        default=30,
+        help="Number of initial points for random search",
+    )
+
+    _ = parser.add_argument(
+        "--n_iter",
+        dest="n_iter",
+        action="store",
+        type=int,
+        required=False,
+        default=70,
+        help="Number of Bayesian optimization iterations",
+    )
 
     _ = parser.add_argument('--n_cores',
                             dest='n_cores',

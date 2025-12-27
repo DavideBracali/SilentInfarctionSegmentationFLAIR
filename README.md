@@ -8,17 +8,17 @@
 The **SilentInfarctionSegmentationFLAIR** package is organized into two main components:
 
 - **Scripts** — provide a structured and modular interface to run the complete segmentation workflow, handle I/O operations, and expose the command-line interface (CLI):
-  - *flair_t1_sum*: Combines FLAIR and T1 images using a gaussian-transformed T1 weighted sum.
-  - *threshold*: Applies an adaptive threshold using histogram mode and rHWHM.
-  - *refinement_step*: Post-processes a threshold-based lesion mask applying connected components, geometric, PVE-based and anatomical filters.
-  - *tuning_alpha_beta*: Optimizes the two parameters necessary to integrate FLAIR and T1 information.
-  - *tuning_gamma_rs*: Optimizes gamma, the main segmentation parameter, and the five parameters necessary to run the refinement step.
+  - [flair_t1_sum](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/flair_t1_sum.py): Combines FLAIR and T1 images using a gaussian-transformed T1 weighted sum.
+  - [threshold](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/threshold.py): Applies an adaptive threshold using histogram mode and rHWHM.
+  - [refinement_step](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/refinement_step.py): Post-processes a threshold-based lesion mask applying connected components, geometric, PVE-based and anatomical filters.
+  - [tuning_alpha_beta](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/tuning_alpha_beta.py): Optimizes the two parameters necessary to integrate FLAIR and T1 information.
+  - [tuning_gamma_rs](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/tuning_gamma_rs.py): Optimizes gamma, the main segmentation parameter, and the five parameters necessary to run the refinement step.
 
 - **Modules** — contain the core functionality of the pipeline:
-  - *histograms*: Methods to compute and extract information from gray level histograms.
-  - *segmentation*: Methods to apply and evaluate segmentation algorithms.
-  - *refinement*: Methods to refine the initial threshold segmentation.
-  - *utils*: Methods to perform general operations such as image plotting, gray level transformations and train-validation-test splits.
+  - [histograms](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/histograms.py): Methods to compute and extract information from gray level histograms.
+  - [segmentation](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/segmentation.py): Methods to apply and evaluate segmentation algorithms.
+  - [refinement](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/refinement.py): Methods to refine the initial threshold segmentation.
+  - [utils](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/utils.py): Methods to perform general operations such as image plotting, gray level transformations and train-validation-test splits.
 
 This structure keeps the computational logic clean making the package easier to maintain and modify.
 
@@ -63,7 +63,7 @@ in case you want to install the package in editable mode.
 
 ### Testing
 
-To execute test routines, please install ```pytest``` and ```hypothesis```. On bash:
+First, please install ```pytest``` and ```hypothesis```. On bash:
 ```bash
 pip install pytest hypothesis
 ```
@@ -146,24 +146,24 @@ The recommended workflow is to run the full pipeline through the main `SilentInf
 
 The following modules can be run as standalone components:
 
-- **flair_t1_sum** — computes the weighted sum of FLAIR and
+- [flair_t1_sum](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/flair_t1_sum.py) — computes the weighted sum of FLAIR and
   Gaussian‑transformed T1.
-- **threshold** — applies the GM‑guided adaptive thresholding.
-- **refinement_step** — refines the thresholded mask using geometric,
+- [threshold](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/threshold.py) — applies the GM‑guided adaptive thresholding.
+- [refinement_step](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/refinement_step.py) — refines the thresholded mask using geometric,
   PVE‑based and anatomical constraints.
 
 To run any of these modules individually, execute:
 
 ```bash
-python -m SilentInfarctionSegmentationFLAIR.<the_module_you_want_to_execute>
+python -m SilentInfarctionSegmentationFLAIR.<the_script_you_want_to_execute>
 ```
 
-Each module provides its own ```--help``` message describing the required
+Each script provides its own ```--help``` message describing the required
 inputs and optional parameters.
 
 
 ### Testing
-To execute all test routines, move to the project folder and simply run:
+To execute all test routines (located in the [testing](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/testing) directory), simply run:
 ```bash
 pytest
 ```
@@ -173,13 +173,55 @@ python -m pytest
 ```
 
 ## Output description
-!! Fare
+The **SilentInfarctionSegmentationFLAIR** package will save the following outputs in the directory specified by the ```--results_folder``` argument:
+- *histogram_FLAIR.png*: Tissue histograms (normalized to unit area) for gray matter, white matter and cerebrospinal fluid in the FLAIR image.
+- *histogram_T1.png*: Tissue histograms (normalized to unit area) for gray matter, white matter and cerebrospinal fluid in the T1-weighted image.
+- *histogram_image.png*: Tissue histograms (normalized to unit area) for gray matter, white matter and cerebrospinal fluid in the FLAIR and gaussian-transformed T1 weighted sum.
+- *image.nii*: NIfTI image of FLAIR and gaussian-transformed T1 weighted sum.
+- *image.png*: 2-dimensional sections of the FLAIR and gaussian-transformed T1 weighted sum.
+- *thr.png*: gray matter histogram where mode, rHWHM (!!! hai spiegato cos'è?) and gray level threshold are highlighted.
+- *thr_mask.nii*: NIFTI image of the thresholded input image.
+- *thr_mask.png*: 2-dimensional sections of the thresholded input image.
+- *segmentation.nii*: NIfTI image of the final refined segmentation.
+- *segmentation.png*: 2-dimensional sections of the thresholded input image.
 
-## Parameter description
-!! Fare
+## Parameters
+### Parameters description
+This segmentation algorithm requires 8 parameters to specify:
+- *alpha* and *beta* (floats): to regulate the weighted sum between FLAIR and gaussian-transformed T1 images. *alpha* controls the width of the Gaussian applied to the T1 intensities, while *beta* controls how strongly the transformed T1 contributes to the final image.
+- *gamma* (float): this is the most important segmentation parameter, as it defines the value of the initial threshold (!!! come descritto nella parte dove spiego l'algoritmo).
+- *extend_dilation_radius* and *n_std* (floats): to control the lesion extension in the refinement step. After the initial segmentation each connected component is dilated with a box kernel with radius equal to *extend_dilation_radius* millimeters. Gray levels that are *n_std* standard deviations within the mean of each component are included in the initial thresholded mask.
+- *min_diameter* (float): specifies, in millimeters, the minimum diameter of the connected components to be considered as lesions in the refined step.
+- *surround_dilation_radius* (float): in the refinement step each connected components receives a certain score based on the prevalent tissue in the neighborhood of each component. This parameter specifies, in millimeters, the radius of the box kernel of the dilation applied to each candidate lesion.
+- *min_points* (int): the minimum score that a candidate lesion must have collected during the refinement step to be present in the final segmentation.
 
-## Parameter optimization
-!! Fare
+### Parameter optimization
+An initial set of optimized parameters is available in the [params.yaml](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/params.yaml) file. This set of parameters was optimized over a training set of 33 sets of images, a validation set of 16 sets of images and evaluated on a test set of 6 images, obtaining a mean DICE of !!!! statistiche!! Anche sensitivity e specificity e precision.
+
+All parameters were optimized using [bayesian-optimization](https://github.com/bayesian-optimization/BayesianOptimization):
+-*alpha* and *beta* were tuned by maximizing an objective function over the training set that rewards separation between gray matter and lesions histograms (increasing true positives), while punishing overlap between gray matter and white matter (potentially increasing false negatives).
+- *extend_dilation_radius*, *n_std*, *min_diameter*, *surround_dilation_radius* and *min_points* were tuned by maximizing the average DICE coefficient (after the refinement step) over the training set. The initial thresholded mask depends on *gamma*, so this optimization was performed separately for each candidate value of *gamma*.
+- *gamma*, being the most influential parameter of the algorithm, was chosen as the value that produced the maximum average DICE coefficient over the validation set. The proposed parameters in [params.yaml](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/params.yaml) returned a validation average DICE of !!! aggiungere media e IQR. !! Immagini??? forse non qui
+
+If you prefer to tune your own parameters, it is possible to do so using the [tuning_alpha_beta](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/tuning_alpha_beta.py) and [tuning_gamma_rs](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/tuning_gamma_rs.py) scripts. Be aware that both scripts will require several hours or even days depending on the performances your computer. 
+
+To optimize *alpha* and *beta* run:
+
+```bash
+python -m SilentInfarctionSegmentationFLAIR.tuning_alpha_beta --data_folder='path_to_data'
+```
+
+Then you can optimize all the other parameters by running:
+
+```bash
+python -m SilentInfarctionSegmentationFLAIR.tuning_gamma_rs --data_folder='path_to_data'
+```
+
+The last script can be run for specific values of *alpha* and *beta* by specifying the ```--alpha``` and ```--beta``` arguments. If not provided, the script will automatically use the previously optimized *params_alpha_beta.yaml* file created by the first script.
+
+Both scripts can exploit parallel processing by specifying the ```n_cores``` argument. Specifying an high value will decrease computation time, however the required RAM space will linearly increase as multiple images will be loaded at the same time.
+
+A ```--help``` argument can be used in both scripts to describe the optional parameters.
 
 ## Evaluate test set
 !! Fare
