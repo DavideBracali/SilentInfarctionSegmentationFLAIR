@@ -12,6 +12,7 @@ import os
 import argparse
 import yaml
 import matplotlib
+import time
 
 from SilentInfarctionSegmentationFLAIR.histograms import (
     plot_histogram,
@@ -30,22 +31,6 @@ from SilentInfarctionSegmentationFLAIR.utils import (
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(os.path.dirname(MODULE_DIR), "config.yaml")
-
-with open(CONFIG_PATH, "r") as f:
-    config = yaml.safe_load(f)
-    
-gm_labels = config["labels"]["gm"]
-wm_labels = config["labels"]["wm"]
-
-flair_file = config["files"]["flair"]
-t1_file = config["files"]["t1"]
-segm_file = config["files"]["segmentation"]
-gm_pve_file = config["files"]["gm_pve"]
-wm_pve_file = config["files"]["wm_pve"]
-csf_pve_file = config["files"]["csf_pve"]
-gt_file = config["files"]["gt"]
-label_name_file = config["files"]["label_name"]
-
 
 def parse_args():
     description = (
@@ -141,23 +126,25 @@ def main(image, gm_mask, gamma, show=False, verbose=True, save_dir=None):
 
     fig, ax = plt.subplots()
 
+    # GM histogram
     gm = sitk.Mask(image, gm_mask)
     gm_hist = plot_histogram(gm, no_bkg=True, bins='fd', ax=ax, show=False)
-    
     gm_smooth_hist = gaussian_smooth_histogram(gm_hist, ax=ax)
-
     mode, rhwhm = mode_and_rhwhm(gm_smooth_hist, ax=ax)
 
+    # apply threshold
     thr = mode + gamma * rhwhm
     if verbose:
         print(f"Applying threshold at gray level {thr:.1f} "
               f"(gamma = {gamma:.1f})...")
     thr_mask = apply_threshold(image, float(thr), ax=ax)
 
+    # plot
     ax.legend()
     ax.set_title(f"GM histogram and threshold with γ={gamma}")
     plt.tight_layout()
     
+    # save and show
     if save_dir is not None:
         os.makedirs(save_dir, exist_ok=True)
         plt.savefig(os.path.join(save_dir, "thr.png"))
@@ -182,11 +169,19 @@ def main(image, gm_mask, gamma, show=False, verbose=True, save_dir=None):
 
 if __name__ == "__main__":
 
+    start_time = time.time()
+
     args = parse_args()
 
+    # load constants
+    with open(CONFIG_PATH, "r") as f:
+        config = yaml.safe_load(f)
+
+    gm_labels = config["labels"]["gm"]
+
+    # load image and segmentation
     image = sitk.ReadImage(args.image)
     image = orient_image(image, "RAS")
-
     segm = sitk.ReadImage(args.segm, sitk.sitkUInt8)
     segm = resample_to_reference(segm, image)
     gm_mask = get_mask_from_segmentation(segm, gm_labels)
@@ -199,3 +194,6 @@ if __name__ == "__main__":
         verbose=args.verbose,
         save_dir=args.save_dir
     )
+
+    elapsed_time = time.time() - start_time
+    print(f"Elapsed time: {elapsed_time:.1f} s")

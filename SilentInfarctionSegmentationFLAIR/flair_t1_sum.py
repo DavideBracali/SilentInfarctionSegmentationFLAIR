@@ -10,6 +10,8 @@ import SimpleITK as sitk
 import os
 import argparse
 import yaml
+import time
+import matplotlib
 
 from SilentInfarctionSegmentationFLAIR.utils import (
     get_array_from_image,
@@ -25,22 +27,6 @@ from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histogram
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(os.path.dirname(MODULE_DIR), "config.yaml")
-
-with open(CONFIG_PATH, "r") as f:
-    config = yaml.safe_load(f)
-
-gm_labels = config["labels"]["gm"]
-wm_labels = config["labels"]["wm"]
-
-flair_file = config["files"]["flair"]
-t1_file = config["files"]["t1"]
-segm_file = config["files"]["segmentation"]
-gm_pve_file = config["files"]["gm_pve"]
-wm_pve_file = config["files"]["wm_pve"]
-csf_pve_file = config["files"]["csf_pve"]
-gt_file = config["files"]["gt"]
-label_name_file = config["files"]["label_name"]
-
 
 def parse_args():
     description = (
@@ -134,9 +120,14 @@ def main(flair, t1, alpha, beta, gm_mask, wm_mask, gt=None,
     SimpleITK.Image
         Weighted sum of FLAIR and gaussian-transformed T1, normalized to 8-bit.
     """
-    flair = normalize(flair, 1)
-    t1 = normalize(t1, 1)
+    if show == False:
+        matplotlib.use("Agg")
 
+    # min-max normalization (float64)
+    flair = normalize(flair, 0)
+    t1 = normalize(t1, 0)
+
+    # wm statistics
     wm_t1 = sitk.Mask(t1, wm_mask)
     stats = sitk.StatisticsImageFilter()
     stats.Execute(wm_t1)
@@ -149,13 +140,16 @@ def main(flair, t1, alpha, beta, gm_mask, wm_mask, gt=None,
             f"(alpha = {alpha}, beta = {beta})..."
         )
 
+    # gaussian transform and weighted sum 
     t1_gauss = gaussian_transform(t1, mean=wm_mean, std=alpha*wm_std)
     t1_gauss_arr = beta * get_array_from_image(t1_gauss)
     t1_gauss_scaled = get_image_from_array(t1_gauss_arr, t1_gauss)
     image = flair + t1_gauss_scaled
 
+    # min-max normalization (8-bit int)
     image = normalize(image, 8)
 
+    # save and plot
     if (save_dir is not None or show) and gt is not None:
         if save_dir is not None:
             os.makedirs(save_dir, exist_ok=True)
@@ -200,20 +194,26 @@ def main(flair, t1, alpha, beta, gm_mask, wm_mask, gt=None,
 
 if __name__ == "__main__":
     
+    start_time = time.time()
+
     args = parse_args()
 
+    # load constants
+    with open(CONFIG_PATH, "r") as f:
+        config = yaml.safe_load(f)
+
+    gm_labels = config["labels"]["gm"]
+    wm_labels = config["labels"]["wm"]
+
+    # load images segmentation and ground truth
     flair = sitk.ReadImage(args.flair)
     flair = orient_image(flair, "RAS")
-
     t1 = sitk.ReadImage(args.t1)
     t1 = resample_to_reference(t1, flair, sitk.sitkLinear)
-
     segm = sitk.ReadImage(args.segm, sitk.sitkUInt8)
     segm = resample_to_reference(segm, flair, sitk.sitkNearestNeighbor)
-
     gm_mask = get_mask_from_segmentation(segm, gm_labels)
     wm_mask = get_mask_from_segmentation(segm, wm_labels)
-
     gt = sitk.ReadImage(args.gt)
     gt = resample_to_reference(gt, flair)
 
@@ -229,3 +229,6 @@ if __name__ == "__main__":
         save_dir=args.save_dir,
         verbose=args.verbose
     )
+
+    elapsed_time = time.time() - start_time
+    print(f"Elapsed time: {elapsed_time:.1f} s")

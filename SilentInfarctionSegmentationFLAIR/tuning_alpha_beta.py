@@ -16,7 +16,8 @@ import yaml
 from bayes_opt import BayesianOptimization
 import time
 import multiprocessing as mp
-
+import matplotlib
+matplotlib.use("Agg")
 sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
 
 from SilentInfarctionSegmentationFLAIR.utils import (orient_image,
@@ -93,23 +94,6 @@ def parse_args():
 
 pbounds={"alpha": (1, 10),
         "beta": (0, 5)}
-
-# load constants from yaml file
-with open("config.yaml", "r") as f:
-    config = yaml.safe_load(f)
-
-gm_labels = config["labels"]["gm"]
-wm_labels = config["labels"]["wm"]
-
-flair_file = config["files"]["flair"]
-t1_file = config["files"]["t1"]
-segm_file = config["files"]["segmentation"]
-gm_pve_file = config["files"]["gm_pve"]
-wm_pve_file = config["files"]["wm_pve"]
-csf_pve_file = config["files"]["csf_pve"]
-gt_file = config["files"]["gt"]
-label_name_file = config["files"]["label_name"]
-
 
 def load_subjects(data_folder, patients=None, paths_only=False):
     """
@@ -427,9 +411,21 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
 
 if __name__ == '__main__':
 
+    start_time = time.time()
+
     args = parse_args()
 
-    start_time = time.time()
+    # load constants
+    with open("config.yaml", "r") as f:
+        config = yaml.safe_load(f)
+
+    gm_labels = config["labels"]["gm"]
+    wm_labels = config["labels"]["wm"]
+    flair_file = config["files"]["flair"]
+    t1_file = config["files"]["t1"]
+    segm_file = config["files"]["segmentation"]
+    gt_file = config["files"]["gt"]
+
     main(args.data_folder, args.results_folder, args.init_points,
          args.n_iter, args.n_cores)
     print(f"Elapsed time: {(time.time()-start_time):.3g} s")

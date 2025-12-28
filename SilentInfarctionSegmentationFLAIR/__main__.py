@@ -7,6 +7,7 @@ import os
 import yaml
 import SimpleITK as sitk
 import time
+import matplotlib
 
 from SilentInfarctionSegmentationFLAIR.segmentation import (
     get_mask_from_segmentation,
@@ -87,22 +88,6 @@ def parse_args():
     )
     return parser.parse_args()
 
-with open("config.yaml", "r") as f:
-    config = yaml.safe_load(f)
-
-gm_labels = config['labels']['gm']
-wm_labels = config['labels']['wm']
-keywords_to_remove = config['labels']['keywords_to_remove']
-
-flair_file = config['files']['flair']
-t1_file = config['files']['t1']
-segm_file = config['files']['segmentation']
-gm_pve_file = config['files']['gm_pve']
-wm_pve_file = config['files']['wm_pve']
-csf_pve_file = config['files']['csf_pve']
-gt_file = config['files']['gt']
-label_name_file = config['files']['label_name']
-
 def main(patient_folder, params_path, results_folder, verbose, show):
     """
     Run the full FLAIR+T1 segmentation pipeline for a single patient.
@@ -142,6 +127,7 @@ def main(patient_folder, params_path, results_folder, verbose, show):
     patient = os.path.basename(patient_folder)
     print(f"\n\nProcessing {patient}...\n")
 
+    # load images, segmentations, pves and ground truth if provided
     flair = sitk.ReadImage(os.path.join(patient_folder, flair_file))
     flair = orient_image(flair, "RAS")
 
@@ -171,9 +157,11 @@ def main(patient_folder, params_path, results_folder, verbose, show):
     else:
         gt = None
 
+    # load segmentation parameters
     with open(params_path, "r") as f:
         params = yaml.safe_load(f)
 
+    # weighted FLAIR + gaussian-transformed T1
     if t1 is None:
         print("WARNING!!! No T1 image was found. "
               "FLAIR image will be processed directly")
@@ -192,6 +180,7 @@ def main(patient_folder, params_path, results_folder, verbose, show):
             save_dir=os.path.join(results_folder, patient)
         )
 
+    # initial thresholded segmentation
     thr_mask = threshold.main(
         image,
         gm_mask=gm_mask,
@@ -201,6 +190,7 @@ def main(patient_folder, params_path, results_folder, verbose, show):
         save_dir=os.path.join(results_folder, patient)
     )
 
+    #refined segmentation
     ref_mask = refinement_step.main(
         thr_mask,
         image,
@@ -229,6 +219,7 @@ def cli():
         print(__version__)
         raise SystemExit(0)
     
+    # iterate over patients
     paths_df = get_paths_df(args.data_folder, extensions=".nii")
     for patient_folder in paths_df.index:
 
@@ -240,32 +231,47 @@ def cli():
             args.show
         )
 
+        # print evaluation metrics if gt is provided
         if gt is not None:
             print("Computing evaluation metrics AFTER THRESHOLDING...")
             thr_results = evaluate_voxel_wise(thr_mask, gt)
-            print(f"  - True positives fraction: "
+            print(f"  - Sensitivity: "
                 f"{thr_results['vw-TPF']:.3g}")
-            print(f"  - False positives fraction: "
-                f"{thr_results['vw-FPF']:.3g}")
+            print(f"  - Specificity: "
+                f"{(1 - thr_results['vw-FPF']):.3g}")
             print(f"  - DICE coefficient: "
                 f"{thr_results['vw-DSC']:.3g}")
-            print(f"  - Mattheus correlation coefficient: "
-                f"{thr_results['vw-MCC']:.3g}")
 
             print("Computing evaluation metrics AFTER REFINEMENT STEP:")
             ref_results = evaluate_voxel_wise(ref_mask, gt)
-            print(f"  - True positives fraction: "
+            print(f"  - Sensitivity: "
                 f"{ref_results['vw-TPF']:.3g}")
-            print(f"  - False positives fraction: "
-                f"{ref_results['vw-FPF']:.3g}")
+            print(f"  - Specificity: "
+                f"{(1 - ref_results['vw-FPF']):.3g}")
             print(f"  - DICE coefficient: "
                 f"{ref_results['vw-DSC']:.3g}")
-            print(f"  - Mattheus correlation coefficient: "
-                f"{ref_results['vw-MCC']:.3g}")
+
 
     elapsed_time = time.time() - start_time
     print(f"Elapsed time: {elapsed_time:.1f} s")
 
     
 if __name__ == '__main__': 
+
+    # load constants
+    with open("config.yaml", "r") as f:
+        config = yaml.safe_load(f)
+
+    gm_labels = config['labels']['gm']
+    wm_labels = config['labels']['wm']
+    keywords_to_remove = config['labels']['keywords_to_remove']
+    flair_file = config['files']['flair']
+    t1_file = config['files']['t1']
+    segm_file = config['files']['segmentation']
+    gm_pve_file = config['files']['gm_pve']
+    wm_pve_file = config['files']['wm_pve']
+    csf_pve_file = config['files']['csf_pve']
+    gt_file = config['files']['gt']
+    label_name_file = config['files']['label_name']
+
     cli()
