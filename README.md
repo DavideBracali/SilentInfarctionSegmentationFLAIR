@@ -93,24 +93,24 @@ If don't want to modify the *config.yaml* file, then your data directory should 
 data/
 │
 ├── Patient001/
-│   ├── flair.nii
-│   ├── t1.nii
-│   ├── segmentation.nii
-│   ├── gm_pve.nii
-│   ├── wm_pve.nii
-│   ├── csf_pve.nii
-│   └── gt.nii
+│   ├── FLAIR.nii
+│   ├── T1ontoFLAIR.nii
+│   ├── aseg.auto_noCCseg.nii
+│   ├── pve_gm.nii
+│   ├── pve_wm.nii
+│   ├── pve_csf.nii
+│   └── GT.nii
 │
 ├── Patient002/
-│   ├── flair.nii
-│   ├── t1.nii
-│   ├── segmentation.nii
-│   ├── gm_pve.nii
-│   ├── wm_pve.nii
-│   ├── csf_pve.nii
-│   └── gt.nii
+│   ├── FLAIR.nii
+│   ├── T1ontoFLAIR.nii
+│   ├── aseg.auto_noCCseg.nii
+│   ├── pve_gm.nii
+│   ├── pve_wm.nii
+│   ├── pve_csf.nii
+│   └── GT.nii
 |
-├──FreeSurferColorLUT.txt 
+└── FreeSurferColorLUT.txt 
 ```
 ### Process one or more imaging sessions
 
@@ -208,23 +208,33 @@ If you prefer to tune your own parameters, it is possible to do so using the [tu
 To optimize *alpha* and *beta* run:
 
 ```bash
-python -m SilentInfarctionSegmentationFLAIR.tuning_alpha_beta --data_folder='path_to_data'
+python -m SilentInfarctionSegmentationFLAIR.tuning_alpha_beta --data_folder='path_to_data_directory'
 ```
 
 Then you can optimize all the other parameters by running:
 
 ```bash
-python -m SilentInfarctionSegmentationFLAIR.tuning_gamma_rs --data_folder='path_to_data'
+python -m SilentInfarctionSegmentationFLAIR.tuning_gamma_rs --data_folder='path_to_data_directory'
 ```
 
 The last script can be run for specific values of *alpha* and *beta* by specifying the ```--alpha``` and ```--beta``` arguments. If not provided, the script will automatically use the previously optimized *params_alpha_beta.yaml* file created by the first script.
+
+Both scripts will search for an existing train-validation-test split. If not found, a 60% - 30% - 10% split will be created, stratified according to the positives / total voxel ratios in the ground truth file.
 
 Both scripts can exploit parallel processing by specifying the ```n_cores``` argument. Specifying an high value will decrease computation time, however the required RAM space will linearly increase as multiple images will be loaded at the same time.
 
 A ```--help``` argument can be used in both scripts to describe the optional parameters.
 
 ## Evaluate test set
-!! Fare
+
+To evaluate the algorithm over a test set, run:
+
+```bash
+python -m SilentInfarctionSegmentationFLAIR.evaluate_test_set --data_folder='path_to_data_directory'
+```
+
+This script will search for an existing train-validatoin-test split. If not found, every imaging session in the data folder will be evaluated. 
+A ```--help``` argument can be used to describe the optional parameters.
 
 ## License
 !! Fare
