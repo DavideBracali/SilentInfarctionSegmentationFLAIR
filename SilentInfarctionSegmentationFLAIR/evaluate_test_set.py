@@ -190,19 +190,50 @@ def main(data_folder, params_path, results_folder, verbose, show):
 
     # final summary
     print(
-        "Average DICE on test set after threshold: "
+        "\nAverage SENSITIVITY on test set after threshold: "
+        f"{np.mean(thr_metrics["vw-TPF"]):.3g} ± "
+        f"{np.std(thr_metrics["vw-TPF"]):.3g}\n"
+        f"MEDIAN = {np.median(thr_metrics["vw-TPF"]):.3g}\n"
+        f"IQR = [{np.quantile(thr_metrics["vw-TPF"], 0.25):.3g}, "
+        f"{np.quantile(thr_metrics["vw-TPF"], 0.75):.3g}]"
+    )
+    print(
+        "\nAverage SENSITIVITY on test set after refinement step: "
+        f"{np.mean(ref_metrics["vw-TPF"]):.3g} ± "
+        f"{np.std(ref_metrics["vw-TPF"]):.3g}\n"
+        f"MEDIAN = {np.median(ref_metrics["vw-TPF"]):.3g}\n"
+        f"IQR = [{np.quantile(ref_metrics["vw-TPF"], 0.25):.3g}, "
+        f"{np.quantile(ref_metrics["vw-TPF"], 0.75):.3g}]"
+    )
+    print(
+        "\nAverage SPECIFICITY on test set after threshold: "
+        f"{np.mean((1 - thr_metrics["vw-FPF"])):.3g} ± "
+        f"{np.std((1 - thr_metrics["vw-FPF"])):.3g}\n"
+        f"MEDIAN = {np.median((1 - thr_metrics["vw-FPF"])):.3g}\n"
+        f"IQR = [{np.quantile((1 - thr_metrics["vw-FPF"]), 0.25):.3g}, "
+        f"{np.quantile((1 - thr_metrics["vw-FPF"]), 0.75):.3g}]"
+    )
+    print(
+        "\nAverage SPECIFICITY on test set after refinement step: "
+        f"{np.mean((1 - ref_metrics["vw-FPF"])):.3g} ± "
+        f"{np.std((1 - ref_metrics["vw-FPF"])):.3g}\n"
+        f"MEDIAN = {np.median((1 - ref_metrics["vw-FPF"])):.3g}\n"
+        f"IQR = [{np.quantile((1 - ref_metrics["vw-FPF"]), 0.25):.3g}, "
+        f"{np.quantile((1 - ref_metrics["vw-FPF"]), 0.75):.3g}]"
+    )
+    print(
+        "\nAverage DICE on test set after threshold: "
         f"{np.mean(thr_metrics["vw-DSC"]):.3g} ± "
         f"{np.std(thr_metrics["vw-DSC"]):.3g}\n"
         f"MEDIAN = {np.median(thr_metrics["vw-DSC"]):.3g}\n"
         f"IQR = [{np.quantile(thr_metrics["vw-DSC"], 0.25):.3g}, "
         f"{np.quantile(thr_metrics["vw-DSC"], 0.75):.3g}]"
     )
-
     print(
-        "Average DICE on test set after refinement step: "
+        "\nAverage DICE on test set after refinement step: "
         f"{np.mean(ref_metrics["vw-DSC"]):.3g} ± "
         f"{np.std(ref_metrics["vw-DSC"]):.3g}\n"
-        f"MEDIAN = {np.median(thr_metrics["vw-DSC"]):.3g}\n"
+        f"MEDIAN = {np.median(ref_metrics["vw-DSC"]):.3g}\n"
         f"IQR = [{np.quantile(ref_metrics["vw-DSC"], 0.25):.3g}, "
         f"{np.quantile(ref_metrics["vw-DSC"], 0.75):.3g}]"
     )
