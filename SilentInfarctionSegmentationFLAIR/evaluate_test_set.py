@@ -110,9 +110,14 @@ def main(data_folder, params_path, results_folder, verbose, show):
             thr_results = evaluate_voxel_wise(thr_mask, gt)
             thr_metrics.append(pd.DataFrame(thr_results, index=[patient]))
             to_plot.append(pd.DataFrame({
-                "patient": [patient],
-                "DICE": thr_results["vw-DSC"],
-                "type": "After threshold"
+                "patient": [patient] * 3,
+                "metric": ["Sensitivity (TPF)", "1 - specificity (FPF)", "DICE"],
+                "value": [
+                    thr_results["vw-TPF"],
+                    thr_results["vw-FPF"],
+                    thr_results["vw-DSC"]
+                ],
+                "type": ["After threshold"] * 3
             }))
             
             if verbose:
@@ -122,8 +127,6 @@ def main(data_folder, params_path, results_folder, verbose, show):
                     f"{thr_results['vw-FPF']:.3g}")
                 print(f"  - DICE coefficient: "
                     f"{thr_results['vw-DSC']:.3g}")
-                print(f"  - Mattheus correlation coefficient: "
-                    f"{thr_results['vw-MCC']:.3g}")
             
             if verbose:
                 print("Computing evaluation metrics AFTER REFINEMENT STEP:")
@@ -131,9 +134,14 @@ def main(data_folder, params_path, results_folder, verbose, show):
             ref_results = evaluate_voxel_wise(ref_mask, gt)
             ref_metrics.append(pd.DataFrame(ref_results, index=[patient]))
             to_plot.append(pd.DataFrame({
-                "patient": [patient],
-                "DICE": ref_results["vw-DSC"],
-                "type": "After refinement step"
+                "patient": [patient] * 3,
+                "metric": ["Sensitivity (TPF)", "1 - specificity (FPF)", "DICE"],
+                "value": [
+                    ref_results["vw-TPF"],
+                    ref_results["vw-FPF"],
+                    ref_results["vw-DSC"]
+                ],
+                "type": ["After refinement step"] * 3
             }))
 
             if verbose:
@@ -143,8 +151,6 @@ def main(data_folder, params_path, results_folder, verbose, show):
                     f"{ref_results['vw-FPF']:.3g}")
                 print(f"  - DICE coefficient: "
                     f"{ref_results['vw-DSC']:.3g}")
-                print(f"  - Mattheus correlation coefficient: "
-                    f"{ref_results['vw-MCC']:.3g}")
                 
 
     # save metrics
@@ -162,27 +168,24 @@ def main(data_folder, params_path, results_folder, verbose, show):
 
     # boxplot
     to_plot = pd.concat(to_plot, ignore_index=True)
-
     plt.figure(figsize=(5, 4))
     sns.boxplot(
         data=to_plot,
-        x="type",
-        y="DICE",
+        x="metric",
+        y="value",
         hue="type",
         palette=["#1f77b4", "#ff7f0e"]
     )
-
-    plt.title("Validation DICE distribution")
+    plt.title("Evaluation metrics distribution on test set")
     plt.xlabel("")
-    plt.ylabel("DICE")
+    plt.ylabel("")
     plt.tight_layout()
 
+    # save and show
     plt.savefig(
         os.path.join(results_folder, "validation_dice_boxplot.png"), dpi=200)
-    
     if show:
         plt.show()
-
     plt.close()
 
     # final summary
