@@ -295,7 +295,7 @@ def main(data_folder, params_path, results_folder, verbose, show):
     )
     print(
         "\nAverage SPECIFICITY on test set after threshold: "
-        f"{np.mean((1 - thr_metrics["vw-FPF"])):.3g} ± "
+        f"{np.mean((1 - thr_metrics["vw-FPF"])):.4f} ± "
         f"{np.std((1 - thr_metrics["vw-FPF"])):.3g}\n"
         f"MEDIAN = {np.median((1 - thr_metrics["vw-FPF"])):.3g}\n"
         f"IQR = [{np.quantile((1 - thr_metrics["vw-FPF"]), 0.25):.3g}, "
@@ -303,7 +303,7 @@ def main(data_folder, params_path, results_folder, verbose, show):
     )
     print(
         "\nAverage SPECIFICITY on test set after refinement step: "
-        f"{np.mean((1 - ref_metrics["vw-FPF"])):.3g} ± "
+        f"{np.mean((1 - ref_metrics["vw-FPF"])):.4f} ± "
         f"{np.std((1 - ref_metrics["vw-FPF"])):.3g}\n"
         f"MEDIAN = {np.median((1 - ref_metrics["vw-FPF"])):.3g}\n"
         f"IQR = [{np.quantile((1 - ref_metrics["vw-FPF"]), 0.25):.3g}, "
