@@ -13,16 +13,20 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import SimpleITK as sitk
 import matplotlib
 matplotlib.use("Agg")
 
 from SilentInfarctionSegmentationFLAIR.__main__ import main as process_patient
 from SilentInfarctionSegmentationFLAIR.segmentation import evaluate_voxel_wise
 from SilentInfarctionSegmentationFLAIR.utils import get_paths_df
+from SilentInfarctionSegmentationFLAIR.refinement import connected_components
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="!!!!")
+    parser = argparse.ArgumentParser(description=
+                "Computes evaluation metrics for a test set. "\
+                "Plots number of lesions and lesion load distributions.")
 
     _ = parser.add_argument(
         '--data_folder', '-i',
@@ -40,7 +44,7 @@ def parse_args():
         '--results_folder', '-o',
         type=str,
         default="evaluate_test_set",
-        help='Output directory where results will be saved'
+        help='Output directory where boxplots will be saved'
     )
     _ = parser.add_argument(
         '--verbose',
@@ -50,7 +54,7 @@ def parse_args():
     _ = parser.add_argument(
         '--show',
         action='store_true',
-        help='Show evaluation boxplot'
+        help='Show evaluation boxplots'
     )
 
     return parser.parse_args()
@@ -58,9 +62,12 @@ def parse_args():
 
 def main(data_folder, params_path, results_folder, verbose, show):
    
-    to_plot = []
+    eval_bp = []
+    n_bp = []
+    v_bp = []
     thr_metrics = []
     ref_metrics = []
+
 
     # organize file paths
     paths_df = get_paths_df(data_folder, extensions=".nii")
@@ -92,14 +99,14 @@ def main(data_folder, params_path, results_folder, verbose, show):
                   f"({counts}/{len(test_patients)})...\n")
 
         # process
-        _, thr_mask, ref_mask, gt = process_patient(
+        image, thr_mask, ref_mask, gt = process_patient(
             patient_folder,
             params_path,
             results_folder,
             verbose=False,
             show=False
         )
-
+    
         # evaluate
         if gt is None:
             print(f"WARNING!!! No ground truth found for patient {patient}")
@@ -109,16 +116,6 @@ def main(data_folder, params_path, results_folder, verbose, show):
             
             thr_results = evaluate_voxel_wise(thr_mask, gt)
             thr_metrics.append(pd.DataFrame(thr_results, index=[patient]))
-            to_plot.append(pd.DataFrame({
-                "patient": [patient] * 3,
-                "metric": ["Sensitivity (TPF)", "1 - specificity (FPF)", "DICE"],
-                "value": [
-                    thr_results["vw-TPF"],
-                    thr_results["vw-FPF"],
-                    thr_results["vw-DSC"]
-                ],
-                "type": ["After threshold"] * 3
-            }))
             
             if verbose:
                 print(f"  - True positives fraction: "
@@ -127,22 +124,10 @@ def main(data_folder, params_path, results_folder, verbose, show):
                     f"{thr_results['vw-FPF']:.3g}")
                 print(f"  - DICE coefficient: "
                     f"{thr_results['vw-DSC']:.3g}")
-            
-            if verbose:
                 print("Computing evaluation metrics AFTER REFINEMENT STEP:")
             
             ref_results = evaluate_voxel_wise(ref_mask, gt)
             ref_metrics.append(pd.DataFrame(ref_results, index=[patient]))
-            to_plot.append(pd.DataFrame({
-                "patient": [patient] * 3,
-                "metric": ["Sensitivity (TPF)", "1 - specificity (FPF)", "DICE"],
-                "value": [
-                    ref_results["vw-TPF"],
-                    ref_results["vw-FPF"],
-                    ref_results["vw-DSC"]
-                ],
-                "type": ["After refinement step"] * 3
-            }))
 
             if verbose:
                 print(f"  - True positives fraction: "
@@ -151,26 +136,90 @@ def main(data_folder, params_path, results_folder, verbose, show):
                     f"{ref_results['vw-FPF']:.3g}")
                 print(f"  - DICE coefficient: "
                     f"{ref_results['vw-DSC']:.3g}")
-                
 
-    # save metrics
-    thr_metrics = pd.concat(thr_metrics)
-    thr_metrics.to_csv(
-        os.path.join(
-            results_folder, "evaluation_metrics_after_threshold.csv")
-    )
+        # preparing boxplot data
+        n_bp.append(pd.DataFrame({
+            "patient": [patient] * 3,
+            "metric": [
+                "Number of lesions",
+                "Number of lesions",
+                "Number of lesions"
+            ],
+            "value": [
+                connected_components(gt)[1],
+                connected_components(thr_mask)[1],
+                connected_components(ref_mask)[1],
+            ],
+            "type": [
+                "Ground truth",
+                "After threshold",
+                "After refinement step",
+            ]
+        }))
 
-    ref_metrics = pd.concat(ref_metrics)
-    ref_metrics.to_csv(
-        os.path.join(
-            results_folder, "evaluation_metrics_after_refinement.csv")
-    )
+        spacing = image.GetSpacing()
+        voxel_volume = spacing[0] * spacing[1] * spacing[2]
 
-    # boxplot
-    to_plot = pd.concat(to_plot, ignore_index=True)
-    plt.figure(figsize=(5, 4))
+        stats = sitk.StatisticsImageFilter()
+        stats.Execute(gt)
+        v_gt = stats.GetSum()*voxel_volume
+
+        stats = sitk.StatisticsImageFilter()
+        stats.Execute(thr_mask)
+        v_thr = stats.GetSum()*voxel_volume
+
+        stats = sitk.StatisticsImageFilter()
+        stats.Execute(ref_mask)
+        v_ref = stats.GetSum()*voxel_volume
+
+        v_bp.append(pd.DataFrame({
+            "patient": [patient] * 3,
+            "metric": [
+                "Lesion volume (mm³)",
+                "Lesion volume (mm³)",
+                "Lesion volume (mm³)"
+            ],
+            "value": [
+                v_gt,
+                v_thr,
+                v_ref
+
+            ],
+            "type": [
+                "Ground truth",
+                "After threshold",
+                "After refinement step",
+                ]
+        }))
+        eval_bp.append(pd.DataFrame({
+                "patient": [patient] * 4,
+                "metric": ["Sensitivity (TPF)", "1 - specificity (FPF)", "DICE", "Volume similarity"],
+                "value": [
+                    thr_results["vw-TPF"],
+                    thr_results["vw-FPF"],
+                    thr_results["vw-DSC"],
+                    1 - np.abs(v_thr - v_gt)/(v_thr + v_gt)
+                ],
+                "type": ["After threshold"] * 4
+        }))
+        eval_bp.append(pd.DataFrame({
+                "patient": [patient] * 4,
+                "metric": ["Sensitivity (TPF)", "1 - specificity (FPF)", "DICE", "Volume similarity"],
+                "value": [
+                    ref_results["vw-TPF"],
+                    ref_results["vw-FPF"],
+                    ref_results["vw-DSC"],
+                    1 - np.abs(v_ref - v_gt)/(v_ref + v_gt)
+                ],
+                "type": ["After refinement step"] * 4
+            }))
+
+
+    # boxplots
+    eval_bp = pd.concat(eval_bp, ignore_index=True)
+    plt.figure(figsize=(7, 4))
     sns.boxplot(
-        data=to_plot,
+        data=eval_bp,
         x="metric",
         y="value",
         hue="type",
@@ -180,15 +229,54 @@ def main(data_folder, params_path, results_folder, verbose, show):
     plt.xlabel("")
     plt.ylabel("")
     plt.tight_layout()
-
-    # save and show
     plt.savefig(
-        os.path.join(results_folder, "validation_dice_boxplot.png"), dpi=200)
+        os.path.join(results_folder, "evaluation_metrics.png"), dpi=200)
+    if show:
+        plt.show()
+    plt.close()
+
+    n_bp = pd.concat(n_bp, ignore_index=True)
+    plt.figure(figsize=(5, 4))
+    sns.boxplot(
+        data=n_bp,
+        x="metric",
+        y="value",
+        hue="type",
+        palette=["#3db41f","#1f77b4", "#ff7f0e"]
+    )
+    plt.title("Number of lesions distribution on test set")
+    plt.xlabel("")
+    plt.ylabel("")
+    plt.tight_layout()
+    plt.savefig(
+        os.path.join(results_folder, "number_of_lesions.png"), dpi=200)
+    if show:
+        plt.show()
+    plt.close()
+
+    v_bp = pd.concat(v_bp, ignore_index=True)
+    plt.figure(figsize=(5, 4))
+    sns.boxplot(
+        data=v_bp,
+        x="metric",
+        y="value",
+        hue="type",
+        palette=["#3db41f","#1f77b4", "#ff7f0e"]
+    )
+    plt.title("Total lesion load distribution on test set")
+    plt.xlabel("")
+    plt.ylabel("")
+    plt.tight_layout()
+    plt.savefig(
+        os.path.join(results_folder, "lesion_load.png"), dpi=200)
     if show:
         plt.show()
     plt.close()
 
     # final summary
+    thr_metrics = pd.concat(thr_metrics)
+    ref_metrics = pd.concat(ref_metrics)
+
     print(
         "\nAverage SENSITIVITY on test set after threshold: "
         f"{np.mean(thr_metrics["vw-TPF"]):.3g} ± "
