@@ -116,11 +116,11 @@ data/
 
 To process one or multiple imaging session, use the CLI (command-line interface) by running the following line:
 ```bash
-SilentInfarctionSegmentationFLAIR/ --data_folder='path_to_data_directory'
+SilentInfarctionSegmentationFLAIR --data_folder='path_to_data_directory'
 ``` 
 or
 ```bash
-SilentInfarctionSegmentationFLAIR/ -i 'path_to_data_directory'
+SilentInfarctionSegmentationFLAIR -i 'path_to_data_directory'
 ``` 
 This will process each individual subfolder of the input directory as a separate case. Additional parameters can be provided:
 - `--params_path`  
@@ -179,7 +179,7 @@ The **SilentInfarctionSegmentationFLAIR** package will save the following output
 - *histogram_image.png*: Tissue histograms (normalized to unit area) for gray matter, white matter and cerebrospinal fluid in the FLAIR and gaussian-transformed T1 weighted sum.
 - *image.nii*: NIfTI image of FLAIR and gaussian-transformed T1 weighted sum.
 - *image.png*: 2-dimensional sections of the FLAIR and gaussian-transformed T1 weighted sum.
-- *thr.png*: gray matter histogram where mode, rHWHM (!!! hai spiegato cos'è?) and gray level threshold are highlighted.
+- *thr.png*: gray matter histogram where mode, rHWHM and gray level threshold are highlighted.
 - *thr_mask.nii*: NIFTI image of the thresholded input image.
 - *thr_mask.png*: 2-dimensional sections of the thresholded input image.
 - *segmentation.nii*: NIfTI image of the final refined segmentation.
@@ -196,12 +196,12 @@ This segmentation algorithm requires 8 parameters to specify:
 - *min_points* (int): the minimum score that a candidate lesion must have collected during the refinement step to be present in the final segmentation.
 
 ### Parameter optimization
-An initial set of optimized parameters is available in the [params.yaml](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/params.yaml) file. This set of parameters was optimized over a training set of 33 sets of images, a validation set of 16 sets of images and evaluated on a test set of 6 images, obtaining a mean DICE of !!!! statistiche!! Anche sensitivity e specificity e precision.
+An initial set of optimized parameters is available in the [params.yaml](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/params.yaml) file. This set of parameters was optimized over a training set of 33 sets of images, a validation set of 16 sets of images and evaluated on a test set of 6 images, obtaining a mean DICE coefficient of 0.08 ± 0.09, a mean sensitivity of 0.14 ± 0.16 and a mean specificity of 0.9997 ± 0.0002.
 
 All parameters were optimized using [bayesian-optimization](https://github.com/bayesian-optimization/BayesianOptimization):
 -*alpha* and *beta* were tuned by maximizing an objective function over the training set that rewards separation between gray matter and lesions histograms (increasing true positives), while punishing overlap between gray matter and white matter (potentially increasing false negatives).
 - *extend_dilation_radius*, *n_std*, *min_diameter*, *surround_dilation_radius* and *min_points* were tuned by maximizing the average DICE coefficient (after the refinement step) over the training set. The initial thresholded mask depends on *gamma*, so this optimization was performed separately for each candidate value of *gamma*.
-- *gamma*, being the most influential parameter of the algorithm, was chosen as the value that produced the maximum average DICE coefficient over the validation set. The proposed parameters in [params.yaml](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/params.yaml) returned a validation average DICE of !!! aggiungere media e IQR. !! Immagini??? forse non qui
+- *gamma*, being the most influential parameter of the algorithm, was chosen as the value that produced the maximum average DICE coefficient over the validation set. The proposed parameters in [params.yaml](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/params.yaml) returned a validation average DICE of 0.131 ± 0.184.
 
 If you prefer to tune your own parameters, it is possible to do so using the [tuning_alpha_beta](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/tuning_alpha_beta.py) and [tuning_gamma_rs](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/tuning_gamma_rs.py) scripts. Be aware that both scripts will require several hours or even days depending on the performances your computer. 
 
@@ -237,4 +237,24 @@ This script will search for an existing train-validatoin-test split. If not foun
 A ```--help``` argument can be used to describe the optional parameters.
 
 ## License
-!! Fare
+MIT License
+
+Copyright (c) 2025 Davide Bracali
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
