@@ -160,7 +160,7 @@ def plot_image(image, xyz=None, mask=None, title=None,
 
     with sns.plotting_context("notebook"):
         fig, (ax0, ax1, ax2) = plt.subplots(
-            nrows=1, ncols=3, figsize=(7, 14)
+            nrows=1, ncols=3, figsize=(7, 7)
         )
 
         ax0.axis("off")
@@ -212,7 +212,7 @@ def plot_image(image, xyz=None, mask=None, title=None,
         ax2.set_title("Coronal")
 
     if title is not None:
-        plt.suptitle(title, y=0.65)
+        plt.suptitle(title, y=0.8)
 
     if save_path is not None:
         plt.savefig(save_path)
