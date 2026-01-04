@@ -178,13 +178,15 @@ def main(flair, t1, alpha, beta, gm_mask, wm_mask, gt=None,
             [sitk.Mask(image, wm_mask), sitk.Mask(image, gm_mask), sitk.Mask(image, gt)],
             normalize=True, no_bkg=True, bins=['fd', 'fd', 'fd'],
             labels=["WM (white matter)", "GM (gray matter)", "lesions"],
-            title=f"Tissue histograms in FLAIR and T1 integrated image\n(α={alpha}, β={beta})",
+            title="Tissue histograms in FLAIR and T1 integrated image\n"\
+                f"(α={alpha:.2f}, β={beta:.2f})",
             show=show,
             save_path=os.path.join(save_dir, "histogram_image.png") if save_dir else None
         )
         _ = plot_image(
             image,
-            title=f"Weighted sum of FLAIR and gaussian-transformed T1\n(α = {alpha}, β = {beta})",
+            title="Weighted sum of FLAIR and gaussian-transformed T1\n"\
+                f"(α = {alpha:.2f}, β = {beta:.2f})",
             show=show,
             save_path=os.path.join(save_dir, "image.png") if save_dir else None
         )
