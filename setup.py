@@ -43,8 +43,8 @@ __version__ = '{version}'
 PACKAGE_NAME = 'SilentInfarctionSegmentationFLAIR'
 AUTHOR = 'Davide Bracali'
 EMAIL = 'davide.bracali@studio.unibo.it'
-REQUIRES_PYTHON = '>=3.9'
-PACKAGE_VERSION = '0.0.1'
+REQUIRES_PYTHON = '>=3.10'
+PACKAGE_VERSION = '1.0.0'
 DESCRIPTION = '3D segmentation of silent infarctions in FLAIR MRI images.'
 URL = 'https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR'
 MAINTAINER = AUTHOR
@@ -92,7 +92,7 @@ setup(
   'Programming Language :: Python :: Implementation :: PyPy']
 ,
   entry_points={'console_scripts': [
-    'SilentInfarctionSegmentationFLAIR = SilentInfarctionSegmentationFLAIR.__main__:main',
+    'SilentInfarctionSegmentationFLAIR = SilentInfarctionSegmentationFLAIR.__main__:cli',
     ],
   },
 )
