@@ -450,9 +450,9 @@ def plot_validation_distributions(gammas, results_folder):
         palette=["#1f77b4", "#ff7f0e"]
     )
 
-    plt.title("Validation DICE distribution")
-    plt.xlabel("γ")
-    plt.ylabel("DICE")
+    plt.title("DICE coefficient distribution over validation set", fontsize=20)
+    plt.xlabel("γ", fontsize=14)
+    plt.ylabel("DICE", fontsize=14)
     plt.legend(title="")
     plt.tight_layout()
 
