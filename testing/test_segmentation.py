@@ -354,7 +354,8 @@ def test_evaluate_voxel_wise_valid_return(mask_pair):
     Then:
         - evaluate them voxel-wise
     Assert that:
-        - output is a dict that contains vw-TPF, vw-FPF and vw-DSC as keys
+        - output is a dict that contains vw-TPF, vw-FPF, vw-DSC, vw-PPV
+        as keys
         - all returned values are floats
     """
     mask, gt = mask_pair
@@ -362,7 +363,7 @@ def test_evaluate_voxel_wise_valid_return(mask_pair):
 
     assert isinstance(metrics, dict)
     assert set(metrics.keys()) == {'vw-TPF', 'vw-FPF',
-                                   'vw-DSC', 'vw-MCC'}
+                                   'vw-DSC', 'vw-PPV'}
     for _, v in metrics.items():
         assert isinstance(v, float)
 
@@ -377,19 +378,13 @@ def test_evaluate_voxel_wise_output_range(mask_pair):
     Then:
         - evaluate them voxel-wise
     Assert that:
-        - MCC ranges between -1 and 1
-        - TPF, FPF and DSC are between 0 and 1
+        - all metrics are between 0 and 1
     """
     mask, gt = mask_pair
     metrics = evaluate_voxel_wise(mask, gt)
 
     for k, v in metrics.items():
-        if k == "vw-MCC":
-            assert -1.0 <= v <= 1.0
-        else:
             assert 0.0 <= v <= 1.0
-
-
 
 
 @given(binary_mask_pair_strategy())
@@ -404,7 +399,7 @@ def test_evaluate_voxel_wise_identical_masks(mask_pair):
         - vw-TPF = 1.0
         - vw-FPF = 0.0
         - vw-DSC = 1.0
-        - vw-MCC = 1.0
+        - vw-PPV = 1.0
     """
     img, _ = mask_pair 
     
@@ -414,7 +409,7 @@ def test_evaluate_voxel_wise_identical_masks(mask_pair):
     metrics = evaluate_voxel_wise(img, img)
 
     assert metrics == {'vw-TPF': 1.0, 'vw-FPF': 0.0,
-                       'vw-DSC': 1.0, 'vw-MCC': 1.0}
+                       'vw-DSC': 1.0, 'vw-PPV': 1.0}
 
 
 def test_evaluate_voxel_wise_all_zero_vs_all_one():
@@ -428,7 +423,7 @@ def test_evaluate_voxel_wise_all_zero_vs_all_one():
         - vw-TPF = 0.0
         - vw-FPF = 0.0
         - vw-DSC = 0.0
-        - vw-MCC = 0.0
+        - vw-PPV = 0.0
     """
     shape = (16, 16, 16)
     mask_arr = np.zeros(shape, dtype=np.uint8)
@@ -440,7 +435,7 @@ def test_evaluate_voxel_wise_all_zero_vs_all_one():
     metrics = evaluate_voxel_wise(mask, gt)
 
     assert metrics == {'vw-TPF': 0.0, 'vw-FPF': 0.0,
-                       'vw-DSC': 0.0, 'vw-MCC': 0.0}
+                       'vw-DSC': 0.0, 'vw-PPV': 0.0}
 
 
 

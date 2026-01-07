@@ -65,8 +65,11 @@ def main(data_folder, params_path, results_folder, verbose, show):
     eval_bp = []
     n_bp = []
     v_bp = []
+    vs_bp = []
     thr_metrics = []
     ref_metrics = []
+    thr_volsim = []
+    ref_volsim = []
 
 
     # organize file paths
@@ -122,6 +125,8 @@ def main(data_folder, params_path, results_folder, verbose, show):
                     f"{thr_results['vw-TPF']:.3g}")
                 print(f"  - False positives fraction: "
                     f"{thr_results['vw-FPF']:.3g}")
+                print(f"  - Precision: "
+                    f"{thr_results['vw-PPV']:.3g}")
                 print(f"  - DICE coefficient: "
                     f"{thr_results['vw-DSC']:.3g}")
                 print("Computing evaluation metrics AFTER REFINEMENT STEP:")
@@ -134,26 +139,25 @@ def main(data_folder, params_path, results_folder, verbose, show):
                     f"{ref_results['vw-TPF']:.3g}")
                 print(f"  - False positives fraction: "
                     f"{ref_results['vw-FPF']:.3g}")
+                print(f"  - Precision: "
+                    f"{ref_results['vw-PPV']:.3g}")
                 print(f"  - DICE coefficient: "
                     f"{ref_results['vw-DSC']:.3g}")
 
         # preparing boxplot data
         n_bp.append(pd.DataFrame({
-            "patient": [patient] * 3,
+            "patient": [patient] * 2,
             "metric": [
-                "Number of lesions",
                 "Number of lesions",
                 "Number of lesions"
             ],
             "value": [
                 connected_components(gt)[1],
-                connected_components(thr_mask)[1],
                 connected_components(ref_mask)[1],
             ],
             "type": [
                 "Ground truth",
-                "After threshold",
-                "After refinement step",
+                "Segmented",
             ]
         }))
 
@@ -173,45 +177,67 @@ def main(data_folder, params_path, results_folder, verbose, show):
         v_ref = stats.GetSum()*voxel_volume
 
         v_bp.append(pd.DataFrame({
-            "patient": [patient] * 3,
+            "patient": [patient] * 2,
             "metric": [
-                "Lesion volume (mm³)",
                 "Lesion volume (mm³)",
                 "Lesion volume (mm³)"
             ],
             "value": [
                 v_gt,
-                v_thr,
                 v_ref
 
             ],
             "type": [
                 "Ground truth",
+                "Segmented",
+                ]
+        }))
+
+        thr_vs = 1 - np.abs(v_thr - v_gt)/(v_thr + v_gt)
+        thr_volsim.append(thr_vs)
+        ref_vs = 1 - np.abs(v_ref - v_gt)/(v_ref + v_gt)
+        ref_volsim.append(ref_vs)
+
+        vs_bp.append(pd.DataFrame({
+            "patient": [patient] * 2,
+            "metric": [
+                "Volume similarity",
+                "Volume similarity"
+            ],
+            "value": [
+                thr_vs,
+                ref_vs
+            ],
+            "type": [
                 "After threshold",
                 "After refinement step",
                 ]
         }))
+
         eval_bp.append(pd.DataFrame({
-                "patient": [patient] * 4,
-                "metric": ["Sensitivity (TPF)", "1 - specificity (FPF)", "DICE", "Volume similarity"],
+                "patient": [patient] * 3,
+                "metric": ["Sensitivity",
+                           "Precision",
+                           "DICE"],
                 "value": [
                     thr_results["vw-TPF"],
-                    thr_results["vw-FPF"],
-                    thr_results["vw-DSC"],
-                    1 - np.abs(v_thr - v_gt)/(v_thr + v_gt)
+                    thr_results["vw-PPV"],
+                    thr_results["vw-DSC"]
                 ],
-                "type": ["After threshold"] * 4
+                "type": ["After threshold"] * 3
         }))
+
         eval_bp.append(pd.DataFrame({
-                "patient": [patient] * 4,
-                "metric": ["Sensitivity (TPF)", "1 - specificity (FPF)", "DICE", "Volume similarity"],
+                "patient": [patient] * 3,
+                "metric": ["Sensitivity",
+                           "Precision",
+                           "DICE"],
                 "value": [
                     ref_results["vw-TPF"],
-                    ref_results["vw-FPF"],
-                    ref_results["vw-DSC"],
-                    1 - np.abs(v_ref - v_gt)/(v_ref + v_gt)
+                    ref_results["vw-PPV"],
+                    ref_results["vw-DSC"]
                 ],
-                "type": ["After refinement step"] * 4
+                "type": ["After refinement step"] * 3
             }))
 
 
@@ -242,7 +268,7 @@ def main(data_folder, params_path, results_folder, verbose, show):
         x="metric",
         y="value",
         hue="type",
-        palette=["#3db41f","#1f77b4", "#ff7f0e"]
+        palette=["#3db41f", "#ff7f0e"]
     )
     plt.title("Number of lesions distribution on test set")
     plt.xlabel("")
@@ -261,7 +287,7 @@ def main(data_folder, params_path, results_folder, verbose, show):
         x="metric",
         y="value",
         hue="type",
-        palette=["#3db41f","#1f77b4", "#ff7f0e"]
+        palette=["#3db41f", "#ff7f0e"]
     )
     plt.title("Total lesion load distribution on test set")
     plt.xlabel("")
@@ -272,6 +298,26 @@ def main(data_folder, params_path, results_folder, verbose, show):
     if show:
         plt.show()
     plt.close()
+
+    vs_bp = pd.concat(vs_bp, ignore_index=True)
+    plt.figure(figsize=(5, 4))
+    sns.boxplot(
+        data=vs_bp,
+        x="metric",
+        y="value",
+        hue="type",
+        palette=["#1f77b4", "#ff7f0e"]
+    )
+    plt.title("Volume similarity distribution on test set")
+    plt.xlabel("")
+    plt.ylabel("")
+    plt.tight_layout()
+    plt.savefig(
+        os.path.join(results_folder, "volume_similarity.png"), dpi=200)
+    if show:
+        plt.show()
+    plt.close()
+
 
     # final summary
     thr_metrics = pd.concat(thr_metrics)
@@ -324,6 +370,38 @@ def main(data_folder, params_path, results_folder, verbose, show):
         f"MEDIAN = {np.median(ref_metrics["vw-DSC"]):.3g}\n"
         f"IQR = [{np.quantile(ref_metrics["vw-DSC"], 0.25):.3g}, "
         f"{np.quantile(ref_metrics["vw-DSC"], 0.75):.3g}]"
+    )
+    print(
+        "\nAverage DICE on test set after threshold: "
+        f"{np.mean(thr_metrics["vw-DSC"]):.3g} ± "
+        f"{np.std(thr_metrics["vw-DSC"]):.3g}\n"
+        f"MEDIAN = {np.median(thr_metrics["vw-DSC"]):.3g}\n"
+        f"IQR = [{np.quantile(thr_metrics["vw-DSC"], 0.25):.3g}, "
+        f"{np.quantile(thr_metrics["vw-DSC"], 0.75):.3g}]"
+    )
+    print(
+        "\nAverage DICE on test set after refinement step: "
+        f"{np.mean(ref_metrics["vw-DSC"]):.3g} ± "
+        f"{np.std(ref_metrics["vw-DSC"]):.3g}\n"
+        f"MEDIAN = {np.median(ref_metrics["vw-DSC"]):.3g}\n"
+        f"IQR = [{np.quantile(ref_metrics["vw-DSC"], 0.25):.3g}, "
+        f"{np.quantile(ref_metrics["vw-DSC"], 0.75):.3g}]"
+    )
+    print(
+        "\nAverage volume similarity on test set after threshold: "
+        f"{np.mean(thr_volsim):.3g} ± "
+        f"{np.std(thr_volsim):.3g}\n"
+        f"MEDIAN = {np.median(thr_volsim):.3g}\n"
+        f"IQR = [{np.quantile(thr_volsim, 0.25):.3g}, "
+        f"{np.quantile(thr_volsim, 0.75):.3g}]"
+    )
+    print(
+        "\nAverage volume similarity on test set after refinement step: "
+        f"{np.mean(ref_volsim):.3g} ± "
+        f"{np.std(ref_volsim):.3g}\n"
+        f"MEDIAN = {np.median(ref_volsim):.3g}\n"
+        f"IQR = [{np.quantile(ref_volsim, 0.25):.3g}, "
+        f"{np.quantile(ref_volsim, 0.75):.3g}]"
     )
 
 

@@ -155,15 +155,6 @@ def evaluate_voxel_wise(mask, gt):
     else:
         dice = 2 * tp / (2 * tp + fp + fn)
 
-    denom = np.sqrt(
-        float(tp + fp)
-        * float(tp + fn)
-        * float(tn + fp)
-        * float(tn + fn)
-    )
-
-    mcc = 0.0 if denom == 0 else (tp * tn - fp * fn) / denom
-
     pos = tp + fn
     neg = tn + fp
 
@@ -171,7 +162,7 @@ def evaluate_voxel_wise(mask, gt):
         "vw-TPF": tp / pos if pos > 0 else 0.0,
         "vw-FPF": fp / neg if neg > 0 else 0.0,
         "vw-DSC": dice,
-        "vw-MCC": mcc,
+        "vw-PPV": tp / (tp + fp) if (tp + fp) > 0 else 0.0
     }
 
     return {k: float(v) for k, v in metrics.items()}
