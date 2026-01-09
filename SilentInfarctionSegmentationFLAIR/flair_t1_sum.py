@@ -100,6 +100,14 @@ def main(flair, t1, alpha, beta, gm_mask, wm_mask, gt=None,
     Combine FLAIR and T1 images using a weighted sum of FLAIR and 
     gaussian-transformed T1. Optionally, compute and plot tissue histograms.
 
+    -----
+    - Normalize FLAIR and T1 images.
+    - Compute WM statistics (mean, std) for gaussian transformation.
+    - Apply gaussian transform to T1 and combine with FLAIR using weights alpha and beta.
+    - Normalize resulting image to 8-bit.
+    - Optionally save image and plot histograms for WM, GM, and lesions.
+    - Optionally display images and histograms interactively.
+
     Parameters
     ----------
     flair : SimpleITK.Image

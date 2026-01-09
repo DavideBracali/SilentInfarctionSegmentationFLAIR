@@ -4,4 +4,4 @@ SilentInfarctionSegmentationFLAIR
 .. toctree::
    :maxdepth: 4
 
-   SilentInfarctionSegmentationFLAIR
+   my_modules

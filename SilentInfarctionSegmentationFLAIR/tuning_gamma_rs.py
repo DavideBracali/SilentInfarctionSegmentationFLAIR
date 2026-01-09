@@ -496,6 +496,8 @@ def main(data_folder, alpha, beta, gammas, results_folder,
     Main pipeline for Bayesian optimization of segmentation settings.
 
     Performs:
+
+    ----
     - Train-validation split
     - Image precomputation
     - Threshold mask computation

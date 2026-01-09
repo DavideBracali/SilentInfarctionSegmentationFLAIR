@@ -61,7 +61,47 @@ def parse_args():
 
 
 def main(data_folder, params_path, results_folder, verbose, show):
-   
+    """
+    Processes a set of patients to evaluate the performance of FLAIR 
+    silent lesion segmentation.
+
+    For each patient in the data folder:
+    
+    ----
+    - Runs the main segmentation function of the package.
+    - Computes voxel-wise metrics (Sensitivity, Precision, DICE).
+    - Computes the number of lesions and total lesion volume.
+    - Computes volume similarity between ground truth and segmentation.
+    - Generates summary boxplots for metrics, lesion count, total volume, 
+      and volume similarity, saving them to the results folder.
+
+    Parameters
+    ----------
+    data_folder : str
+        Path to the folder containing input patient images (.nii).
+    params_path : str
+        Path to the .yaml file containing segmentation parameters.
+    results_folder : str
+        Path to the folder where results and boxplots will be saved.
+    verbose : bool
+        If True, prints detailed log messages during processing.
+    show : bool
+        If True, displays the generated boxplots.
+
+    Returns
+    -------
+    None
+        All results are saved to files; nothing is returned.
+
+    Notes
+    -----
+    - If present, a 'test_patients.pkl' file is used to process only the test set patients.
+      Otherwise, all patients in the folder are processed.
+    - Uses SimpleITK for volume calculations and Seaborn/Matplotlib for visualization.
+    - Requires the functions `process_patient`, `evaluate_voxel_wise`, `get_paths_df`,
+      and `connected_components` to be importable from the SilentInfarctionSegmentationFLAIR package.
+    """
+
     eval_bp = []
     n_bp = []
     v_bp = []

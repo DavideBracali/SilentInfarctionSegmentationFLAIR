@@ -6,18 +6,14 @@
 Silent Infarction FLAIR Segmentation documentation
 ==================================================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
-
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+Overview
+--------
+Documentation for the SilentInfarctionSegmentationFLAIR package.
 
 .. toctree::
    :maxdepth: 2
-   :caption: API Reference
+   :caption: Contents
 
-   SilentInfarctionSegmentationFLAIR
+   my_modules
+   my_scripts
 

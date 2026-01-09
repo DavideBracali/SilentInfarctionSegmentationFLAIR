@@ -219,7 +219,18 @@ def main(thr_mask, image=None, pves=[], segm=None,
          labels_to_remove=[], keywords_to_remove=[], label_name_file=None,
          verbose=True, save_dir=None, show=False):
     """
-    Refine a threshold-based lesion mask applying multiple filters.
+    Processes a set of patients to evaluate the performance of FLAIR 
+    silent lesion segmentation.
+
+    For each patient in the data folder:
+
+    ----
+    - Run the main segmentation function of the package.
+    - Compute voxel-wise metrics (Sensitivity, Precision, DICE)
+        both after thresholding and after the refinement step.
+    - Compute the number of lesions and total lesion volume.
+    - Compute volume similarity between ground truth and segmentation.
+    - Generate summary boxplots for metrics saving them to the results folder.
 
     Parameters
     ----------
