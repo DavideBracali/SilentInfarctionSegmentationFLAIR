@@ -7,6 +7,8 @@ analysis/
 evaluate_test_set/
 results/
 tuning/
+cabezas/
+prove.ipynb
 
 
 # Byte-compiled / optimized / DLL files
