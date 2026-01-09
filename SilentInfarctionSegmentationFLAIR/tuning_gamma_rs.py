@@ -546,7 +546,7 @@ def main(data_folder, alpha, beta, gammas, results_folder,
         None
             Saves images to disk.
         """
-        
+
         start = time.time()
         gc.collect()
 
@@ -608,15 +608,13 @@ def main(data_folder, alpha, beta, gammas, results_folder,
         gc.collect()
 
         # chunk structure to avoid RAM overload
-        if n_cores > len(train_patients):
-            n_cores = len(train_patients)
-            
-        n_chunks = (len(train_patients) + n_cores - 1) // n_cores
+        cores = min(n_cores, len(train_patients))    
+        n_chunks = (len(train_patients) + cores - 1) // cores
 
         for chunk in range(n_chunks):
             gc.collect()
 
-            chunk_patients = train_patients[chunk*n_cores:(chunk+1)*n_cores]
+            chunk_patients = train_patients[chunk*cores:(chunk+1)*cores]
 
             if data is None:
                 chunk_data, _ = load_subjects(
@@ -630,8 +628,8 @@ def main(data_folder, alpha, beta, gammas, results_folder,
                 for patient in chunk_patients
             ]
 
-            if n_cores > 1:
-                with mp.Pool(n_cores) as pool:
+            if cores > 1:
+                with mp.Pool(cores) as pool:
                     _ = pool.starmap(
                         process_patient_thr,
                         [(a, results_folder) for a in args_list],
@@ -646,15 +644,13 @@ def main(data_folder, alpha, beta, gammas, results_folder,
         gc.collect()
         dice_list = []
 
-        if n_cores > len(val_patients):
-            n_cores = len(val_patients)
-
-        n_chunks = (len(val_patients) + n_cores - 1) // n_cores
+        cores = min(n_cores, len(val_patients))
+        n_chunks = (len(val_patients) + cores - 1) // cores
 
         for chunk in range(n_chunks):
             gc.collect()
 
-            chunk_patients = val_patients[chunk*n_cores:(chunk+1)*n_cores]
+            chunk_patients = val_patients[chunk*cores:(chunk+1)*cores]
 
             if data is None:
                 chunk_data, _ = load_subjects(
@@ -668,8 +664,8 @@ def main(data_folder, alpha, beta, gammas, results_folder,
                 for patient in chunk_patients
             ]
 
-            if n_cores > 1:
-                with mp.Pool(n_cores) as pool:
+            if cores > 1:
+                with mp.Pool(cores) as pool:
                     results = pool.starmap(
                         process_patient_thr_dice,
                         [(a, results_folder) for a in args_list],
@@ -715,16 +711,14 @@ def main(data_folder, alpha, beta, gammas, results_folder,
         dice_list = []
 
         # chunk structure to avoid RAM overload
-        if n_cores > len(train_patients):
-            n_cores = len(train_patients)
-
-        n_chunks = (len(train_patients) + n_cores - 1) // n_cores
+        cores = min(n_cores, len(train_patients))
+        n_chunks = (len(train_patients) + cores - 1) // cores
 
         for chunk in range(n_chunks):
             gc.collect()
 
             chunk_patients = train_patients[
-                chunk * n_cores:(chunk + 1) * n_cores
+                chunk * cores:(chunk + 1) * cores
             ]
 
             if data is None:
@@ -748,8 +742,8 @@ def main(data_folder, alpha, beta, gammas, results_folder,
                 for patient in chunk_patients
             ]
 
-            if n_cores > 1:
-                with mp.Pool(n_cores) as pool:
+            if cores > 1:
+                with mp.Pool(cores) as pool:
                     results = pool.starmap(
                         process_patient_rs, [(a, results_folder)
                                              for a in args_list]
