@@ -1,7 +1,6 @@
 labels:
-  gm: [3, 8, 10, 11, 12, 13, 17, 18, 26,
-       42, 47, 49, 50, 51, 52, 53, 54, 62]
-  wm: [2, 7, 41, 46]
+  gm: [3, 42, 8, 47, 10, 49, 11, 50, 12, 51, 13, 52, 17, 53, 18, 54, 26, 58, 28, 60, 138, 139, 169, 176]
+  wm: [ 2, 7, 41, 46, 77, 78, 79, 155, 156, 157,158,192]
   keywords_to_remove: ["Bone", "Teeth", "Cranium", "Skull", 
     "Table", "Diploe", "Endosteum", "Periosteum", "CSF", "Ventricle",
     "Humor", "Lens", "Globe", "Choroid", "Epidermis", "Scalp", "Skin",
