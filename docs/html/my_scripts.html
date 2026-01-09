@@ -1,0 +1,351 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scripts &mdash; Silent Infarction FLAIR Segmentation 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Modules" href="my_modules.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Silent Infarction FLAIR Segmentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="my_modules.html">Modules</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Scripts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#silentinfarctionsegmentationflair-flair-t1-sum">SilentInfarctionSegmentationFLAIR.flair_t1_sum</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.flair_t1_sum.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#silentinfarctionsegmentationflair-threshold">SilentInfarctionSegmentationFLAIR.threshold</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.threshold.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#silentinfarctionsegmentationflair-refinement-step">SilentInfarctionSegmentationFLAIR.refinement_step</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.refinement_step.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#silentinfarctionsegmentationflair-evaluate-test-set">SilentInfarctionSegmentationFLAIR.evaluate_test_set</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.evaluate_test_set.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#silentinfarctionsegmentationflair-tuning-alpha-beta">SilentInfarctionSegmentationFLAIR.tuning_alpha_beta</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.tuning_alpha_beta.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#silentinfarctionsegmentationflair-tuning-gamma-rs">SilentInfarctionSegmentationFLAIR.tuning_gamma_rs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.tuning_gamma_rs.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Silent Infarction FLAIR Segmentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Scripts</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/my_scripts.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="scripts">
+<h1>Scripts<a class="headerlink" href="#scripts" title="Link to this heading"></a></h1>
+<section id="silentinfarctionsegmentationflair-flair-t1-sum">
+<h2>SilentInfarctionSegmentationFLAIR.flair_t1_sum<a class="headerlink" href="#silentinfarctionsegmentationflair-flair-t1-sum" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.flair_t1_sum.main">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.flair_t1_sum.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">flair</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gm_mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wm_mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/flair_t1_sum.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.flair_t1_sum.main" title="Link to this definition"></a></dt>
+<dd><p>Combine FLAIR and T1 images using a weighted sum of FLAIR and
+gaussian-transformed T1. Optionally, compute and plot tissue histograms.</p>
+<ul class="simple">
+<li><p>Apply gaussian transform to T1 and combine with FLAIR using weights alpha and beta.</p></li>
+<li><p>Normalize resulting image to 8-bit.</p></li>
+<li><p>Optionally save image and plot histograms for WM, GM, and lesions.</p></li>
+<li><p>Optionally display images and histograms interactively.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>flair</strong> (<em>SimpleITK.Image</em>) – Preloaded FLAIR image.</p></li>
+<li><p><strong>t1</strong> (<em>SimpleITK.Image</em>) – Preloaded T1 image.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – Scaling factor for the standard deviation of the gaussian transform
+applied to T1.</p></li>
+<li><p><strong>beta</strong> (<em>float</em>) – Weight applied to the gaussian-transformed T1 image.</p></li>
+<li><p><strong>gm_mask</strong> (<em>SimpleITK.Image</em>) – Mask for gray matter (GM).</p></li>
+<li><p><strong>wm_mask</strong> (<em>SimpleITK.Image</em>) – Mask for white matter (WM).</p></li>
+<li><p><strong>gt</strong> (<em>SimpleITK.Image</em><em>, </em><em>optional</em>) – Ground-truth lesion mask, if available (default: None).</p></li>
+<li><p><strong>show</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to show histograms interactively (default: False).</p></li>
+<li><p><strong>save_dir</strong> (<em>str</em><em>, </em><em>optional</em>) – Directory to save output images and histograms (default: None).</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em><em>, </em><em>optional</em>) – Print progress messages (default: True).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Weighted sum of FLAIR and gaussian-transformed T1, normalized to 8-bit.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SimpleITK.Image</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="silentinfarctionsegmentationflair-threshold">
+<h2>SilentInfarctionSegmentationFLAIR.threshold<a class="headerlink" href="#silentinfarctionsegmentationflair-threshold" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.threshold.main">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.threshold.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gm_mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gamma</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/threshold.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.threshold.main" title="Link to this definition"></a></dt>
+<dd><p>Compute a gray-matter-based threshold using histogram mode and RHWHM,
+apply it to the input image, and optionally plot/save the results.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> (<em>SimpleITK.Image</em>) – Input image to be thresholded.</p></li>
+<li><p><strong>gm_mask</strong> (<em>SimpleITK.Image</em>) – Gray matter mask used to compute the histogram.</p></li>
+<li><p><strong>gamma</strong> (<em>float</em>) – Multiplier for the right-side half-width at half-maximum (RHWHM)
+to set the threshold.</p></li>
+<li><p><strong>show</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to display plots interactively (default: False).</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to print progress messages (default: True).</p></li>
+<li><p><strong>save_dir</strong> (<em>str</em><em>, </em><em>optional</em>) – Directory to save histogram figure and thresholded mask (default: None).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>thr_mask</strong> – Thresholded binary mask of the input image.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SimpleITK.Image</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="silentinfarctionsegmentationflair-refinement-step">
+<h2>SilentInfarctionSegmentationFLAIR.refinement_step<a class="headerlink" href="#silentinfarctionsegmentationflair-refinement-step" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.refinement_step.main">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.refinement_step.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">thr_mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pves</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">segm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_diameter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">surround_dilation_radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_std</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extend_dilation_radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels_to_remove</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keywords_to_remove</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_name_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/refinement_step.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.refinement_step.main" title="Link to this definition"></a></dt>
+<dd><p>Processes a set of patients to evaluate the performance of FLAIR
+silent lesion segmentation.</p>
+<p>For each patient in the data folder:</p>
+<blockquote>
+<div><p>both after thresholding and after the refinement step.</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>Compute the number of lesions and total lesion volume.</p></li>
+<li><p>Compute volume similarity between ground truth and segmentation.</p></li>
+<li><p>Generate summary boxplots for metrics saving them to the results folder.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>thr_mask</strong> (<em>SimpleITK.Image</em>) – Thresholded lesion mask.</p></li>
+<li><p><strong>image</strong> (<em>SimpleITK.Image</em><em>, </em><em>optional</em>) – Reference image used for lesion extension (default: None).</p></li>
+<li><p><strong>pves</strong> (<em>list</em><em> of </em><em>SimpleITK.Image</em><em>, </em><em>optional</em>) – List of partial volume effect maps [WM, GM, CSF] (default: []).</p></li>
+<li><p><strong>segm</strong> (<em>SimpleITK.Image</em><em>, </em><em>optional</em>) – Anatomical segmentation used to remove impossible voxels (default: None).</p></li>
+<li><p><strong>min_diameter</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum lesion diameter in mm (default: None).</p></li>
+<li><p><strong>surround_dilation_radius</strong> (<em>int</em><em>, </em><em>optional</em>) – Dilation radius for surrounding PVE filter (default: None).</p></li>
+<li><p><strong>n_std</strong> (<em>float</em><em>, </em><em>optional</em>) – Number of standard deviations for lesion extension (default: None).</p></li>
+<li><p><strong>extend_dilation_radius</strong> (<em>int</em><em>, </em><em>optional</em>) – Dilation radius for lesion extension (default: 1).</p></li>
+<li><p><strong>min_points</strong> (<em>int</em><em>, </em><em>optional</em>) – Minimum score a lesion must satisfy (default: 3).</p></li>
+<li><p><strong>labels_to_remove</strong> (<em>list</em><em> of </em><em>int</em><em>, </em><em>optional</em>) – List of segmentation labels to remove (default: []).</p></li>
+<li><p><strong>keywords_to_remove</strong> (<em>list</em><em> of </em><em>str</em><em>, </em><em>optional</em>) – Keywords of labels to remove (default: []).</p></li>
+<li><p><strong>label_name_file</strong> (<em>str</em><em>, </em><em>optional</em>) – Label-name LUT file (default: None).</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em><em>, </em><em>optional</em>) – Print progress messages (default: True).</p></li>
+<li><p><strong>save_dir</strong> (<em>str</em><em>, </em><em>optional</em>) – Directory to save output segmentation and plots (default: None).</p></li>
+<li><p><strong>show</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to display plots interactively (default: False).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ref_mask</strong> – Refined lesion mask after applying all filters.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SimpleITK.Image</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="silentinfarctionsegmentationflair-evaluate-test-set">
+<h2>SilentInfarctionSegmentationFLAIR.evaluate_test_set<a class="headerlink" href="#silentinfarctionsegmentationflair-evaluate-test-set" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.evaluate_test_set.main">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.evaluate_test_set.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">results_folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/evaluate_test_set.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.evaluate_test_set.main" title="Link to this definition"></a></dt>
+<dd><p>Processes a set of patients to evaluate the performance of FLAIR
+silent lesion segmentation.</p>
+<p>For each patient in the data folder:</p>
+<ul class="simple">
+<li><p>Computes the number of lesions and total lesion volume.</p></li>
+<li><p>Computes volume similarity between ground truth and segmentation.</p></li>
+<li><p>Generates summary boxplots for metrics, lesion count, total volume,
+and volume similarity, saving them to the results folder.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_folder</strong> (<em>str</em>) – Path to the folder containing input patient images (.nii).</p></li>
+<li><p><strong>params_path</strong> (<em>str</em>) – Path to the .yaml file containing segmentation parameters.</p></li>
+<li><p><strong>results_folder</strong> (<em>str</em>) – Path to the folder where results and boxplots will be saved.</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – If True, prints detailed log messages during processing.</p></li>
+<li><p><strong>show</strong> (<em>bool</em>) – If True, displays the generated boxplots.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>All results are saved to files; nothing is returned.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>If present, a ‘test_patients.pkl’ file is used to process only the test set patients.
+Otherwise, all patients in the folder are processed.</p></li>
+<li><p>Uses SimpleITK for volume calculations and Seaborn/Matplotlib for visualization.</p></li>
+<li><p>Requires the functions <cite>process_patient</cite>, <cite>evaluate_voxel_wise</cite>, <cite>get_paths_df</cite>,
+and <cite>connected_components</cite> to be importable from the SilentInfarctionSegmentationFLAIR package.</p></li>
+</ul>
+</dd></dl>
+
+</section>
+<section id="silentinfarctionsegmentationflair-tuning-alpha-beta">
+<h2>SilentInfarctionSegmentationFLAIR.tuning_alpha_beta<a class="headerlink" href="#silentinfarctionsegmentationflair-tuning-alpha-beta" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.tuning_alpha_beta.main">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.tuning_alpha_beta.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">results_folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_points</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_iter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cores</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/tuning_alpha_beta.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.tuning_alpha_beta.main" title="Link to this definition"></a></dt>
+<dd><p>Main pipeline for Bayesian optimization of segmentation parameters.</p>
+<p>Steps:
+- Load patient data
+- Split into training and validation sets
+- Optimize alpha and beta using Bayesian Optimization
+- Save best parameters and separation metrics
+- Validate the best parameters on the validation set</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_folder</strong> (<em>str</em>) – Path to the dataset directory.</p></li>
+<li><p><strong>results_folder</strong> (<em>str</em>) – Path to save outputs, logs, and metrics.</p></li>
+<li><p><strong>init_points</strong> (<em>int</em>) – Number of initial random exploration steps for Bayesian Optimization.</p></li>
+<li><p><strong>n_iter</strong> (<em>int</em>) – Number of BO iterations.</p></li>
+<li><p><strong>n_cores</strong> (<em>int</em>) – Number of CPU cores to use for multiprocessing.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="silentinfarctionsegmentationflair-tuning-gamma-rs">
+<h2>SilentInfarctionSegmentationFLAIR.tuning_gamma_rs<a class="headerlink" href="#silentinfarctionsegmentationflair-tuning-gamma-rs" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.tuning_gamma_rs.main">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.tuning_gamma_rs.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gammas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">results_folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_points</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_iter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_cores</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/tuning_gamma_rs.html#main"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.tuning_gamma_rs.main" title="Link to this definition"></a></dt>
+<dd><p>Main pipeline for Bayesian optimization of segmentation settings.</p>
+<p>Performs:</p>
+<ul class="simple">
+<li><p>Threshold mask computation</p></li>
+<li><p>Refinement step optimization with Bayesian Optimization</p></li>
+<li><p>Validation of best parameters</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_folder</strong> (<em>str</em>) – Path to the dataset directory.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – Segmentation parameter alpha.</p></li>
+<li><p><strong>beta</strong> (<em>float</em>) – Segmentation parameter beta.</p></li>
+<li><p><strong>gammas</strong> (<em>sequence</em><em> of </em><em>float</em>) – Gamma values to evaluate.</p></li>
+<li><p><strong>results_folder</strong> (<em>str</em>) – Directory to save outputs, logs, and metrics.</p></li>
+<li><p><strong>init_points</strong> (<em>int</em>) – Number of initial random exploration steps for BO.</p></li>
+<li><p><strong>n_iter</strong> (<em>int</em>) – Number of BO iterations.</p></li>
+<li><p><strong>n_cores</strong> (<em>int</em>) – Number of CPU cores to use for multiprocessing.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="my_modules.html" class="btn btn-neutral float-left" title="Modules" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Davide Bracali.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

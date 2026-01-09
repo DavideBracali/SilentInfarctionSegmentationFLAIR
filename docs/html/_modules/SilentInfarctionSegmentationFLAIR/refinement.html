@@ -1,0 +1,715 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SilentInfarctionSegmentationFLAIR.refinement &mdash; Silent Infarction FLAIR Segmentation 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Silent Infarction FLAIR Segmentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../my_modules.html">Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../my_scripts.html">Scripts</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Silent Infarction FLAIR Segmentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">SilentInfarctionSegmentationFLAIR.refinement</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for SilentInfarctionSegmentationFLAIR.refinement</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Created on 2025-08-13 13:41:50</span>
+
+<span class="sd">@author: david</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">SimpleITK</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sitk</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy.ndimage</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ndi</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.spatial</span><span class="w"> </span><span class="kn">import</span> <span class="n">cKDTree</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">SilentInfarctionSegmentationFLAIR.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">get_info</span><span class="p">,</span>
+    <span class="n">get_array_from_image</span><span class="p">,</span>
+    <span class="n">get_image_from_array</span><span class="p">,</span>
+    <span class="n">progress_bar</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="connected_components">
+<a class="viewcode-back" href="../../my_modules.html#SilentInfarctionSegmentationFLAIR.refinement.connected_components">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">connected_components</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">connectivity</span><span class="o">=</span><span class="mi">26</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute connected components in a binary image.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    image : SimpleITK.Image</span>
+<span class="sd">        Binary input image (0 = background, 1 = foreground).</span>
+<span class="sd">    connectivity : int, optional</span>
+<span class="sd">        Connectivity type: 6 (faces), 18 (faces + edges),</span>
+<span class="sd">        26 (faces + edges + corners). Default is 26.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ccs : SimpleITK.Image</span>
+<span class="sd">        Labeled image where each connected component has a unique</span>
+<span class="sd">        integer label.</span>
+<span class="sd">    n_components : int</span>
+<span class="sd">        Number of connected components (excluding background).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">connectivity</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">18</span><span class="p">,</span> <span class="mi">26</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;&#39;connectivity&#39; must be 6, 18 or 26&quot;</span><span class="p">)</span>
+
+    <span class="n">arr</span> <span class="o">=</span> <span class="n">get_array_from_image</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">connectivity</span> <span class="o">==</span> <span class="mi">6</span><span class="p">:</span>
+        <span class="n">structure</span> <span class="o">=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">generate_binary_structure</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">connectivity</span> <span class="o">==</span> <span class="mi">18</span><span class="p">:</span>
+        <span class="n">structure</span> <span class="o">=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">generate_binary_structure</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">structure</span> <span class="o">=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">generate_binary_structure</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+    <span class="n">ccs_arr</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">structure</span><span class="o">=</span><span class="n">structure</span><span class="p">)</span>
+
+    <span class="n">ccs</span> <span class="o">=</span> <span class="n">get_image_from_array</span><span class="p">(</span><span class="n">ccs_arr</span><span class="p">)</span>
+    <span class="n">ccs</span><span class="o">.</span><span class="n">CopyInformation</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ccs</span><span class="p">,</span> <span class="n">n_components</span></div>
+
+
+
+<div class="viewcode-block" id="find_diameters">
+<a class="viewcode-back" href="../../my_modules.html#SilentInfarctionSegmentationFLAIR.refinement.find_diameters">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">find_diameters</span><span class="p">(</span><span class="n">ccs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute minimum and maximum physical diameter of each connected</span>
+<span class="sd">    component.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ccs : SimpleITK.Image</span>
+<span class="sd">        Labeled connected components image.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    diameters : dict of tuple</span>
+<span class="sd">        Dictionary mapping each label to a tuple</span>
+<span class="sd">        ``(min_diameter, max_diameter)`` in millimeters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ccs_arr</span> <span class="o">=</span> <span class="n">get_array_from_image</span><span class="p">(</span><span class="n">ccs</span><span class="p">)</span>
+    <span class="n">spacing</span> <span class="o">=</span> <span class="n">get_info</span><span class="p">(</span><span class="n">ccs</span><span class="p">)[</span><span class="s2">&quot;spacing&quot;</span><span class="p">]</span>
+    <span class="n">diameters</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="n">slices</span> <span class="o">=</span> <span class="n">ndi</span><span class="o">.</span><span class="n">find_objects</span><span class="p">(</span><span class="n">ccs_arr</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">label_idx</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">slices</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="n">diams</span> <span class="o">=</span> <span class="p">[(</span><span class="n">sl</span><span class="o">.</span><span class="n">stop</span> <span class="o">-</span> <span class="n">sl</span><span class="o">.</span><span class="n">start</span><span class="p">)</span> <span class="o">*</span> <span class="n">sp</span> <span class="k">for</span> <span class="n">sl</span><span class="p">,</span> <span class="n">sp</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">spacing</span><span class="p">)]</span>
+        <span class="n">diameters</span><span class="p">[</span><span class="n">label_idx</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">diams</span><span class="p">),</span> <span class="nb">max</span><span class="p">(</span><span class="n">diams</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">diameters</span></div>
+
+
+<div class="viewcode-block" id="diameter_filter">
+<a class="viewcode-back" href="../../my_modules.html#SilentInfarctionSegmentationFLAIR.refinement.diameter_filter">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">diameter_filter</span><span class="p">(</span><span class="n">ccs</span><span class="p">,</span> <span class="n">lower_thr</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">upper_thr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Filter connected components based on their physical diameters.</span>
+
+<span class="sd">    A component is removed if its minimum diameter is below ``lower_thr`` or</span>
+<span class="sd">    its maximum diameter is above ``upper_thr``.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ccs : SimpleITK.Image</span>
+<span class="sd">        Labeled connected components image.</span>
+<span class="sd">    lower_thr : float or None, optional</span>
+<span class="sd">        Minimum allowed diameter (mm). If None, no lower bound is applied.</span>
+<span class="sd">    upper_thr : float or None, optional</span>
+<span class="sd">        Maximum allowed diameter (mm). If None, no upper bound is applied.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    points : pandas.Series</span>
+<span class="sd">        Series indexed by component label. Value is 1 if the component is</span>
+<span class="sd">        kept, 0 if removed.</span>
+<span class="sd">    n_components : int</span>
+<span class="sd">        Number of components remaining after filtering.</span>
+<span class="sd">    ccs_filtered : SimpleITK.Image</span>
+<span class="sd">        Labeled image after removing filtered components.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ccs_arr</span> <span class="o">=</span> <span class="n">get_array_from_image</span><span class="p">(</span><span class="n">ccs</span><span class="p">)</span>
+    <span class="n">spacing</span> <span class="o">=</span> <span class="n">get_info</span><span class="p">(</span><span class="n">ccs</span><span class="p">)[</span><span class="s2">&quot;spacing&quot;</span><span class="p">]</span>
+    <span class="n">diameters</span> <span class="o">=</span> <span class="n">find_diameters</span><span class="p">(</span><span class="n">ccs</span><span class="p">)</span>
+    <span class="n">removed</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="n">lower_thr</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">upper_thr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ccs</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">ccs_arr</span><span class="p">))</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="p">{}</span>
+
+    <span class="k">if</span> <span class="n">lower_thr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">lower_thr</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="n">upper_thr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">upper_thr</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ccs_arr</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">spacing</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">label_idx</span><span class="p">,</span> <span class="n">diams</span> <span class="ow">in</span> <span class="n">diameters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">min_d</span><span class="p">,</span> <span class="n">max_d</span> <span class="o">=</span> <span class="n">diams</span>
+        <span class="k">if</span> <span class="n">min_d</span> <span class="o">&lt;</span> <span class="n">lower_thr</span> <span class="ow">or</span> <span class="n">max_d</span> <span class="o">&gt;</span> <span class="n">upper_thr</span><span class="p">:</span>
+            <span class="n">removed</span><span class="p">[</span><span class="n">label_idx</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">min_d</span><span class="p">,</span> <span class="n">max_d</span><span class="p">)</span>
+
+    <span class="n">to_remove</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">removed</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="n">remove_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">ccs_arr</span><span class="p">,</span> <span class="n">to_remove</span><span class="p">)</span>
+    <span class="n">ccs_arr</span><span class="p">[</span><span class="n">remove_mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">ccs_filtered</span> <span class="o">=</span> <span class="n">get_image_from_array</span><span class="p">(</span><span class="n">ccs_arr</span><span class="p">)</span>
+    <span class="n">ccs_filtered</span><span class="o">.</span><span class="n">CopyInformation</span><span class="p">(</span><span class="n">ccs</span><span class="p">)</span>
+
+    <span class="n">n_components</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">diameters</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">removed</span><span class="p">)</span>
+
+    <span class="n">points</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span>
+        <span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="mi">0</span> <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">removed</span> <span class="k">else</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">diameters</span><span class="o">.</span><span class="n">keys</span><span class="p">()}</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">points</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span> <span class="n">ccs_filtered</span></div>
+
+
+<div class="viewcode-block" id="label_filter">
+<a class="viewcode-back" href="../../my_modules.html#SilentInfarctionSegmentationFLAIR.refinement.label_filter">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">label_filter</span><span class="p">(</span><span class="n">segm</span><span class="p">,</span> <span class="n">labels_to_remove</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">keywords_to_remove</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">labels_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Remove specific labels from a segmentation image.</span>
+
+<span class="sd">    Labels can be removed either by specifying their numeric values or by</span>
+<span class="sd">    providing keywords that match their textual descriptions.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    segm : SimpleITK.Image</span>
+<span class="sd">        Labeled segmentation image.</span>
+<span class="sd">    labels_to_remove : list of int, optional</span>
+<span class="sd">        List of numeric labels to remove. Default is None.</span>
+<span class="sd">    keywords_to_remove : list of str, optional</span>
+<span class="sd">        Keywords used to match label names in ``labels_dict``.</span>
+<span class="sd">    labels_dict : dict, optional</span>
+<span class="sd">        Mapping from numeric labels to textual descriptions. Required if</span>
+<span class="sd">        ``keywords_to_remove`` is provided.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    segm_filtered : SimpleITK.Image</span>
+<span class="sd">        Segmentation image after removing selected labels.</span>
+<span class="sd">    removed : dict</span>
+<span class="sd">        Dictionary mapping removed label names to the number of voxels</span>
+<span class="sd">        removed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">labels_to_remove</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">labels_to_remove</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">keywords_to_remove</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">keywords_to_remove</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="n">keywords_to_remove</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">labels_dict</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;If &#39;keywords_to_remove&#39; is specified, &#39;labels_dict&#39; &quot;</span>
+                <span class="s2">&quot;must also be provided.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">labels_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">kw</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">kw</span> <span class="ow">in</span> <span class="n">keywords_to_remove</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="n">labels_to_remove</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span>
+
+    <span class="n">segm_arr</span> <span class="o">=</span> <span class="n">get_array_from_image</span><span class="p">(</span><span class="n">segm</span><span class="p">)</span>
+    <span class="n">segm_arr_filtered</span> <span class="o">=</span> <span class="n">segm_arr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">labels_to_remove</span><span class="p">:</span>
+        <span class="n">segm_arr_filtered</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">segm_arr</span><span class="p">,</span> <span class="n">labels_to_remove</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">segm_filtered</span> <span class="o">=</span> <span class="n">get_image_from_array</span><span class="p">(</span><span class="n">segm_arr_filtered</span><span class="p">,</span> <span class="n">segm</span><span class="p">)</span>
+
+    <span class="n">removed</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels_to_remove</span><span class="p">:</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">segm_arr</span> <span class="o">==</span> <span class="n">label</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">labels_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels_dict</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">labels_dict</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+            <span class="n">removed</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">count</span>
+
+    <span class="k">return</span> <span class="n">segm_filtered</span><span class="p">,</span> <span class="n">removed</span></div>
+
+
+<div class="viewcode-block" id="pve_filter">
+<a class="viewcode-back" href="../../my_modules.html#SilentInfarctionSegmentationFLAIR.refinement.pve_filter">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">pve_filter</span><span class="p">(</span><span class="n">ccs</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span> <span class="n">pves</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Assign points to connected components based on predominant partial</span>
+<span class="sd">    volume estimates (PVE).</span>
+
+<span class="sd">    Each component receives a score depending on whether white matter (WM),</span>
+<span class="sd">    gray matter (GM), or cerebrospinal fluid (CSF) is predominant in its</span>
+<span class="sd">    region.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ccs : SimpleITK.Image</span>
+<span class="sd">        Labeled connected components image.</span>
+<span class="sd">    n_components : int</span>
+<span class="sd">        Number of connected components in ``ccs``.</span>
+<span class="sd">    pves : list of SimpleITK.Image</span>
+<span class="sd">        List of PVE images in the order [WM, GM, CSF].</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    points : pandas.Series</span>
+<span class="sd">        Score assigned to each component:</span>
+<span class="sd">        - +2 → WM predominant</span>
+<span class="sd">        - +1 → GM predominant</span>
+<span class="sd">        -  0 → CSF predominant</span>
+<span class="sd">        - -2 → all PVEs equal to zero</span>
+<span class="sd">    counts : tuple of int</span>
+<span class="sd">        Tuple ``(n_wm, n_gm, n_csf, n_zeros)`` with the number of</span>
+<span class="sd">        components in each category.</span>
+<span class="sd">    pve_sums : pandas.DataFrame</span>
+<span class="sd">        Mean PVE values for WM, GM, and CSF for each component.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pve_wm</span><span class="p">,</span> <span class="n">pve_gm</span><span class="p">,</span> <span class="n">pve_csf</span> <span class="o">=</span> <span class="n">pves</span>
+
+    <span class="n">filt</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">LabelStatisticsImageFilter</span><span class="p">()</span>
+    <span class="n">filt</span><span class="o">.</span><span class="n">Execute</span><span class="p">(</span><span class="n">pve_wm</span><span class="p">,</span> <span class="n">ccs</span><span class="p">)</span>
+    <span class="n">pve_wm_means</span> <span class="o">=</span> <span class="p">[</span><span class="n">filt</span><span class="o">.</span><span class="n">GetMean</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+
+    <span class="n">filt</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">LabelStatisticsImageFilter</span><span class="p">()</span>
+    <span class="n">filt</span><span class="o">.</span><span class="n">Execute</span><span class="p">(</span><span class="n">pve_gm</span><span class="p">,</span> <span class="n">ccs</span><span class="p">)</span>
+    <span class="n">pve_gm_means</span> <span class="o">=</span> <span class="p">[</span><span class="n">filt</span><span class="o">.</span><span class="n">GetMean</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+
+    <span class="n">filt</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">LabelStatisticsImageFilter</span><span class="p">()</span>
+    <span class="n">filt</span><span class="o">.</span><span class="n">Execute</span><span class="p">(</span><span class="n">pve_csf</span><span class="p">,</span> <span class="n">ccs</span><span class="p">)</span>
+    <span class="n">pve_csf_means</span> <span class="o">=</span> <span class="p">[</span><span class="n">filt</span><span class="o">.</span><span class="n">GetMean</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+
+    <span class="n">pve_sums</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;pve_wm&quot;</span><span class="p">:</span> <span class="n">pve_wm_means</span><span class="p">,</span>
+            <span class="s2">&quot;pve_gm&quot;</span><span class="p">:</span> <span class="n">pve_gm_means</span><span class="p">,</span>
+            <span class="s2">&quot;pve_csf&quot;</span><span class="p">:</span> <span class="n">pve_csf_means</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="n">index</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="n">max_columns</span> <span class="o">=</span> <span class="n">pve_sums</span><span class="o">.</span><span class="n">idxmax</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">pve_sums</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="n">n_wm</span> <span class="o">=</span> <span class="n">n_gm</span> <span class="o">=</span> <span class="n">n_csf</span> <span class="o">=</span> <span class="n">n_zeros</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">pve_sums</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="n">pve_sums</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">row</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">points</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span>
+            <span class="n">n_zeros</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">max_columns</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;pve_wm&quot;</span><span class="p">:</span>
+            <span class="n">points</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+            <span class="n">n_wm</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">max_columns</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;pve_gm&quot;</span><span class="p">:</span>
+            <span class="n">points</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">n_gm</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">points</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">n_csf</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">return</span> <span class="n">points</span><span class="p">,</span> <span class="p">(</span><span class="n">n_wm</span><span class="p">,</span> <span class="n">n_gm</span><span class="p">,</span> <span class="n">n_csf</span><span class="p">,</span> <span class="n">n_zeros</span><span class="p">),</span> <span class="n">pve_sums</span></div>
+
+
+
+<div class="viewcode-block" id="nearly_isotropic_kernel">
+<a class="viewcode-back" href="../../my_modules.html#SilentInfarctionSegmentationFLAIR.refinement.nearly_isotropic_kernel">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">nearly_isotropic_kernel</span><span class="p">(</span><span class="n">spacing</span><span class="p">,</span> <span class="n">desired_radius</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute a nearly isotropic kernel radius in voxel units.</span>
+
+<span class="sd">    Converts a desired physical radius (in mm) into voxel units for each</span>
+<span class="sd">    dimension, based on the image spacing.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    spacing : sequence of float</span>
+<span class="sd">        Voxel spacing (e.g., (sx, sy, sz)).</span>
+<span class="sd">    desired_radius : float, optional</span>
+<span class="sd">        Desired physical radius in millimeters. Default is 1.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    kernel : list of int</span>
+<span class="sd">        Kernel radius in voxels for each dimension.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">kernel</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">spacing</span><span class="p">:</span>
+        <span class="n">kernel</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">desired_radius</span> <span class="o">/</span> <span class="n">s</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">kernel</span></div>
+
+
+<div class="viewcode-block" id="surrounding_filter">
+<a class="viewcode-back" href="../../my_modules.html#SilentInfarctionSegmentationFLAIR.refinement.surrounding_filter">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">surrounding_filter</span><span class="p">(</span><span class="n">ccs</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span> <span class="n">pves</span><span class="p">,</span> <span class="n">dilation_radius</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Assign points to connected components based on surrounding tissue</span>
+<span class="sd">    composition.</span>
+
+<span class="sd">    For each lesion, the surrounding region is defined by morphological</span>
+<span class="sd">    dilation. Each voxel in this region is assigned to the closest lesion</span>
+<span class="sd">    using a Voronoi-like partition. Mean PVE values of WM, GM, and CSF are</span>
+<span class="sd">    then computed for each lesion&#39;s surrounding area.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ccs : SimpleITK.Image</span>
+<span class="sd">        Labeled connected components image.</span>
+<span class="sd">    n_components : int</span>
+<span class="sd">        Number of connected components in ``ccs``.</span>
+<span class="sd">    pves : list of SimpleITK.Image</span>
+<span class="sd">        List of PVE images in the order [WM, GM, CSF].</span>
+<span class="sd">    dilation_radius : float, optional</span>
+<span class="sd">        Physical radius (mm) used for morphological dilation. Default is 1.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    points : pandas.Series</span>
+<span class="sd">        Score assigned to each component:</span>
+<span class="sd">        - +2 → WM predominant in surrounding region</span>
+<span class="sd">        - +1 → GM predominant</span>
+<span class="sd">        -  0 → CSF predominant</span>
+<span class="sd">        - -2 → all PVEs equal to zero</span>
+<span class="sd">    counts : tuple of int</span>
+<span class="sd">        Tuple ``(n_wm, n_gm, n_csf, n_zeros)`` with the number of components</span>
+<span class="sd">        in each category.</span>
+<span class="sd">    pve_sums : pandas.DataFrame</span>
+<span class="sd">        Mean PVE values for WM, GM, and CSF in the surrounding region.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pve_wm</span><span class="p">,</span> <span class="n">pve_gm</span><span class="p">,</span> <span class="n">pve_csf</span> <span class="o">=</span> <span class="n">pves</span>
+
+    <span class="n">lesion_mask</span> <span class="o">=</span> <span class="n">ccs</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="n">kernel</span> <span class="o">=</span> <span class="n">nearly_isotropic_kernel</span><span class="p">(</span><span class="n">ccs</span><span class="o">.</span><span class="n">GetSpacing</span><span class="p">(),</span> <span class="n">dilation_radius</span><span class="p">)</span>
+
+    <span class="n">dilated</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">BinaryDilate</span><span class="p">(</span>
+        <span class="n">lesion_mask</span><span class="p">,</span>
+        <span class="n">kernelRadius</span><span class="o">=</span><span class="n">kernel</span><span class="p">,</span>
+        <span class="n">kernelType</span><span class="o">=</span><span class="n">sitk</span><span class="o">.</span><span class="n">sitkBox</span>
+    <span class="p">)</span>
+    <span class="n">surround_mask</span> <span class="o">=</span> <span class="n">dilated</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">lesion_mask</span>
+
+    <span class="n">ccs_arr</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">GetArrayFromImage</span><span class="p">(</span><span class="n">ccs</span><span class="p">)</span>
+    <span class="n">surround_arr</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">GetArrayFromImage</span><span class="p">(</span><span class="n">surround_mask</span><span class="p">)</span>
+
+    <span class="n">seed_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">ccs_arr</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">seed_labels</span> <span class="o">=</span> <span class="n">ccs_arr</span><span class="p">[</span><span class="n">ccs_arr</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">target_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">surround_arr</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">tree</span> <span class="o">=</span> <span class="n">cKDTree</span><span class="p">(</span><span class="n">seed_coords</span><span class="p">)</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">indices</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">target_coords</span><span class="p">)</span>
+
+    <span class="n">voronoi_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">ccs_arr</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">ccs_arr</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">voronoi_arr</span><span class="p">[</span>
+        <span class="n">target_coords</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="n">target_coords</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="n">target_coords</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="n">seed_labels</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span>
+
+    <span class="n">voronoi_map</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">GetImageFromArray</span><span class="p">(</span><span class="n">voronoi_arr</span><span class="p">)</span>
+    <span class="n">voronoi_map</span><span class="o">.</span><span class="n">CopyInformation</span><span class="p">(</span><span class="n">ccs</span><span class="p">)</span>
+
+    <span class="n">surround_ccs</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">Mask</span><span class="p">(</span>
+        <span class="n">voronoi_map</span><span class="p">,</span>
+        <span class="n">sitk</span><span class="o">.</span><span class="n">Cast</span><span class="p">(</span><span class="n">surround_mask</span><span class="p">,</span> <span class="n">sitk</span><span class="o">.</span><span class="n">sitkUInt8</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">filt</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">LabelStatisticsImageFilter</span><span class="p">()</span>
+    <span class="n">filt</span><span class="o">.</span><span class="n">Execute</span><span class="p">(</span><span class="n">pve_wm</span><span class="p">,</span> <span class="n">surround_ccs</span><span class="p">)</span>
+    <span class="n">pve_wm_means</span> <span class="o">=</span> <span class="p">[</span><span class="n">filt</span><span class="o">.</span><span class="n">GetMean</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+
+    <span class="n">filt</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">LabelStatisticsImageFilter</span><span class="p">()</span>
+    <span class="n">filt</span><span class="o">.</span><span class="n">Execute</span><span class="p">(</span><span class="n">pve_gm</span><span class="p">,</span> <span class="n">surround_ccs</span><span class="p">)</span>
+    <span class="n">pve_gm_means</span> <span class="o">=</span> <span class="p">[</span><span class="n">filt</span><span class="o">.</span><span class="n">GetMean</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+
+    <span class="n">filt</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">LabelStatisticsImageFilter</span><span class="p">()</span>
+    <span class="n">filt</span><span class="o">.</span><span class="n">Execute</span><span class="p">(</span><span class="n">pve_csf</span><span class="p">,</span> <span class="n">surround_ccs</span><span class="p">)</span>
+    <span class="n">pve_csf_means</span> <span class="o">=</span> <span class="p">[</span><span class="n">filt</span><span class="o">.</span><span class="n">GetMean</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+
+    <span class="n">pve_sums</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;pve_wm&quot;</span><span class="p">:</span> <span class="n">pve_wm_means</span><span class="p">,</span>
+            <span class="s2">&quot;pve_gm&quot;</span><span class="p">:</span> <span class="n">pve_gm_means</span><span class="p">,</span>
+            <span class="s2">&quot;pve_csf&quot;</span><span class="p">:</span> <span class="n">pve_csf_means</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="n">index</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="n">points</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">pve_sums</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">n_wm</span> <span class="o">=</span> <span class="n">n_gm</span> <span class="o">=</span> <span class="n">n_csf</span> <span class="o">=</span> <span class="n">n_zeros</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">max_columns</span> <span class="o">=</span> <span class="n">pve_sums</span><span class="o">.</span><span class="n">idxmax</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">pve_sums</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="n">pve_sums</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">row</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">points</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span>
+            <span class="n">n_zeros</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">max_columns</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;pve_wm&quot;</span><span class="p">:</span>
+            <span class="n">points</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>
+            <span class="n">n_wm</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">max_columns</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;pve_gm&quot;</span><span class="p">:</span>
+            <span class="n">points</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">n_gm</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">points</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">n_csf</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">return</span> <span class="n">points</span><span class="p">,</span> <span class="p">(</span><span class="n">n_wm</span><span class="p">,</span> <span class="n">n_gm</span><span class="p">,</span> <span class="n">n_csf</span><span class="p">,</span> <span class="n">n_zeros</span><span class="p">),</span> <span class="n">pve_sums</span></div>
+
+
+<div class="viewcode-block" id="extend_lesions">
+<a class="viewcode-back" href="../../my_modules.html#SilentInfarctionSegmentationFLAIR.refinement.extend_lesions">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">extend_lesions</span><span class="p">(</span><span class="n">ccs</span><span class="p">,</span> <span class="n">n_components</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">n_std</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">dilation_radius</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extend lesion regions by adding surrounding voxels whose intensity</span>
+<span class="sd">    exceeds a lesion‑specific threshold.</span>
+
+<span class="sd">    The surrounding region is defined by morphological dilation. Each voxel</span>
+<span class="sd">    in this region is assigned to the closest lesion using a Voronoi-like</span>
+<span class="sd">    partition. For each lesion, a threshold is computed as:</span>
+
+<span class="sd">    ``threshold_i = mean_i - n_std * std_i``</span>
+
+<span class="sd">    Voxels in the surrounding region whose intensity exceeds this threshold</span>
+<span class="sd">    are added to the lesion.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ccs : SimpleITK.Image</span>
+<span class="sd">        Labeled connected components image (lesions).</span>
+<span class="sd">    n_components : int</span>
+<span class="sd">        Number of connected components in ``ccs``.</span>
+<span class="sd">    image : SimpleITK.Image</span>
+<span class="sd">        Original intensity image used to compute lesion statistics.</span>
+<span class="sd">    n_std : float, optional</span>
+<span class="sd">        Number of standard deviations subtracted from the mean to compute</span>
+<span class="sd">        the threshold. Lower values produce more aggressive extension.</span>
+<span class="sd">        Default is 1.</span>
+<span class="sd">    dilation_radius : float, optional</span>
+<span class="sd">        Physical radius (mm) used for morphological dilation. Default is 1.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    extended_lesion : SimpleITK.Image</span>
+<span class="sd">        Binary image containing the original and extended lesions.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - Each lesion receives its own adaptive threshold.</span>
+<span class="sd">    - Voronoi assignment ensures each surrounding voxel is associated with</span>
+<span class="sd">      the closest lesion.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">lesion_mask</span> <span class="o">=</span> <span class="n">ccs</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="n">kernel</span> <span class="o">=</span> <span class="n">nearly_isotropic_kernel</span><span class="p">(</span><span class="n">ccs</span><span class="o">.</span><span class="n">GetSpacing</span><span class="p">(),</span> <span class="n">dilation_radius</span><span class="p">)</span>
+
+    <span class="n">dilated</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">BinaryDilate</span><span class="p">(</span>
+        <span class="n">lesion_mask</span><span class="p">,</span>
+        <span class="n">kernelRadius</span><span class="o">=</span><span class="n">kernel</span><span class="p">,</span>
+        <span class="n">kernelType</span><span class="o">=</span><span class="n">sitk</span><span class="o">.</span><span class="n">sitkBox</span>
+    <span class="p">)</span>
+    <span class="n">surround_mask</span> <span class="o">=</span> <span class="n">dilated</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">lesion_mask</span>
+
+    <span class="n">ccs_arr</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">GetArrayFromImage</span><span class="p">(</span><span class="n">ccs</span><span class="p">)</span>
+    <span class="n">surround_arr</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">GetArrayFromImage</span><span class="p">(</span><span class="n">surround_mask</span><span class="p">)</span>
+
+    <span class="n">seed_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">ccs_arr</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">seed_labels</span> <span class="o">=</span> <span class="n">ccs_arr</span><span class="p">[</span><span class="n">ccs_arr</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">target_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span><span class="n">surround_arr</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">tree</span> <span class="o">=</span> <span class="n">cKDTree</span><span class="p">(</span><span class="n">seed_coords</span><span class="p">)</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">indices</span> <span class="o">=</span> <span class="n">tree</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">target_coords</span><span class="p">)</span>
+
+    <span class="n">voronoi_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">ccs_arr</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">ccs_arr</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">voronoi_arr</span><span class="p">[</span>
+        <span class="n">target_coords</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">],</span>
+        <span class="n">target_coords</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span>
+        <span class="n">target_coords</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="n">seed_labels</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span>
+
+    <span class="n">voronoi_map</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">GetImageFromArray</span><span class="p">(</span><span class="n">voronoi_arr</span><span class="p">)</span>
+    <span class="n">voronoi_map</span><span class="o">.</span><span class="n">CopyInformation</span><span class="p">(</span><span class="n">ccs</span><span class="p">)</span>
+
+    <span class="n">surround_ccs</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">Mask</span><span class="p">(</span>
+        <span class="n">voronoi_map</span><span class="p">,</span>
+        <span class="n">sitk</span><span class="o">.</span><span class="n">Cast</span><span class="p">(</span><span class="n">surround_mask</span><span class="p">,</span> <span class="n">sitk</span><span class="o">.</span><span class="n">sitkUInt8</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">filt</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">LabelStatisticsImageFilter</span><span class="p">()</span>
+    <span class="n">filt</span><span class="o">.</span><span class="n">Execute</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">ccs</span><span class="p">)</span>
+
+    <span class="n">means</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">filt</span><span class="o">.</span><span class="n">GetMean</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
+    <span class="n">stds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">filt</span><span class="o">.</span><span class="n">GetSigma</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_components</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)])</span>
+    <span class="n">thrs</span> <span class="o">=</span> <span class="n">means</span> <span class="o">-</span> <span class="n">n_std</span> <span class="o">*</span> <span class="n">stds</span>
+
+    <span class="n">surround_arr</span> <span class="o">=</span> <span class="n">get_array_from_image</span><span class="p">(</span><span class="n">surround_ccs</span><span class="p">)</span>
+    <span class="n">thrs_with_zero</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([[</span><span class="mi">0</span><span class="p">],</span> <span class="n">thrs</span><span class="p">])</span>
+    <span class="n">thrs_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">thrs_with_zero</span><span class="p">,</span> <span class="n">surround_arr</span><span class="p">)</span>
+
+    <span class="n">image_arr</span> <span class="o">=</span> <span class="n">get_array_from_image</span><span class="p">(</span><span class="n">sitk</span><span class="o">.</span><span class="n">Mask</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">surround_mask</span><span class="p">))</span>
+    <span class="n">extended_lesion_arr</span> <span class="o">=</span> <span class="p">(</span><span class="n">image_arr</span> <span class="o">&gt;</span> <span class="n">thrs_arr</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+    <span class="n">extended_lesion</span> <span class="o">=</span> <span class="n">get_image_from_array</span><span class="p">(</span>
+        <span class="n">extended_lesion_arr</span><span class="p">,</span>
+        <span class="n">lesion_mask</span>
+    <span class="p">)</span>
+    <span class="n">extended_lesion</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">sitk</span><span class="o">.</span><span class="n">Cast</span><span class="p">(</span><span class="n">lesion_mask</span><span class="p">,</span> <span class="n">sitk</span><span class="o">.</span><span class="n">sitkUInt8</span><span class="p">)</span> <span class="o">|</span> <span class="n">extended_lesion</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">extended_lesion</span></div>
+
+
+<div class="viewcode-block" id="evaluate_region_wise">
+<a class="viewcode-back" href="../../my_modules.html#SilentInfarctionSegmentationFLAIR.refinement.evaluate_region_wise">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">evaluate_region_wise</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">gt</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute region‑wise detection metrics between a predicted mask and</span>
+<span class="sd">    ground‑truth lesions.</span>
+
+<span class="sd">    Metrics follow the definitions in:</span>
+<span class="sd">    Cabezas et al., *Automatic multiple sclerosis lesion detection in brain</span>
+<span class="sd">    MRI by FLAIR thresholding* (2014).</span>
+
+<span class="sd">    A lesion is considered detected if at least one voxel of the predicted</span>
+<span class="sd">    mask overlaps with it.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mask : SimpleITK.Image</span>
+<span class="sd">        Binary prediction mask to evaluate.</span>
+<span class="sd">    gt : SimpleITK.Image</span>
+<span class="sd">        Binary ground‑truth lesion mask.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    metrics : dict</span>
+<span class="sd">        Dictionary containing:</span>
+<span class="sd">        - ``rw-TPF`` : True Positive Fraction (detected GT lesions / total GT)</span>
+<span class="sd">        - ``rw-FPF`` : False Positive Fraction (spurious predicted lesions /</span>
+<span class="sd">                       total predicted lesions)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">gt_arr</span> <span class="o">=</span> <span class="n">get_array_from_image</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span>
+    <span class="n">mask_arr</span> <span class="o">=</span> <span class="n">get_array_from_image</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+
+    <span class="n">ccs_mask</span><span class="p">,</span> <span class="n">n_mask</span> <span class="o">=</span> <span class="n">connected_components</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
+    <span class="n">ccs_mask_arr</span> <span class="o">=</span> <span class="n">get_array_from_image</span><span class="p">(</span><span class="n">ccs_mask</span><span class="p">)</span>
+
+    <span class="n">ccs_gt</span><span class="p">,</span> <span class="n">n_gt</span> <span class="o">=</span> <span class="n">connected_components</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span>
+    <span class="n">ccs_gt_arr</span> <span class="o">=</span> <span class="n">get_array_from_image</span><span class="p">(</span><span class="n">ccs_gt</span><span class="p">)</span>
+
+    <span class="c1"># GT lesions that intersect the predicted mask</span>
+    <span class="n">gt_in_mask</span> <span class="o">=</span> <span class="n">ccs_gt_arr</span><span class="p">[</span><span class="n">mask_arr</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">tp</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">gt_in_mask</span><span class="p">[</span><span class="n">gt_in_mask</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]))</span>
+
+    <span class="c1"># Predicted lesions that do NOT intersect any GT lesion</span>
+    <span class="n">mask_in_gt</span> <span class="o">=</span> <span class="n">ccs_mask_arr</span><span class="p">[</span><span class="n">gt_arr</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">mask_not_touching_gt</span> <span class="o">=</span> <span class="n">ccs_mask_arr</span><span class="p">[</span>
+        <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">ccs_mask_arr</span><span class="p">,</span> <span class="n">mask_in_gt</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">fp</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">mask_not_touching_gt</span><span class="p">[</span><span class="n">mask_not_touching_gt</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]))</span>
+
+    <span class="n">metrics</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;rw-TPF&quot;</span><span class="p">:</span> <span class="n">tp</span> <span class="o">/</span> <span class="n">n_gt</span> <span class="k">if</span> <span class="n">n_gt</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="s2">&quot;rw-FPF&quot;</span><span class="p">:</span> <span class="n">fp</span> <span class="o">/</span> <span class="n">n_mask</span> <span class="k">if</span> <span class="n">n_mask</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">metrics</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Davide Bracali.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

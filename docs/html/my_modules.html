@@ -1,0 +1,1015 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modules &mdash; Silent Infarction FLAIR Segmentation 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Scripts" href="my_scripts.html" />
+    <link rel="prev" title="Silent Infarction FLAIR Segmentation documentation" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Silent Infarction FLAIR Segmentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Modules</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-SilentInfarctionSegmentationFLAIR.histograms">SilentInfarctionSegmentationFLAIR.histograms module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.histograms.gaussian_smooth_histogram"><code class="docutils literal notranslate"><span class="pre">gaussian_smooth_histogram()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.histograms.histogram_stats"><code class="docutils literal notranslate"><span class="pre">histogram_stats()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.histograms.mode_and_rhwhm"><code class="docutils literal notranslate"><span class="pre">mode_and_rhwhm()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.histograms.plot_histogram"><code class="docutils literal notranslate"><span class="pre">plot_histogram()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.histograms.plot_multiple_histograms"><code class="docutils literal notranslate"><span class="pre">plot_multiple_histograms()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-SilentInfarctionSegmentationFLAIR.refinement">SilentInfarctionSegmentationFLAIR.refinement module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.refinement.connected_components"><code class="docutils literal notranslate"><span class="pre">connected_components()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.refinement.diameter_filter"><code class="docutils literal notranslate"><span class="pre">diameter_filter()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.refinement.evaluate_region_wise"><code class="docutils literal notranslate"><span class="pre">evaluate_region_wise()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.refinement.extend_lesions"><code class="docutils literal notranslate"><span class="pre">extend_lesions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.refinement.find_diameters"><code class="docutils literal notranslate"><span class="pre">find_diameters()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.refinement.label_filter"><code class="docutils literal notranslate"><span class="pre">label_filter()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.refinement.nearly_isotropic_kernel"><code class="docutils literal notranslate"><span class="pre">nearly_isotropic_kernel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.refinement.pve_filter"><code class="docutils literal notranslate"><span class="pre">pve_filter()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.refinement.surrounding_filter"><code class="docutils literal notranslate"><span class="pre">surrounding_filter()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-SilentInfarctionSegmentationFLAIR.segmentation">SilentInfarctionSegmentationFLAIR.segmentation module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.segmentation.apply_threshold"><code class="docutils literal notranslate"><span class="pre">apply_threshold()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.segmentation.evaluate_voxel_wise"><code class="docutils literal notranslate"><span class="pre">evaluate_voxel_wise()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.segmentation.get_mask_from_pve"><code class="docutils literal notranslate"><span class="pre">get_mask_from_pve()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.segmentation.get_mask_from_segmentation"><code class="docutils literal notranslate"><span class="pre">get_mask_from_segmentation()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-SilentInfarctionSegmentationFLAIR.utils">SilentInfarctionSegmentationFLAIR.utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.DimensionError"><code class="docutils literal notranslate"><span class="pre">DimensionError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.check_3d"><code class="docutils literal notranslate"><span class="pre">check_3d()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.cliffs_delta"><code class="docutils literal notranslate"><span class="pre">cliffs_delta()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.downsample_array"><code class="docutils literal notranslate"><span class="pre">downsample_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.gaussian_transform"><code class="docutils literal notranslate"><span class="pre">gaussian_transform()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.get_array_from_image"><code class="docutils literal notranslate"><span class="pre">get_array_from_image()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.get_image_from_array"><code class="docutils literal notranslate"><span class="pre">get_image_from_array()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.get_info"><code class="docutils literal notranslate"><span class="pre">get_info()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.get_paths_df"><code class="docutils literal notranslate"><span class="pre">get_paths_df()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.label_names"><code class="docutils literal notranslate"><span class="pre">label_names()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.normalize"><code class="docutils literal notranslate"><span class="pre">normalize()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.orient_image"><code class="docutils literal notranslate"><span class="pre">orient_image()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.plot_image"><code class="docutils literal notranslate"><span class="pre">plot_image()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.progress_bar"><code class="docutils literal notranslate"><span class="pre">progress_bar()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.resample_to_reference"><code class="docutils literal notranslate"><span class="pre">resample_to_reference()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.train_val_test_split"><code class="docutils literal notranslate"><span class="pre">train_val_test_split()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="my_scripts.html">Scripts</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Silent Infarction FLAIR Segmentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Modules</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/my_modules.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="modules">
+<h1>Modules<a class="headerlink" href="#modules" title="Link to this heading"></a></h1>
+<section id="module-SilentInfarctionSegmentationFLAIR.histograms">
+<span id="silentinfarctionsegmentationflair-histograms-module"></span><h2>SilentInfarctionSegmentationFLAIR.histograms module<a class="headerlink" href="#module-SilentInfarctionSegmentationFLAIR.histograms" title="Link to this heading"></a></h2>
+<p>Created on 2025-08-11 17:18:09</p>
+<p>&#64;author: david</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.histograms.gaussian_smooth_histogram">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.histograms.</span></span><span class="sig-name descname"><span class="pre">gaussian_smooth_histogram</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/histograms.html#gaussian_smooth_histogram"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.histograms.gaussian_smooth_histogram" title="Link to this definition"></a></dt>
+<dd><p>Smooth a histogram using a Gaussian kernel.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>hist</strong> (<em>tuple</em>) – Tuple <code class="docutils literal notranslate"><span class="pre">(counts,</span> <span class="pre">bin_edges)</span></code> from <code class="docutils literal notranslate"><span class="pre">np.histogram</span></code>.</p></li>
+<li><p><strong>sigma</strong> (<em>float</em><em>, </em><em>optional</em>) – Standard deviation of the Gaussian kernel.</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em><em>, </em><em>optional</em>) – Axis on which to draw.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>smooth_hist</strong> – Smoothed histogram <code class="docutils literal notranslate"><span class="pre">(counts,</span> <span class="pre">bin_edges)</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.histograms.histogram_stats">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.histograms.</span></span><span class="sig-name descname"><span class="pre">histogram_stats</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">75</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/histograms.html#histogram_stats"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.histograms.histogram_stats" title="Link to this definition"></a></dt>
+<dd><p>Compute descriptive statistics from a histogram.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>hist</strong> (<em>tuple</em>) – Tuple <code class="docutils literal notranslate"><span class="pre">(counts,</span> <span class="pre">bin_edges)</span></code> from <code class="docutils literal notranslate"><span class="pre">np.histogram</span></code>.</p></li>
+<li><p><strong>q1</strong> (<em>float</em><em>, </em><em>optional</em>) – First percentile (default 25).</p></li>
+<li><p><strong>q2</strong> (<em>float</em><em>, </em><em>optional</em>) – Second percentile (default 75).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">(mean,</span> <span class="pre">p1,</span> <span class="pre">p2,</span> <span class="pre">variance,</span> <span class="pre">skewness,</span> <span class="pre">kurtosis)</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.histograms.mode_and_rhwhm">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.histograms.</span></span><span class="sig-name descname"><span class="pre">mode_and_rhwhm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hist</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/histograms.html#mode_and_rhwhm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.histograms.mode_and_rhwhm" title="Link to this definition"></a></dt>
+<dd><p>Compute the mode and right-side half-width at half-maximum (HWHM).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>hist</strong> (<em>tuple</em>) – Tuple <code class="docutils literal notranslate"><span class="pre">(counts,</span> <span class="pre">bin_edges)</span></code> from <code class="docutils literal notranslate"><span class="pre">np.histogram</span></code>.</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em><em>, </em><em>optional</em>) – Axis on which to draw.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>mode</strong> (<em>float</em>) – Most frequent gray level.</p></li>
+<li><p><strong>rhwhm</strong> (<em>float</em>) – Right-side half-width at half-maximum.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.histograms.plot_histogram">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.histograms.</span></span><span class="sig-name descname"><span class="pre">plot_histogram</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Gray</span> <span class="pre">level</span> <span class="pre">histogram'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_bkg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">downsampling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/histograms.html#plot_histogram"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.histograms.plot_histogram" title="Link to this definition"></a></dt>
+<dd><p>Plot the histogram of a gray‑scale 3D SimpleITK image.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> (<em>SimpleITK.Image</em>) – Input image.</p></li>
+<li><p><strong>bins</strong> (<em>int</em><em> or </em><em>str</em><em>, </em><em>optional</em>) – Number of bins or binning strategy. If None, uses the maximum
+gray level.</p></li>
+<li><p><strong>title</strong> (<em>str</em><em>, </em><em>optional</em>) – Title of the plot.</p></li>
+<li><p><strong>save_path</strong> (<em>str</em><em>, </em><em>optional</em>) – Path where the figure is saved.</p></li>
+<li><p><strong>no_bkg</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, exclude gray level 0.</p></li>
+<li><p><strong>show</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to display the plot.</p></li>
+<li><p><strong>normalize</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, normalize histogram counts.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em><em>, </em><em>optional</em>) – Transparency of the bars.</p></li>
+<li><p><strong>downsampling</strong> (<em>float</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Percentage of voxels to sample.</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em><em>, </em><em>optional</em>) – Axis on which to draw.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>hist</strong> – Tuple <code class="docutils literal notranslate"><span class="pre">(counts,</span> <span class="pre">bin_edges)</span></code> from <code class="docutils literal notranslate"><span class="pre">np.histogram</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.histograms.plot_multiple_histograms">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.histograms.</span></span><span class="sig-name descname"><span class="pre">plot_multiple_histograms</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">images</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Gray</span> <span class="pre">level</span> <span class="pre">histograms'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">legend_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">no_bkg</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">downsampling</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/histograms.html#plot_multiple_histograms"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.histograms.plot_multiple_histograms" title="Link to this definition"></a></dt>
+<dd><p>Plot histograms for multiple 3D SimpleITK images.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>images</strong> (<em>list</em><em> of </em><em>SimpleITK.Image</em>) – Images to process.</p></li>
+<li><p><strong>bins</strong> (<em>int</em><em>, </em><em>list</em><em>, or </em><em>None</em>) – Number of bins. If list, must match <code class="docutils literal notranslate"><span class="pre">images</span></code> length.</p></li>
+<li><p><strong>labels</strong> (<em>list</em><em> of </em><em>str</em><em>, </em><em>optional</em>) – Labels for each histogram.</p></li>
+<li><p><strong>title</strong> (<em>str</em><em>, </em><em>optional</em>) – Plot title.</p></li>
+<li><p><strong>legend_title</strong> (<em>str</em><em>, </em><em>optional</em>) – Title of the legend.</p></li>
+<li><p><strong>save_path</strong> (<em>str</em><em>, </em><em>optional</em>) – Path where the figure is saved.</p></li>
+<li><p><strong>no_bkg</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, exclude gray level 0.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em><em>, </em><em>optional</em>) – Transparency of bars.</p></li>
+<li><p><strong>normalize</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, normalize histogram counts.</p></li>
+<li><p><strong>downsampling</strong> (<em>float</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Percentage of voxels to sample.</p></li>
+<li><p><strong>show</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to display the plot.</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em><em>, </em><em>optional</em>) – Axis on which to draw.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>hist_tables</strong> – List of histograms <code class="docutils literal notranslate"><span class="pre">(counts,</span> <span class="pre">bin_edges)</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list of tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-SilentInfarctionSegmentationFLAIR.refinement">
+<span id="silentinfarctionsegmentationflair-refinement-module"></span><h2>SilentInfarctionSegmentationFLAIR.refinement module<a class="headerlink" href="#module-SilentInfarctionSegmentationFLAIR.refinement" title="Link to this heading"></a></h2>
+<p>Created on 2025-08-13 13:41:50</p>
+<p>&#64;author: david</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.refinement.connected_components">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.refinement.</span></span><span class="sig-name descname"><span class="pre">connected_components</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">connectivity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">26</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/refinement.html#connected_components"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.refinement.connected_components" title="Link to this definition"></a></dt>
+<dd><p>Compute connected components in a binary image.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> (<em>SimpleITK.Image</em>) – Binary input image (0 = background, 1 = foreground).</p></li>
+<li><p><strong>connectivity</strong> (<em>int</em><em>, </em><em>optional</em>) – Connectivity type: 6 (faces), 18 (faces + edges),
+26 (faces + edges + corners). Default is 26.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>ccs</strong> (<em>SimpleITK.Image</em>) – Labeled image where each connected component has a unique
+integer label.</p></li>
+<li><p><strong>n_components</strong> (<em>int</em>) – Number of connected components (excluding background).</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.refinement.diameter_filter">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.refinement.</span></span><span class="sig-name descname"><span class="pre">diameter_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ccs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower_thr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper_thr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/refinement.html#diameter_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.refinement.diameter_filter" title="Link to this definition"></a></dt>
+<dd><p>Filter connected components based on their physical diameters.</p>
+<p>A component is removed if its minimum diameter is below <code class="docutils literal notranslate"><span class="pre">lower_thr</span></code> or
+its maximum diameter is above <code class="docutils literal notranslate"><span class="pre">upper_thr</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ccs</strong> (<em>SimpleITK.Image</em>) – Labeled connected components image.</p></li>
+<li><p><strong>lower_thr</strong> (<em>float</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Minimum allowed diameter (mm). If None, no lower bound is applied.</p></li>
+<li><p><strong>upper_thr</strong> (<em>float</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Maximum allowed diameter (mm). If None, no upper bound is applied.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>points</strong> (<em>pandas.Series</em>) – Series indexed by component label. Value is 1 if the component is
+kept, 0 if removed.</p></li>
+<li><p><strong>n_components</strong> (<em>int</em>) – Number of components remaining after filtering.</p></li>
+<li><p><strong>ccs_filtered</strong> (<em>SimpleITK.Image</em>) – Labeled image after removing filtered components.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.refinement.evaluate_region_wise">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.refinement.</span></span><span class="sig-name descname"><span class="pre">evaluate_region_wise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gt</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/refinement.html#evaluate_region_wise"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.refinement.evaluate_region_wise" title="Link to this definition"></a></dt>
+<dd><p>Compute region‑wise detection metrics between a predicted mask and
+ground‑truth lesions.</p>
+<p>Metrics follow the definitions in:
+Cabezas et al., <em>Automatic multiple sclerosis lesion detection in brain
+MRI by FLAIR thresholding</em> (2014).</p>
+<p>A lesion is considered detected if at least one voxel of the predicted
+mask overlaps with it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mask</strong> (<em>SimpleITK.Image</em>) – Binary prediction mask to evaluate.</p></li>
+<li><p><strong>gt</strong> (<em>SimpleITK.Image</em>) – Binary ground‑truth lesion mask.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p><strong>metrics</strong> – Dictionary containing:
+- <code class="docutils literal notranslate"><span class="pre">rw-TPF</span></code> : True Positive Fraction (detected GT lesions / total GT)
+- <code class="docutils literal notranslate"><span class="pre">rw-FPF</span></code> : False Positive Fraction (spurious predicted lesions /</p>
+<blockquote>
+<div><p>total predicted lesions)</p>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.refinement.extend_lesions">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.refinement.</span></span><span class="sig-name descname"><span class="pre">extend_lesions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ccs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_components</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_std</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation_radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/refinement.html#extend_lesions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.refinement.extend_lesions" title="Link to this definition"></a></dt>
+<dd><p>Extend lesion regions by adding surrounding voxels whose intensity
+exceeds a lesion‑specific threshold.</p>
+<p>The surrounding region is defined by morphological dilation. Each voxel
+in this region is assigned to the closest lesion using a Voronoi-like
+partition. For each lesion, a threshold is computed as:</p>
+<p><code class="docutils literal notranslate"><span class="pre">threshold_i</span> <span class="pre">=</span> <span class="pre">mean_i</span> <span class="pre">-</span> <span class="pre">n_std</span> <span class="pre">*</span> <span class="pre">std_i</span></code></p>
+<p>Voxels in the surrounding region whose intensity exceeds this threshold
+are added to the lesion.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ccs</strong> (<em>SimpleITK.Image</em>) – Labeled connected components image (lesions).</p></li>
+<li><p><strong>n_components</strong> (<em>int</em>) – Number of connected components in <code class="docutils literal notranslate"><span class="pre">ccs</span></code>.</p></li>
+<li><p><strong>image</strong> (<em>SimpleITK.Image</em>) – Original intensity image used to compute lesion statistics.</p></li>
+<li><p><strong>n_std</strong> (<em>float</em><em>, </em><em>optional</em>) – Number of standard deviations subtracted from the mean to compute
+the threshold. Lower values produce more aggressive extension.
+Default is 1.</p></li>
+<li><p><strong>dilation_radius</strong> (<em>float</em><em>, </em><em>optional</em>) – Physical radius (mm) used for morphological dilation. Default is 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>extended_lesion</strong> – Binary image containing the original and extended lesions.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SimpleITK.Image</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Each lesion receives its own adaptive threshold.</p></li>
+<li><p>Voronoi assignment ensures each surrounding voxel is associated with
+the closest lesion.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.refinement.find_diameters">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.refinement.</span></span><span class="sig-name descname"><span class="pre">find_diameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ccs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/refinement.html#find_diameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.refinement.find_diameters" title="Link to this definition"></a></dt>
+<dd><p>Compute minimum and maximum physical diameter of each connected
+component.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ccs</strong> (<em>SimpleITK.Image</em>) – Labeled connected components image.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>diameters</strong> – Dictionary mapping each label to a tuple
+<code class="docutils literal notranslate"><span class="pre">(min_diameter,</span> <span class="pre">max_diameter)</span></code> in millimeters.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict of tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.refinement.label_filter">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.refinement.</span></span><span class="sig-name descname"><span class="pre">label_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">segm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels_to_remove</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keywords_to_remove</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels_dict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/refinement.html#label_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.refinement.label_filter" title="Link to this definition"></a></dt>
+<dd><p>Remove specific labels from a segmentation image.</p>
+<p>Labels can be removed either by specifying their numeric values or by
+providing keywords that match their textual descriptions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>segm</strong> (<em>SimpleITK.Image</em>) – Labeled segmentation image.</p></li>
+<li><p><strong>labels_to_remove</strong> (<em>list</em><em> of </em><em>int</em><em>, </em><em>optional</em>) – List of numeric labels to remove. Default is None.</p></li>
+<li><p><strong>keywords_to_remove</strong> (<em>list</em><em> of </em><em>str</em><em>, </em><em>optional</em>) – Keywords used to match label names in <code class="docutils literal notranslate"><span class="pre">labels_dict</span></code>.</p></li>
+<li><p><strong>labels_dict</strong> (<em>dict</em><em>, </em><em>optional</em>) – Mapping from numeric labels to textual descriptions. Required if
+<code class="docutils literal notranslate"><span class="pre">keywords_to_remove</span></code> is provided.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>segm_filtered</strong> (<em>SimpleITK.Image</em>) – Segmentation image after removing selected labels.</p></li>
+<li><p><strong>removed</strong> (<em>dict</em>) – Dictionary mapping removed label names to the number of voxels
+removed.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.refinement.nearly_isotropic_kernel">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.refinement.</span></span><span class="sig-name descname"><span class="pre">nearly_isotropic_kernel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spacing</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">desired_radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/refinement.html#nearly_isotropic_kernel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.refinement.nearly_isotropic_kernel" title="Link to this definition"></a></dt>
+<dd><p>Compute a nearly isotropic kernel radius in voxel units.</p>
+<p>Converts a desired physical radius (in mm) into voxel units for each
+dimension, based on the image spacing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>spacing</strong> (<em>sequence</em><em> of </em><em>float</em>) – Voxel spacing (e.g., (sx, sy, sz)).</p></li>
+<li><p><strong>desired_radius</strong> (<em>float</em><em>, </em><em>optional</em>) – Desired physical radius in millimeters. Default is 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>kernel</strong> – Kernel radius in voxels for each dimension.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list of int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.refinement.pve_filter">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.refinement.</span></span><span class="sig-name descname"><span class="pre">pve_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ccs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_components</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pves</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/refinement.html#pve_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.refinement.pve_filter" title="Link to this definition"></a></dt>
+<dd><p>Assign points to connected components based on predominant partial
+volume estimates (PVE).</p>
+<p>Each component receives a score depending on whether white matter (WM),
+gray matter (GM), or cerebrospinal fluid (CSF) is predominant in its
+region.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ccs</strong> (<em>SimpleITK.Image</em>) – Labeled connected components image.</p></li>
+<li><p><strong>n_components</strong> (<em>int</em>) – Number of connected components in <code class="docutils literal notranslate"><span class="pre">ccs</span></code>.</p></li>
+<li><p><strong>pves</strong> (<em>list</em><em> of </em><em>SimpleITK.Image</em>) – List of PVE images in the order [WM, GM, CSF].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>points</strong> (<em>pandas.Series</em>) – Score assigned to each component:
+- +2 → WM predominant
+- +1 → GM predominant
+-  0 → CSF predominant
+- -2 → all PVEs equal to zero</p></li>
+<li><p><strong>counts</strong> (<em>tuple of int</em>) – Tuple <code class="docutils literal notranslate"><span class="pre">(n_wm,</span> <span class="pre">n_gm,</span> <span class="pre">n_csf,</span> <span class="pre">n_zeros)</span></code> with the number of
+components in each category.</p></li>
+<li><p><strong>pve_sums</strong> (<em>pandas.DataFrame</em>) – Mean PVE values for WM, GM, and CSF for each component.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.refinement.surrounding_filter">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.refinement.</span></span><span class="sig-name descname"><span class="pre">surrounding_filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ccs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_components</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pves</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dilation_radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/refinement.html#surrounding_filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.refinement.surrounding_filter" title="Link to this definition"></a></dt>
+<dd><p>Assign points to connected components based on surrounding tissue
+composition.</p>
+<p>For each lesion, the surrounding region is defined by morphological
+dilation. Each voxel in this region is assigned to the closest lesion
+using a Voronoi-like partition. Mean PVE values of WM, GM, and CSF are
+then computed for each lesion’s surrounding area.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ccs</strong> (<em>SimpleITK.Image</em>) – Labeled connected components image.</p></li>
+<li><p><strong>n_components</strong> (<em>int</em>) – Number of connected components in <code class="docutils literal notranslate"><span class="pre">ccs</span></code>.</p></li>
+<li><p><strong>pves</strong> (<em>list</em><em> of </em><em>SimpleITK.Image</em>) – List of PVE images in the order [WM, GM, CSF].</p></li>
+<li><p><strong>dilation_radius</strong> (<em>float</em><em>, </em><em>optional</em>) – Physical radius (mm) used for morphological dilation. Default is 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>points</strong> (<em>pandas.Series</em>) – Score assigned to each component:
+- +2 → WM predominant in surrounding region
+- +1 → GM predominant
+-  0 → CSF predominant
+- -2 → all PVEs equal to zero</p></li>
+<li><p><strong>counts</strong> (<em>tuple of int</em>) – Tuple <code class="docutils literal notranslate"><span class="pre">(n_wm,</span> <span class="pre">n_gm,</span> <span class="pre">n_csf,</span> <span class="pre">n_zeros)</span></code> with the number of components
+in each category.</p></li>
+<li><p><strong>pve_sums</strong> (<em>pandas.DataFrame</em>) – Mean PVE values for WM, GM, and CSF in the surrounding region.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-SilentInfarctionSegmentationFLAIR.segmentation">
+<span id="silentinfarctionsegmentationflair-segmentation-module"></span><h2>SilentInfarctionSegmentationFLAIR.segmentation module<a class="headerlink" href="#module-SilentInfarctionSegmentationFLAIR.segmentation" title="Link to this heading"></a></h2>
+<p>Created on Tue May 27 19:49:24 2025</p>
+<p>&#64;author: david</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.segmentation.apply_threshold">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.segmentation.</span></span><span class="sig-name descname"><span class="pre">apply_threshold</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/segmentation.html#apply_threshold"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.segmentation.apply_threshold" title="Link to this definition"></a></dt>
+<dd><p>Apply a binary lower threshold to an image.</p>
+<p>Voxels with intensity &gt;= <code class="docutils literal notranslate"><span class="pre">thr</span></code> are set to 1, otherwise to 0.
+Optionally draws a vertical threshold line on a provided axis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> (<em>SimpleITK.Image</em>) – Input image.</p></li>
+<li><p><strong>thr</strong> (<em>float</em>) – Lower threshold value.</p></li>
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em><em>, </em><em>optional</em>) – Axis on which to draw the threshold line.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>thr_image</strong> – Binary thresholded image.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SimpleITK.Image</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.segmentation.evaluate_voxel_wise">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.segmentation.</span></span><span class="sig-name descname"><span class="pre">evaluate_voxel_wise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gt</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/segmentation.html#evaluate_voxel_wise"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.segmentation.evaluate_voxel_wise" title="Link to this definition"></a></dt>
+<dd><p>Compute voxel-wise evaluation metrics between prediction and ground truth.</p>
+<p>Metrics include:
+- True Positive Fraction (TPF)
+- False Positive Fraction (FPF)
+- Dice Similarity Coefficient (DSC)
+- Matthews Correlation Coefficient (MCC)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mask</strong> (<em>SimpleITK.Image</em>) – Binary prediction mask.</p></li>
+<li><p><strong>gt</strong> (<em>SimpleITK.Image</em>) – Binary ground-truth mask.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>metrics</strong> – Dictionary containing voxel-wise metrics.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.segmentation.get_mask_from_pve">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.segmentation.</span></span><span class="sig-name descname"><span class="pre">get_mask_from_pve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pve</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-12</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/segmentation.html#get_mask_from_pve"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.segmentation.get_mask_from_pve" title="Link to this definition"></a></dt>
+<dd><p>Generate a binary mask from a partial volume estimation (PVE) map.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pve</strong> (<em>SimpleITK.Image</em>) – Partial volume estimation map.</p></li>
+<li><p><strong>thr</strong> (<em>float</em><em>, </em><em>optional</em>) – Threshold value. Voxels &gt;= thr are set to 1. Default is 1e-12.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>mask</strong> – Binary mask.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SimpleITK.Image</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.segmentation.get_mask_from_segmentation">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.segmentation.</span></span><span class="sig-name descname"><span class="pre">get_mask_from_segmentation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">segm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/segmentation.html#get_mask_from_segmentation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.segmentation.get_mask_from_segmentation" title="Link to this definition"></a></dt>
+<dd><p>Generate a binary mask from a segmentation image.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>segm</strong> (<em>SimpleITK.Image</em>) – Segmentation image where each voxel contains an integer label.</p></li>
+<li><p><strong>labels</strong> (<em>int</em><em>, </em><em>float</em><em>, </em><em>iterable</em><em>, or </em><em>dict</em>) – Labels to include in the mask. If a dict is provided, its values
+are used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>mask</strong> – Binary mask where selected labels are set to 1.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SimpleITK.Image</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-SilentInfarctionSegmentationFLAIR.utils">
+<span id="silentinfarctionsegmentationflair-utils-module"></span><h2>SilentInfarctionSegmentationFLAIR.utils module<a class="headerlink" href="#module-SilentInfarctionSegmentationFLAIR.utils" title="Link to this heading"></a></h2>
+<p>Utility functions for 3D SimpleITK image handling and visualization.</p>
+<p>Created on Fri May 23 20:16:28 2025
+&#64;author: david</p>
+<dl class="py exception">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.DimensionError">
+<em class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">DimensionError</span></span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#DimensionError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.DimensionError" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
+<p>Custom exception for non‑3D images.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.check_3d">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">check_3d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#check_3d"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.check_3d" title="Link to this definition"></a></dt>
+<dd><p>Ensure that a SimpleITK image is 3‑dimensional.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>image</strong> (<em>SimpleITK.Image</em>) – Input image.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#SilentInfarctionSegmentationFLAIR.utils.DimensionError" title="SilentInfarctionSegmentationFLAIR.utils.DimensionError"><strong>DimensionError</strong></a> – If the image is not 3‑dimensional.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.cliffs_delta">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">cliffs_delta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#cliffs_delta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.cliffs_delta" title="Link to this definition"></a></dt>
+<dd><p>Compute Cliff’s delta effect size between two 1D samples.</p>
+<p>Cliff’s delta measures how often values in <code class="docutils literal notranslate"><span class="pre">x</span></code> exceed values in
+<code class="docutils literal notranslate"><span class="pre">y</span></code> minus how often they are smaller, normalized by the total
+number of pairwise comparisons.</p>
+<p>The statistic ranges from -1 to +1:
+- +1  → all values in <code class="docutils literal notranslate"><span class="pre">x</span></code> &gt; all values in <code class="docutils literal notranslate"><span class="pre">y</span></code>
+-  0  → distributions largely overlap
+- -1 → all values in <code class="docutils literal notranslate"><span class="pre">x</span></code> &lt; all values in <code class="docutils literal notranslate"><span class="pre">y</span></code></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.ndarray</em>) – First 1D sample.</p></li>
+<li><p><strong>y</strong> (<em>np.ndarray</em>) – Second 1D sample.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Cliff’s delta effect size.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.downsample_array">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">downsample_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">perc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#downsample_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.downsample_array" title="Link to this definition"></a></dt>
+<dd><p>Evenly downsample a 1D NumPy array.</p>
+<p>Useful for reducing memory and computation on very large arrays by
+selecting regularly spaced samples.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>arr</strong> (<em>np.ndarray</em>) – Input 1D array.</p></li>
+<li><p><strong>perc</strong> (<em>float</em><em>, </em><em>optional</em>) – Fraction of elements to keep (e.g., 0.01 = 1%). Must be in
+(0, 1]. Default is 0.01.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Downsampled array.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <code class="docutils literal notranslate"><span class="pre">perc</span></code> is &lt;= 0.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.gaussian_transform">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">gaussian_transform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">std</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_float</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalized</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#gaussian_transform"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.gaussian_transform" title="Link to this definition"></a></dt>
+<dd><p>Apply a Gaussian weighting to voxel intensities.</p>
+<p>Each voxel intensity <code class="docutils literal notranslate"><span class="pre">I</span></code> is transformed as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">G</span><span class="p">(</span><span class="n">I</span><span class="p">)</span> <span class="o">=</span> <span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">((</span><span class="n">I</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span> <span class="o">/</span> <span class="n">std</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">I</span>
+</pre></div>
+</div>
+<p>If <code class="docutils literal notranslate"><span class="pre">return_float=True</span></code> and <code class="docutils literal notranslate"><span class="pre">normalized=True</span></code>, the result is
+additionally scaled by:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">std</span> <span class="o">*</span> <span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="n">π</span><span class="p">))</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> (<em>SimpleITK.Image</em>) – Input image with non‑negative voxel intensities.</p></li>
+<li><p><strong>mean</strong> (<em>float</em>) – Mean of the Gaussian distribution.</p></li>
+<li><p><strong>std</strong> (<em>float</em>) – Standard deviation of the Gaussian.</p></li>
+<li><p><strong>return_float</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, return a float image in [0, 1].</p></li>
+<li><p><strong>normalized</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True and <code class="docutils literal notranslate"><span class="pre">return_float=True</span></code>, apply Gaussian normalization.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Gaussian‑weighted image with preserved metadata.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SimpleITK.Image</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the input image contains negative voxel values.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.get_array_from_image">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">get_array_from_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#get_array_from_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.get_array_from_image" title="Link to this definition"></a></dt>
+<dd><p>Convert a SimpleITK 3D image into a NumPy array.</p>
+<p>The returned array is transposed so that:
+- axial plane   → xy
+- sagittal plane → yz
+- coronal plane → xz</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>image</strong> (<em>SimpleITK.Image</em>) – Input 3D image.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Array with shape (x, y, z).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.get_image_from_array">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">get_image_from_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference_image</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cast_to_reference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#get_image_from_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.get_image_from_array" title="Link to this definition"></a></dt>
+<dd><p>Convert a NumPy array into a SimpleITK image.</p>
+<p>The input array must follow the convention:
+- axial plane   → xy
+- sagittal plane → yz
+- coronal plane → xz</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image_array</strong> (<em>np.ndarray</em>) – Array with shape (x, y, z).</p></li>
+<li><p><strong>reference_image</strong> (<em>SimpleITK.Image</em><em>, </em><em>optional</em>) – If provided, copy spacing, origin and direction.</p></li>
+<li><p><strong>cast_to_reference</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, cast voxel type to match <code class="docutils literal notranslate"><span class="pre">reference_image</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Output image.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SimpleITK.Image</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.get_info">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">get_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#get_info"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.get_info" title="Link to this definition"></a></dt>
+<dd><p>Extract metadata from a SimpleITK 3D image.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>image</strong> (<em>SimpleITK.Image</em>) – Input image.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Dictionary containing size, spacing, origin and direction.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.get_paths_df">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">get_paths_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extensions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#get_paths_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.get_paths_df" title="Link to this definition"></a></dt>
+<dd><p>Build a DataFrame containing paths of files inside a folder.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>folder</strong> (<em>str</em>) – Path to the folder to scan.</p></li>
+<li><p><strong>extensions</strong> (<em>str</em><em> or </em><em>list</em><em> of </em><em>str</em><em>, </em><em>optional</em>) – File extensions to include. If a single string is provided, it is
+converted to a list.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>DataFrame where:
+- index = folder paths
+- columns = filenames
+- values = full file paths</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.label_names">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">label_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label_name_file_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#label_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.label_names" title="Link to this definition"></a></dt>
+<dd><p>Read a text file and map numeric labels to string names.</p>
+<p>The file must contain lines beginning with an integer followed by a
+label name. Only the first word after the number is used.</p>
+<p class="rubric">Examples</p>
+<p>‘1 Left-Thalamus’ → {1: ‘Left-Thalamus’}
+‘2 Left Thalamus’ → {2: ‘Left’}</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>label_name_file_path</strong> (<em>str</em>) – Path to the label text file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mapping from integer labels to string names.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.normalize">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_bits</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.normalize" title="Link to this definition"></a></dt>
+<dd><p>Normalize an image using min‑max rescaling.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">n_bits</span> <span class="pre">==</span> <span class="pre">0</span></code>, the output is float64 in [0, 1].
+Otherwise, the output is cast to an unsigned integer type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> (<em>SimpleITK.Image</em>) – Input image.</p></li>
+<li><p><strong>n_bits</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of bits for the output image. Default is 8.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Normalized image with preserved metadata.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SimpleITK.Image</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.orient_image">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">orient_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">orientation</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#orient_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.orient_image" title="Link to this definition"></a></dt>
+<dd><p>Reorient a SimpleITK image to a given coordinate system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> (<em>SimpleITK.Image</em>) – Input 3D image.</p></li>
+<li><p><strong>orientation</strong> (<em>str</em>) – Desired orientation code (e.g., ‘RAS’, ‘LPS’).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reoriented image.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SimpleITK.Image</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.plot_image">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">plot_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xyz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#plot_image"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.plot_image" title="Link to this definition"></a></dt>
+<dd><p>Plot three orthogonal slices (axial, sagittal, coronal) of a 3D image.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> (<em>SimpleITK.Image</em>) – Input 3D image.</p></li>
+<li><p><strong>xyz</strong> (<em>tuple</em><em> of </em><em>int</em><em>, </em><em>optional</em>) – Coordinates of the slice intersection (x, y, z). If None, the
+center of the image is used.</p></li>
+<li><p><strong>mask</strong> (<em>SimpleITK.Image</em><em>, </em><em>optional</em>) – Binary mask to overlay on the image. Masked voxels are shown in
+red.</p></li>
+<li><p><strong>title</strong> (<em>str</em><em>, </em><em>optional</em>) – Title of the figure.</p></li>
+<li><p><strong>show</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to display the figure.</p></li>
+<li><p><strong>save_path</strong> (<em>str</em><em>, </em><em>optional</em>) – Path where the figure is saved.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Dictionary containing array size, spacing and aspect ratios.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.progress_bar">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">progress_bar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iteration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_time</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">40</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#progress_bar"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.progress_bar" title="Link to this definition"></a></dt>
+<dd><p>Display or update a textual progress bar in the console.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>iteration</strong> (<em>int</em>) – Current iteration (0‑based).</p></li>
+<li><p><strong>total</strong> (<em>int</em>) – Total number of iterations.</p></li>
+<li><p><strong>start_time</strong> (<em>float</em><em>, </em><em>optional</em>) – Start time (e.g., <code class="docutils literal notranslate"><span class="pre">time.time()</span></code>). If provided, an ETA is shown.</p></li>
+<li><p><strong>prefix</strong> (<em>str</em><em>, </em><em>optional</em>) – Text displayed before the bar.</p></li>
+<li><p><strong>length</strong> (<em>int</em><em>, </em><em>optional</em>) – Length of the bar in characters.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>The bar updates in place using carriage return.</p></li>
+<li><p>A newline is printed at the last iteration.</p></li>
+<li><p>Handles cases where <code class="docutils literal notranslate"><span class="pre">iteration</span> <span class="pre">&gt;=</span> <span class="pre">total</span></code> or <code class="docutils literal notranslate"><span class="pre">total</span> <span class="pre">&lt;=</span> <span class="pre">0</span></code>.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.resample_to_reference">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">resample_to_reference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reference</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interpolator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_value</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#resample_to_reference"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.resample_to_reference" title="Link to this definition"></a></dt>
+<dd><p>Resample an image into the space of a reference image.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> (<em>SimpleITK.Image</em>) – Image to resample.</p></li>
+<li><p><strong>reference</strong> (<em>SimpleITK.Image</em>) – Target reference image.</p></li>
+<li><p><strong>interpolator</strong> (<em>SimpleITK interpolator</em><em>, </em><em>optional</em>) – Interpolation method (e.g., sitk.sitkLinear).</p></li>
+<li><p><strong>default_value</strong> (<em>float</em><em>, </em><em>optional</em>) – Value assigned outside the original image domain.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Resampled image.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SimpleITK.Image</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="SilentInfarctionSegmentationFLAIR.utils.train_val_test_split">
+<span class="sig-prename descclassname"><span class="pre">SilentInfarctionSegmentationFLAIR.utils.</span></span><span class="sig-name descname"><span class="pre">train_val_test_split</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_folder</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">validation_fraction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_fraction</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gt_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'GT.nii'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_series</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/SilentInfarctionSegmentationFLAIR/utils.html#train_val_test_split"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#SilentInfarctionSegmentationFLAIR.utils.train_val_test_split" title="Link to this definition"></a></dt>
+<dd><p>Split patients into train/validation/test sets based on ground‑truth
+lesion ratios.</p>
+<p>Patients are grouped by quartiles of the positive‑label ratio and
+sampled proportionally within each quartile.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_folder</strong> (<em>str</em>) – Root folder containing patient subdirectories with <cite>.nii</cite> files.</p></li>
+<li><p><strong>validation_fraction</strong> (<em>float</em><em>, </em><em>optional</em>) – Fraction of patients assigned to validation. Default is 0.</p></li>
+<li><p><strong>test_fraction</strong> (<em>float</em><em>, </em><em>optional</em>) – Fraction of patients assigned to test. Default is 0.</p></li>
+<li><p><strong>gt_file</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the ground‑truth file inside each patient folder.</p></li>
+<li><p><strong>show</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to display the ratio distribution plot.</p></li>
+<li><p><strong>save_series</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to save train/val/test patient lists as pickle files.</p></li>
+<li><p><strong>title</strong> (<em>str</em><em>, </em><em>optional</em>) – Title for the ratio distribution plot.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>tr_patients</strong> (<em>list of str</em>) – Patients assigned to the training set.</p></li>
+<li><p><strong>val_patients</strong> (<em>list of str</em>) – Patients assigned to the validation set.</p></li>
+<li><p><strong>ts_patients</strong> (<em>list of str</em>) – Patients assigned to the test set.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul>
+<li><p>Patients missing required <cite>.nii</cite> files are discarded.</p></li>
+<li><p>Positive ratio is defined as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ratio</span> <span class="o">=</span> <span class="n">count</span><span class="p">(</span><span class="n">label</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">count</span><span class="p">(</span><span class="n">label</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="n">count</span><span class="p">(</span><span class="n">label</span> <span class="o">==</span> <span class="mi">1</span><span class="p">))</span>
+</pre></div>
+</div>
+</li>
+<li><p>Quartile‑based stratification ensures balanced sampling.</p></li>
+<li><p>A plot <code class="docutils literal notranslate"><span class="pre">ratios.png</span></code> is saved in <code class="docutils literal notranslate"><span class="pre">data_folder</span></code>.</p></li>
+</ul>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Silent Infarction FLAIR Segmentation documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="my_scripts.html" class="btn btn-neutral float-right" title="Scripts" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Davide Bracali.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

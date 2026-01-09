@@ -1,0 +1,556 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SilentInfarctionSegmentationFLAIR.refinement_step &mdash; Silent Infarction FLAIR Segmentation 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Silent Infarction FLAIR Segmentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../my_modules.html">Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../my_scripts.html">Scripts</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Silent Infarction FLAIR Segmentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">SilentInfarctionSegmentationFLAIR.refinement_step</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for SilentInfarctionSegmentationFLAIR.refinement_step</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Created on 2025-08-18 12:10:40</span>
+
+<span class="sd">@author: david</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">SimpleITK</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sitk</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">SilentInfarctionSegmentationFLAIR.refinement</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">connected_components</span><span class="p">,</span>
+    <span class="n">extend_lesions</span><span class="p">,</span>
+    <span class="n">diameter_filter</span><span class="p">,</span>
+    <span class="n">pve_filter</span><span class="p">,</span>
+    <span class="n">surrounding_filter</span><span class="p">,</span>
+    <span class="n">label_filter</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">SilentInfarctionSegmentationFLAIR.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">get_array_from_image</span><span class="p">,</span>
+    <span class="n">get_image_from_array</span><span class="p">,</span>
+    <span class="n">orient_image</span><span class="p">,</span>
+    <span class="n">resample_to_reference</span><span class="p">,</span>
+    <span class="n">label_names</span><span class="p">,</span>
+    <span class="n">plot_image</span>
+<span class="p">)</span>
+
+<span class="n">MODULE_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="n">CONFIG_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">MODULE_DIR</span><span class="p">),</span> <span class="s2">&quot;config.yaml&quot;</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_args</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse command-line arguments for post-processing a threshold-based lesion mask.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    argparse.Namespace</span>
+<span class="sd">        Parsed arguments with attributes: `thr_mask`, `image`, `pve_wm`, `pve_gm`,</span>
+<span class="sd">        `pve_csf`, `segm`, `min_diameter`, `surround_dilation_radius`, `n_std`,</span>
+<span class="sd">        `extend_dilation_radius`, `min_points`, `labels_to_remove`, `keywords_to_remove`,</span>
+<span class="sd">        `label_name_file`, `save_dir`, `verbose`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s2">&quot;Post-processes a threshold-based lesion mask applying connected &quot;</span>
+        <span class="s2">&quot;components, geometric, PVE-based and anatomical filters.&quot;</span>
+    <span class="p">)</span>
+
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--thr_mask&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;thr_mask&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to thresholded lesion mask&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--image&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;image&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Reference image used for lesion extension&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--pve_wm&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;pve_wm&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to WM PVE map&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--pve_gm&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;pve_gm&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to GM PVE map&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--pve_csf&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;pve_csf&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to CSF PVE map&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--segm&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;segm&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to anatomical segmentation&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--min_diameter&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;min_diameter&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Minimum lesion diameter in mm&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--surround_dilation_radius&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;surround_dilation_radius&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Dilation radius for surrounding PVE filter&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--n_std&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;n_std&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of standard deviations for lesion extension&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--extend_dilation_radius&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;extend_dilation_radius&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Dilation radius for lesion extension&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--min_score&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;min_points&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Minimum score a lesion must satisfy&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--labels_to_remove&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;labels_to_remove&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="p">[],</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;List of segmentation labels to remove&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--keywords_to_remove&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;keywords_to_remove&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="p">[],</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;List of keywords of labels to remove&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--label_name_file&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;label_name_file&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Label-name LUT file&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--save_dir&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;save_dir&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Directory where output segmentation will be saved&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s1">&#39;--no_verbose&#39;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;verbose&#39;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_false&#39;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Disable verbose output&#39;</span>
+    <span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">args</span>
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../my_scripts.html#SilentInfarctionSegmentationFLAIR.refinement_step.main">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">thr_mask</span><span class="p">,</span> <span class="n">image</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pves</span><span class="o">=</span><span class="p">[],</span> <span class="n">segm</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+         <span class="n">min_diameter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">surround_dilation_radius</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+         <span class="n">n_std</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">extend_dilation_radius</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">min_points</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+         <span class="n">labels_to_remove</span><span class="o">=</span><span class="p">[],</span> <span class="n">keywords_to_remove</span><span class="o">=</span><span class="p">[],</span> <span class="n">label_name_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+         <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">save_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Processes a set of patients to evaluate the performance of FLAIR </span>
+<span class="sd">    silent lesion segmentation.</span>
+
+<span class="sd">    For each patient in the data folder:</span>
+
+<span class="sd">    ----</span>
+<span class="sd">    - Run the main segmentation function of the package.</span>
+<span class="sd">    - Compute voxel-wise metrics (Sensitivity, Precision, DICE)</span>
+<span class="sd">        both after thresholding and after the refinement step.</span>
+<span class="sd">    - Compute the number of lesions and total lesion volume.</span>
+<span class="sd">    - Compute volume similarity between ground truth and segmentation.</span>
+<span class="sd">    - Generate summary boxplots for metrics saving them to the results folder.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    thr_mask : SimpleITK.Image</span>
+<span class="sd">        Thresholded lesion mask.</span>
+<span class="sd">    image : SimpleITK.Image, optional</span>
+<span class="sd">        Reference image used for lesion extension (default: None).</span>
+<span class="sd">    pves : list of SimpleITK.Image, optional</span>
+<span class="sd">        List of partial volume effect maps [WM, GM, CSF] (default: []).</span>
+<span class="sd">    segm : SimpleITK.Image, optional</span>
+<span class="sd">        Anatomical segmentation used to remove impossible voxels (default: None).</span>
+<span class="sd">    min_diameter : float, optional</span>
+<span class="sd">        Minimum lesion diameter in mm (default: None).</span>
+<span class="sd">    surround_dilation_radius : int, optional</span>
+<span class="sd">        Dilation radius for surrounding PVE filter (default: None).</span>
+<span class="sd">    n_std : float, optional</span>
+<span class="sd">        Number of standard deviations for lesion extension (default: None).</span>
+<span class="sd">    extend_dilation_radius : int, optional</span>
+<span class="sd">        Dilation radius for lesion extension (default: 1).</span>
+<span class="sd">    min_points : int, optional</span>
+<span class="sd">        Minimum score a lesion must satisfy (default: 3).</span>
+<span class="sd">    labels_to_remove : list of int, optional</span>
+<span class="sd">        List of segmentation labels to remove (default: []).</span>
+<span class="sd">    keywords_to_remove : list of str, optional</span>
+<span class="sd">        Keywords of labels to remove (default: []).</span>
+<span class="sd">    label_name_file : str, optional</span>
+<span class="sd">        Label-name LUT file (default: None).</span>
+<span class="sd">    verbose : bool, optional</span>
+<span class="sd">        Print progress messages (default: True).</span>
+<span class="sd">    save_dir : str, optional</span>
+<span class="sd">        Directory to save output segmentation and plots (default: None).</span>
+<span class="sd">    show : bool, optional</span>
+<span class="sd">        Whether to display plots interactively (default: False).</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ref_mask : SimpleITK.Image</span>
+<span class="sd">        Refined lesion mask after applying all filters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># compute connected components</span>
+    <span class="n">ccs</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="n">connected_components</span><span class="p">(</span><span class="n">thr_mask</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of connected components (lesions) in the image: </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># lesion extension</span>
+    <span class="k">if</span> <span class="n">n_std</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">image</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Extending lesions (dilated with a nearly-isotropic kernel &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;of radius </span><span class="si">{</span><span class="n">surround_dilation_radius</span><span class="si">}</span><span class="s2"> mm) with gray &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;levels </span><span class="si">{</span><span class="n">n_std</span><span class="si">}</span><span class="s2"> standard deviations away from mean...&quot;</span><span class="p">)</span>
+
+        <span class="n">ext_mask</span> <span class="o">=</span> <span class="n">extend_lesions</span><span class="p">(</span><span class="n">ccs</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">n_std</span><span class="o">=</span><span class="n">n_std</span><span class="p">,</span>
+                                  <span class="n">dilation_radius</span><span class="o">=</span><span class="n">extend_dilation_radius</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Before lesion extension: </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> connected components&quot;</span><span class="p">)</span>
+
+        <span class="n">ccs</span><span class="p">,</span> <span class="n">n</span> <span class="o">=</span> <span class="n">connected_components</span><span class="p">(</span><span class="n">ext_mask</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;After lesion extension: </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> connected components&quot;</span><span class="p">)</span>
+
+    <span class="c1"># minimum diameter</span>
+    <span class="k">if</span> <span class="n">min_diameter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Applying diameter filter with a minimum diameter of &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">min_diameter</span><span class="si">}</span><span class="s2"> mm...&quot;</span><span class="p">)</span>
+
+        <span class="n">diameter_points</span><span class="p">,</span> <span class="n">n_filtered</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">diameter_filter</span><span class="p">(</span><span class="n">ccs</span><span class="p">,</span> <span class="n">lower_thr</span><span class="o">=</span><span class="n">min_diameter</span><span class="p">)</span>
+        <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">diameter_points</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">n_filtered</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> lesions have minimum diameter &gt;= &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">min_diameter</span><span class="si">}</span><span class="s2"> mm&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pves</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;&#39;pves&#39; must be a list containing respectively &quot;</span>
+                      <span class="s2">&quot;[pve_wm, pve_gm, pve_csf]. PVE filter will not be applied.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># PVEs inside the lesion</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Applying PVE filter inside the lesions...&quot;</span><span class="p">)</span>
+
+        <span class="n">pve_points</span><span class="p">,</span> <span class="n">n_filtered</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">pve_filter</span><span class="p">(</span><span class="n">ccs</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">pves</span><span class="p">)</span>
+        <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pve_points</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">n_filtered</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> lesions are predominantly composed &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;of WM</span><span class="se">\n</span><span class="si">{</span><span class="n">n_filtered</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> lesions are predominantly &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;composed of GM</span><span class="se">\n</span><span class="si">{</span><span class="n">n_filtered</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> lesions are &quot;</span>
+                  <span class="sa">f</span><span class="s2">&quot;predominantly composed of CSF</span><span class="se">\n</span><span class="si">{</span><span class="n">n_filtered</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> &quot;</span>
+                  <span class="s2">&quot;lesions have null PVE effect for neither WM, GM and CSF&quot;</span><span class="p">)</span>
+
+        <span class="c1"># PVEs in the surrounding of the lesion</span>
+        <span class="k">if</span> <span class="n">surround_dilation_radius</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Applying PVE filter around the lesions (dilated with &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;a nearly-isotropic kernel of radius &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">extend_dilation_radius</span><span class="si">}</span><span class="s2"> mm)...&quot;</span><span class="p">)</span>
+
+            <span class="n">surround_points</span><span class="p">,</span> <span class="n">n_filtered</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">surrounding_filter</span><span class="p">(</span>
+                <span class="n">ccs</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">pves</span><span class="p">,</span> <span class="n">dilation_radius</span><span class="o">=</span><span class="n">surround_dilation_radius</span>
+            <span class="p">)</span>
+            <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">surround_points</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">n_filtered</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> lesions are predominantly &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;surrounded by WM</span><span class="se">\n</span><span class="si">{</span><span class="n">n_filtered</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> lesions are &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;predominantly surrounded by GM</span><span class="se">\n</span><span class="si">{</span><span class="n">n_filtered</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> &quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;lesions are predominantly surrounded by CSF</span><span class="se">\n</span><span class="s2">&quot;</span>
+                      <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">n_filtered</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> lesions neighborhoods have null &quot;</span>
+                      <span class="s2">&quot;PVE effect for neither WM, GM and CSF&quot;</span><span class="p">)</span>
+
+    <span class="c1"># filter out bad lesions</span>
+    <span class="k">if</span> <span class="n">points</span><span class="p">:</span>
+        <span class="n">combined_points</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+        <span class="n">lesion_idx</span> <span class="o">=</span> <span class="n">combined_points</span><span class="p">[</span><span class="n">combined_points</span> <span class="o">&gt;=</span> <span class="n">min_points</span><span class="p">]</span><span class="o">.</span><span class="n">index</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">lesion_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">ccs_arr</span> <span class="o">=</span> <span class="n">get_array_from_image</span><span class="p">(</span><span class="n">ccs</span><span class="p">)</span>
+    <span class="n">lesion_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">ccs_arr</span><span class="p">,</span> <span class="n">lesion_idx</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">ref_mask</span> <span class="o">=</span> <span class="n">get_image_from_array</span><span class="p">(</span><span class="n">lesion_mask</span><span class="p">,</span> <span class="n">thr_mask</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">n_kept</span> <span class="o">=</span> <span class="n">connected_components</span><span class="p">(</span><span class="n">ref_mask</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="n">n_kept</span><span class="si">}</span><span class="s2"> out of </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> lesions obtained a score of at least &quot;</span>
+              <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">min_points</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+    <span class="c1"># remove keyword-forbidden voxels</span>
+    <span class="k">if</span> <span class="p">((</span><span class="n">keywords_to_remove</span> <span class="o">!=</span> <span class="p">[]</span> <span class="ow">and</span> <span class="n">label_name_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span>
+        <span class="p">(</span><span class="n">labels_to_remove</span> <span class="o">!=</span> <span class="p">[]))</span> <span class="ow">and</span> <span class="n">segm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Applying labels filter...&quot;</span><span class="p">)</span>
+        <span class="n">labels_dict</span> <span class="o">=</span> <span class="n">label_names</span><span class="p">(</span><span class="n">label_name_file</span><span class="p">)</span>
+        <span class="n">segm_filt</span><span class="p">,</span> <span class="n">removed</span> <span class="o">=</span> <span class="n">label_filter</span><span class="p">(</span><span class="n">segm</span><span class="p">,</span>
+                                          <span class="n">labels_to_remove</span><span class="o">=</span><span class="n">labels_to_remove</span><span class="p">,</span>
+                                          <span class="n">keywords_to_remove</span><span class="o">=</span><span class="n">keywords_to_remove</span><span class="p">,</span>
+                                          <span class="n">labels_dict</span><span class="o">=</span><span class="n">labels_dict</span><span class="p">)</span>
+        <span class="n">ref_mask</span> <span class="o">=</span> <span class="n">ref_mask</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">segm_filt</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">n_removed</span> <span class="ow">in</span> <span class="n">removed</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Removed </span><span class="si">{</span><span class="n">n_removed</span><span class="si">}</span><span class="s2"> voxels of label &#39;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+    <span class="c1"># save and show</span>
+    <span class="k">if</span> <span class="n">save_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">save_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">sitk</span><span class="o">.</span><span class="n">WriteImage</span><span class="p">(</span><span class="n">ref_mask</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">save_dir</span><span class="p">,</span> <span class="s2">&quot;segmentation.nii&quot;</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">show</span> <span class="ow">or</span> <span class="n">save_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">plot_image</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="n">ref_mask</span><span class="p">,</span>
+                       <span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Refined segmented mask&quot;</span><span class="p">,</span>
+                       <span class="n">show</span><span class="o">=</span><span class="n">show</span><span class="p">,</span>
+                       <span class="n">save_path</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">save_dir</span><span class="p">,</span> <span class="s2">&quot;segmentation.png&quot;</span><span class="p">)</span>
+                       <span class="k">if</span> <span class="n">save_dir</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ref_mask</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="c1"># load constants</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">CONFIG_PATH</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        
+    <span class="n">keywords_to_remove</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">][</span><span class="s2">&quot;keywords_to_remove&quot;</span><span class="p">]</span>
+    <span class="n">label_name_file</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;files&quot;</span><span class="p">][</span><span class="s2">&quot;label_name&quot;</span><span class="p">]</span>
+
+    <span class="c1"># load images, pves and segmentation</span>
+    <span class="n">thr_mask</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">ReadImage</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">thr_mask</span><span class="p">,</span> <span class="n">sitk</span><span class="o">.</span><span class="n">sitkUInt8</span><span class="p">)</span>
+    <span class="n">thr_mask</span> <span class="o">=</span> <span class="n">orient_image</span><span class="p">(</span><span class="n">thr_mask</span><span class="p">,</span> <span class="s2">&quot;RAS&quot;</span><span class="p">)</span>
+
+    <span class="n">image</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">image</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">image</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">ReadImage</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">image</span><span class="p">)</span>
+        <span class="n">image</span> <span class="o">=</span> <span class="n">resample_to_reference</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">thr_mask</span><span class="p">,</span> <span class="n">sitk</span><span class="o">.</span><span class="n">sitkLinear</span><span class="p">)</span>
+
+    <span class="n">pves</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">p</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">pve_wm</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">pve_gm</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">pve_csf</span><span class="p">]):</span>
+        <span class="n">pves</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">sitk</span><span class="o">.</span><span class="n">ReadImage</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">pve_wm</span><span class="p">),</span>
+            <span class="n">sitk</span><span class="o">.</span><span class="n">ReadImage</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">pve_gm</span><span class="p">),</span>
+            <span class="n">sitk</span><span class="o">.</span><span class="n">ReadImage</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">pve_csf</span><span class="p">)</span>
+        <span class="p">]</span>
+    <span class="n">pves</span> <span class="o">=</span> <span class="p">[</span><span class="n">resample_to_reference</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">thr_mask</span><span class="p">,</span> <span class="n">sitk</span><span class="o">.</span><span class="n">sitkLinear</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pves</span><span class="p">]</span>
+
+    <span class="n">segm</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">segm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">segm</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">ReadImage</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">segm</span><span class="p">,</span> <span class="n">sitk</span><span class="o">.</span><span class="n">sitkUInt8</span><span class="p">)</span>
+        <span class="n">segm</span> <span class="o">=</span> <span class="n">resample_to_reference</span><span class="p">(</span><span class="n">segm</span><span class="p">,</span> <span class="n">thr_mask</span><span class="p">,</span> <span class="n">sitk</span><span class="o">.</span><span class="n">sitkNearestNeighbor</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">keywords_to_remove</span> <span class="o">==</span> <span class="p">[]:</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">keywords_to_remove</span> <span class="o">=</span> <span class="n">keywords_to_remove</span>
+
+    <span class="n">ref_mask</span> <span class="o">=</span> <span class="n">main</span><span class="p">(</span>
+        <span class="n">thr_mask</span><span class="o">=</span><span class="n">thr_mask</span><span class="p">,</span>
+        <span class="n">image</span><span class="o">=</span><span class="n">image</span><span class="p">,</span>
+        <span class="n">pves</span><span class="o">=</span><span class="n">pves</span><span class="p">,</span>
+        <span class="n">segm</span><span class="o">=</span><span class="n">segm</span><span class="p">,</span>
+        <span class="n">min_diameter</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">min_diameter</span><span class="p">,</span>
+        <span class="n">surround_dilation_radius</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">surround_dilation_radius</span><span class="p">,</span>
+        <span class="n">n_std</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">n_std</span><span class="p">,</span>
+        <span class="n">extend_dilation_radius</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">extend_dilation_radius</span><span class="p">,</span>
+        <span class="n">min_points</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">min_points</span><span class="p">,</span>
+        <span class="n">labels_to_remove</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">labels_to_remove</span><span class="p">,</span>
+        <span class="n">keywords_to_remove</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">keywords_to_remove</span><span class="p">,</span>
+        <span class="n">label_name_file</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">label_name_file</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">,</span>
+        <span class="n">save_dir</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">save_dir</span>
+    <span class="p">)</span>
+
+    <span class="n">elapsed_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Elapsed time: </span><span class="si">{</span><span class="n">elapsed_time</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> s&quot;</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Davide Bracali.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,538 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SilentInfarctionSegmentationFLAIR.tuning_alpha_beta &mdash; Silent Infarction FLAIR Segmentation 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Silent Infarction FLAIR Segmentation
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../my_modules.html">Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../my_scripts.html">Scripts</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Silent Infarction FLAIR Segmentation</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">SilentInfarctionSegmentationFLAIR.tuning_alpha_beta</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for SilentInfarctionSegmentationFLAIR.tuning_alpha_beta</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Created on 2025-11-01 13:21:28</span>
+
+<span class="sd">@author: david</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">SimpleITK</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sitk</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">gc</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bayes_opt</span><span class="w"> </span><span class="kn">import</span> <span class="n">BayesianOptimization</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">multiprocessing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mp</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib</span>
+<span class="n">matplotlib</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s2">&quot;Agg&quot;</span><span class="p">)</span>
+<span class="n">sitk</span><span class="o">.</span><span class="n">ProcessObject</span><span class="o">.</span><span class="n">SetGlobalDefaultNumberOfThreads</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">SilentInfarctionSegmentationFLAIR.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">orient_image</span><span class="p">,</span>
+                                                     <span class="n">resample_to_reference</span><span class="p">,</span>
+                                                     <span class="n">get_array_from_image</span><span class="p">,</span>
+                                                     <span class="n">get_image_from_array</span><span class="p">,</span>
+                                                     <span class="n">label_names</span><span class="p">,</span>
+                                                     <span class="n">train_val_test_split</span><span class="p">,</span>
+                                                     <span class="n">cliffs_delta</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">SilentInfarctionSegmentationFLAIR.segmentation</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">get_mask_from_segmentation</span><span class="p">,</span>
+                                                            <span class="n">evaluate_voxel_wise</span><span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">SilentInfarctionSegmentationFLAIR.histograms</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_multiple_histograms</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">SilentInfarctionSegmentationFLAIR</span><span class="w"> </span><span class="kn">import</span> <span class="n">flair_t1_sum</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_args</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parse command-line arguments for optimizing alpha and beta parameters.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    argparse.Namespace</span>
+<span class="sd">        Parsed arguments with attributes: `data_folder`, `results_folder`,</span>
+<span class="sd">        `init_points`, `n_iter`, `n_cores`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Optimizes alpha and beta parameters on a training set, &quot;</span>\
+        <span class="s2">&quot;maximizing separation between histograms of different tissues.&quot;</span>
+
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--data_folder&quot;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;data_folder&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path of the folder where data is located&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--results_folder&quot;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;results_folder&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s2">&quot;tuning_alpha_beta&quot;</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path of the folder where intermediate results are stored&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--init_points&quot;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;init_points&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Number of initial points for random search&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span>
+        <span class="s2">&quot;--n_iter&quot;</span><span class="p">,</span>
+        <span class="n">dest</span><span class="o">=</span><span class="s2">&quot;n_iter&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store&quot;</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="mi">70</span><span class="p">,</span>
+        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Number of Bayesian optimization iterations&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">_</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--n_cores&#39;</span><span class="p">,</span>
+                            <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;n_cores&#39;</span><span class="p">,</span>
+                            <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span>
+                            <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                            <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                            <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                            <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of CPU cores to use during optimization </span><span class="se">\</span>
+<span class="s1">                                (improves computational time but increases RAM and CPU usage)&#39;</span><span class="p">)</span>
+    
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">args</span>
+
+
+<span class="n">pbounds</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+        <span class="s2">&quot;beta&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">)}</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">load_subjects</span><span class="p">(</span><span class="n">data_folder</span><span class="p">,</span> <span class="n">patients</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">paths_only</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load imaging data for multiple subjects and organize into a dictionary.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data_folder : str</span>
+<span class="sd">        Path to folder containing patient subfolders with .nii files.</span>
+<span class="sd">    patients : list of str, optional</span>
+<span class="sd">        List of patient IDs to load; if None, loads all patients.</span>
+<span class="sd">    paths_only : bool, default=False</span>
+<span class="sd">        If True, only returns file paths without loading images into memory.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    data : dict</span>
+<span class="sd">        Dictionary where keys are patient IDs and values are dictionaries containing:</span>
+<span class="sd">            - flair : SimpleITK.Image, FLAIR image</span>
+<span class="sd">            - t1 : SimpleITK.Image, T1-weighted image</span>
+<span class="sd">            - gt : SimpleITK.Image, ground truth mask</span>
+<span class="sd">            - gm_mask : SimpleITK.Image, GM mask from segmentation</span>
+<span class="sd">            - wm_mask : SimpleITK.Image, WM mask from segmentation</span>
+<span class="sd">    paths_df : pandas.DataFrame</span>
+<span class="sd">        DataFrame mapping each patient to their corresponding file paths.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># organize all images in a df</span>
+    <span class="n">paths_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">data_folder</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">file</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.nii&quot;</span><span class="p">):</span>
+                <span class="n">paths_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">root</span><span class="p">,</span> <span class="n">file</span><span class="p">))</span>
+
+    <span class="n">paths_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">paths_list</span><span class="p">:</span>
+        <span class="n">patient</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+        <span class="n">paths_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">patient</span><span class="p">,</span> <span class="n">file</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
+
+    <span class="c1"># load only specified patients</span>
+    <span class="k">if</span> <span class="n">patients</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">paths_df</span> <span class="o">=</span> <span class="n">paths_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">patients</span><span class="p">]</span>
+
+    <span class="c1"># drop NaN</span>
+    <span class="n">dropped_patients</span> <span class="o">=</span> <span class="n">paths_df</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="n">paths_df</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dropped_patients</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+       <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING!!! The following patients will be removed because &quot;</span> \
+                      <span class="sa">f</span><span class="s2">&quot;one of the required images is missing: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">dropped_patients</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">paths_df</span> <span class="o">=</span> <span class="n">paths_df</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">how</span><span class="o">=</span><span class="s2">&quot;any&quot;</span><span class="p">)</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">paths_only</span> <span class="o">==</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">patient</span> <span class="ow">in</span> <span class="n">paths_df</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="n">flair</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">ReadImage</span><span class="p">(</span><span class="n">paths_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">patient</span><span class="p">,</span> <span class="n">flair_file</span><span class="p">])</span>
+            <span class="n">flair</span> <span class="o">=</span> <span class="n">orient_image</span><span class="p">(</span><span class="n">flair</span><span class="p">,</span> <span class="s2">&quot;RAS&quot;</span><span class="p">)</span>
+
+            <span class="n">t1</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">ReadImage</span><span class="p">(</span><span class="n">paths_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">patient</span><span class="p">,</span> <span class="n">t1_file</span><span class="p">])</span>
+            <span class="n">t1</span> <span class="o">=</span> <span class="n">resample_to_reference</span><span class="p">(</span><span class="n">t1</span><span class="p">,</span> <span class="n">flair</span><span class="p">,</span>
+                                       <span class="n">sitk</span><span class="o">.</span><span class="n">sitkLinear</span><span class="p">)</span>
+
+            <span class="n">gt</span> <span class="o">=</span> <span class="n">resample_to_reference</span><span class="p">(</span><span class="n">sitk</span><span class="o">.</span><span class="n">ReadImage</span><span class="p">(</span><span class="n">paths_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">patient</span><span class="p">,</span> <span class="n">gt_file</span><span class="p">]),</span> <span class="n">flair</span><span class="p">,</span>
+                                       <span class="n">sitk</span><span class="o">.</span><span class="n">sitkNearestNeighbor</span><span class="p">)</span>
+            <span class="n">gt</span> <span class="o">=</span> <span class="n">sitk</span><span class="o">.</span><span class="n">Cast</span><span class="p">(</span><span class="n">gt</span><span class="p">,</span> <span class="n">sitk</span><span class="o">.</span><span class="n">sitkUInt8</span><span class="p">)</span>
+
+            <span class="n">segm</span> <span class="o">=</span> <span class="n">resample_to_reference</span><span class="p">(</span><span class="n">sitk</span><span class="o">.</span><span class="n">ReadImage</span><span class="p">(</span><span class="n">paths_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">patient</span><span class="p">,</span> <span class="n">segm_file</span><span class="p">]),</span> <span class="n">flair</span><span class="p">,</span>
+                                         <span class="n">sitk</span><span class="o">.</span><span class="n">sitkNearestNeighbor</span><span class="p">)</span>
+            <span class="n">gm_mask</span> <span class="o">=</span> <span class="n">get_mask_from_segmentation</span><span class="p">(</span><span class="n">segm</span><span class="p">,</span> <span class="n">gm_labels</span><span class="p">)</span>
+            <span class="n">wm_mask</span> <span class="o">=</span> <span class="n">get_mask_from_segmentation</span><span class="p">(</span><span class="n">segm</span><span class="p">,</span> <span class="n">wm_labels</span><span class="p">)</span>
+
+            <span class="n">data</span><span class="p">[</span><span class="n">patient</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;flair&quot;</span><span class="p">:</span> <span class="n">flair</span><span class="p">,</span> <span class="s2">&quot;t1&quot;</span><span class="p">:</span> <span class="n">t1</span><span class="p">,</span> <span class="s2">&quot;gt&quot;</span><span class="p">:</span> <span class="n">gt</span><span class="p">,</span>
+                <span class="s2">&quot;gm_mask&quot;</span><span class="p">:</span> <span class="n">gm_mask</span><span class="p">,</span> <span class="s2">&quot;wm_mask&quot;</span><span class="p">:</span> <span class="n">wm_mask</span><span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">data</span><span class="p">,</span> <span class="n">paths_df</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">process_patient</span><span class="p">(</span><span class="n">args_tuple</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Process a single patient&#39;s data and compute the separation score.</span>
+
+<span class="sd">    The score is designed to:</span>
+<span class="sd">        - Maximize separation between GM and lesions (true positives)</span>
+<span class="sd">        - Penalize overlap between WM and GM (false positives)</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    args_tuple : tuple</span>
+<span class="sd">        Tuple containing:</span>
+<span class="sd">            - data : dict</span>
+<span class="sd">                Dictionary with patient images and masks.</span>
+<span class="sd">            - alpha : float</span>
+<span class="sd">                Segmentation parameter alpha.</span>
+<span class="sd">            - beta : float</span>
+<span class="sd">                Segmentation parameter beta.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        Separation score: larger values indicate better GM-lesion separation</span>
+<span class="sd">        and minimal WM overlap.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span> <span class="o">=</span> <span class="n">args_tuple</span>
+
+    <span class="n">flair</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;flair&quot;</span><span class="p">]</span>
+    <span class="n">t1</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;t1&quot;</span><span class="p">]</span>
+    <span class="n">gt</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;gt&quot;</span><span class="p">]</span>
+    <span class="n">gm_mask</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;gm_mask&quot;</span><span class="p">]</span>
+    <span class="n">wm_mask</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;wm_mask&quot;</span><span class="p">]</span>
+
+    <span class="n">image</span> <span class="o">=</span> <span class="n">flair_t1_sum</span><span class="o">.</span><span class="n">main</span><span class="p">(</span><span class="n">flair</span><span class="p">,</span> <span class="n">t1</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span>
+                                                      <span class="n">wm_mask</span><span class="o">=</span><span class="n">wm_mask</span><span class="p">,</span>
+                                                      <span class="n">gm_mask</span><span class="o">=</span><span class="n">gm_mask</span><span class="p">,</span>
+                                                      <span class="n">gt</span><span class="o">=</span><span class="n">gt</span><span class="p">,</span>
+                                                      <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    
+    <span class="n">gm_arr</span> <span class="o">=</span> <span class="n">get_array_from_image</span><span class="p">(</span><span class="n">sitk</span><span class="o">.</span><span class="n">Mask</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">gm_mask</span><span class="p">))</span>
+    <span class="n">wm_arr</span> <span class="o">=</span> <span class="n">get_array_from_image</span><span class="p">(</span><span class="n">sitk</span><span class="o">.</span><span class="n">Mask</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">wm_mask</span><span class="p">))</span>
+    <span class="n">lesions_arr</span> <span class="o">=</span> <span class="n">get_array_from_image</span><span class="p">(</span><span class="n">sitk</span><span class="o">.</span><span class="n">Mask</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">gt</span><span class="p">))</span>
+    <span class="n">gm_gl</span> <span class="o">=</span> <span class="n">gm_arr</span><span class="p">[</span><span class="n">gm_arr</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">wm_gl</span> <span class="o">=</span> <span class="n">wm_arr</span><span class="p">[</span><span class="n">wm_arr</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">lesions_gl</span> <span class="o">=</span> <span class="n">lesions_arr</span><span class="p">[</span><span class="n">lesions_arr</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="n">les_low</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">lesions_gl</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">)</span>
+    <span class="n">gm_high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">gm_gl</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">)</span>
+    <span class="n">scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">gm_gl</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">gm_gl</span><span class="p">,</span> <span class="mf">0.25</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-6</span>
+    <span class="n">reward</span> <span class="o">=</span> <span class="p">(</span><span class="n">les_low</span> <span class="o">-</span> <span class="n">gm_high</span><span class="p">)</span> <span class="o">/</span> <span class="n">scale</span>
+
+    <span class="n">gm_mode</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">gm_gl</span><span class="p">))</span>
+    <span class="n">mean_wm_above_gm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">wm_gl</span> <span class="o">&gt;</span> <span class="n">gm_mode</span><span class="p">)</span> 
+    <span class="n">penalty</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">5</span><span class="o">*</span><span class="n">mean_wm_above_gm</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+
+    <span class="c1"># maximization logic:</span>
+    <span class="c1"># if gm &lt;&lt; lesions this is good (true positives)</span>
+    <span class="c1"># but if wm and gl overlap this is very bad</span>
+    <span class="c1"># because in that case we have some wm &gt; gm_mode (false positives)</span>
+    <span class="c1"># so we try to separate lesions and gm</span>
+    <span class="c1"># as long wm and gm don&#39;t overlap too much</span>
+    <span class="c1"># so we try to maximize:</span>
+
+    <span class="k">return</span> <span class="n">reward</span> <span class="o">-</span> <span class="nb">max</span><span class="p">(</span><span class="n">penalty</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../my_scripts.html#SilentInfarctionSegmentationFLAIR.tuning_alpha_beta.main">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">data_folder</span><span class="p">,</span> <span class="n">results_folder</span><span class="p">,</span> <span class="n">init_points</span><span class="p">,</span> <span class="n">n_iter</span><span class="p">,</span> <span class="n">n_cores</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Main pipeline for Bayesian optimization of segmentation parameters.</span>
+
+<span class="sd">    Steps:</span>
+<span class="sd">    - Load patient data</span>
+<span class="sd">    - Split into training and validation sets</span>
+<span class="sd">    - Optimize alpha and beta using Bayesian Optimization</span>
+<span class="sd">    - Save best parameters and separation metrics</span>
+<span class="sd">    - Validate the best parameters on the validation set</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    data_folder : str</span>
+<span class="sd">        Path to the dataset directory.</span>
+<span class="sd">    results_folder : str</span>
+<span class="sd">        Path to save outputs, logs, and metrics.</span>
+<span class="sd">    init_points : int</span>
+<span class="sd">        Number of initial random exploration steps for Bayesian Optimization.</span>
+<span class="sd">    n_iter : int</span>
+<span class="sd">        Number of BO iterations.</span>
+<span class="sd">    n_cores : int</span>
+<span class="sd">        Number of CPU cores to use for multiprocessing.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">separation_obj</span><span class="p">(</span><span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">train_patients</span><span class="o">=</span><span class="p">[]):</span>
+
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+        <span class="n">separation_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># chunk structure to avoid RAM overload</span>
+        <span class="n">cores</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">n_cores</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_patients</span><span class="p">))</span>    
+        <span class="n">n_chunks</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">train_patients</span><span class="p">)</span> <span class="o">+</span> <span class="n">cores</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="n">cores</span>
+
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_chunks</span><span class="p">):</span>
+            <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+
+            <span class="n">chunk_patients</span> <span class="o">=</span> <span class="n">train_patients</span><span class="p">[</span><span class="n">chunk</span><span class="o">*</span><span class="n">cores</span><span class="p">:(</span><span class="n">chunk</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">cores</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">chunk_data</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">load_subjects</span><span class="p">(</span><span class="n">data_folder</span><span class="p">,</span> <span class="n">patients</span><span class="o">=</span><span class="n">chunk_patients</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">chunk_data</span> <span class="o">=</span> <span class="n">data</span>
+            
+            <span class="n">args_list</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">(</span><span class="n">chunk_data</span><span class="p">[</span><span class="n">patient</span><span class="p">],</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">beta</span><span class="p">)</span> <span class="k">for</span> <span class="n">patient</span> <span class="ow">in</span> <span class="n">chunk_patients</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">cores</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">with</span> <span class="n">mp</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">cores</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+                    <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">process_patient</span><span class="p">,</span> <span class="n">args_list</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">process_patient</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">args_list</span><span class="p">]</span>
+
+            <span class="n">separation_list</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>  
+            
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Elapsed time: </span><span class="si">{</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">start</span><span class="p">)</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2"> s&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">separation_list</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">separation_obj_mean</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">tr_separation_list</span> <span class="o">=</span> <span class="n">separation_obj</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                                <span class="n">train_patients</span><span class="o">=</span><span class="n">tr_patients</span><span class="p">,</span>
+                                <span class="n">data</span><span class="o">=</span><span class="n">preloaded_data</span><span class="p">,</span>
+                                <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">tr_separation_list</span><span class="p">)</span>
+
+    <span class="c1"># create results folder</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">results_folder</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    
+    <span class="c1"># train-val-test split</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_folder</span><span class="p">,</span> <span class="s2">&quot;train_patients.pkl&quot;</span><span class="p">)</span>
+        <span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_folder</span><span class="p">,</span> <span class="s2">&quot;validation_patients.pkl&quot;</span><span class="p">)):</span>
+        <span class="n">tr_patients</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">read_pickle</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_folder</span><span class="p">,</span> <span class="s2">&quot;train_patients.pkl&quot;</span><span class="p">)))</span>
+        <span class="n">val_patients</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">read_pickle</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_folder</span><span class="p">,</span> <span class="s2">&quot;validation_patients.pkl&quot;</span><span class="p">)))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found train-validation split in &#39;</span><span class="si">{</span><span class="n">data_folder</span><span class="si">}</span><span class="s2">&#39;. &quot;</span> \
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">tr_patients</span><span class="p">)</span><span class="si">}</span><span class="s2"> patients will be used for training, </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">val_patients</span><span class="p">)</span><span class="si">}</span><span class="s2"> for validation.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">tr_patients</span><span class="p">,</span> <span class="n">val_patients</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">train_val_test_split</span><span class="p">(</span><span class="n">data_folder</span><span class="p">,</span>
+                                                <span class="n">validation_fraction</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">test_fraction</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>
+                                                <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Stratification of train–validation–test split according to positive-to-total ratio&quot;</span><span class="p">)</span>
+
+    <span class="c1"># optimization</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_folder</span><span class="p">,</span> <span class="s2">&quot;best_params.pkl&quot;</span><span class="p">)):</span>
+        
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tr_patients</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">n_cores</span><span class="p">:</span> <span class="c1"># preload data (faster but heavy in RAM) </span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">tr_patients</span><span class="p">)</span><span class="si">}</span><span class="s2"> training patients and </span><span class="si">{</span><span class="n">n_cores</span><span class="si">}</span><span class="s2"> avalible cores. &quot;</span> \
+                        <span class="s2">&quot;Preloading data in advance...&quot;</span><span class="p">)</span>
+            <span class="n">preloaded_data</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">load_subjects</span><span class="p">(</span><span class="n">data_folder</span><span class="p">,</span> <span class="n">patients</span><span class="o">=</span><span class="n">tr_patients</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>   <span class="c1"># light on RAM, but slower in time</span>
+            <span class="n">preloaded_data</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">tr_patients</span><span class="p">)</span><span class="si">}</span><span class="s2"> training patients and </span><span class="si">{</span><span class="n">n_cores</span><span class="si">}</span><span class="s2"> avalible cores. &quot;</span> \
+                    <span class="s2">&quot;Data will be loaded at each iteration...&quot;</span><span class="p">)</span>
+
+        <span class="c1"># maximize training separation    </span>
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">BayesianOptimization</span><span class="p">(</span><span class="n">f</span><span class="o">=</span><span class="n">separation_obj_mean</span><span class="p">,</span> <span class="n">pbounds</span><span class="o">=</span><span class="n">pbounds</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+        <span class="n">optimizer</span><span class="o">.</span><span class="n">maximize</span><span class="p">(</span><span class="n">init_points</span><span class="o">=</span><span class="n">init_points</span><span class="p">,</span> <span class="n">n_iter</span><span class="o">=</span><span class="n">n_iter</span><span class="p">)</span>
+        <span class="n">best_params</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">max</span><span class="p">[</span><span class="s2">&quot;params&quot;</span><span class="p">]</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">best_params</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">to_pickle</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_folder</span><span class="p">,</span> <span class="s2">&quot;best_params.pkl&quot;</span><span class="p">))</span>
+        <span class="n">history</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">res</span>
+        <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">history</span><span class="p">)</span><span class="o">.</span><span class="n">to_pickle</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_folder</span><span class="p">,</span> <span class="s2">&quot;history.pkl&quot;</span><span class="p">))</span>
+
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">best_params</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_pickle</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_folder</span><span class="p">,</span> <span class="s2">&quot;best_params.pkl&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+    
+    <span class="c1"># training performance</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_folder</span><span class="p">,</span> <span class="s2">&quot;tr_separation.npy&quot;</span><span class="p">)):</span>
+        <span class="n">tr_separation_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_folder</span><span class="p">,</span> <span class="s2">&quot;tr_separation.npy&quot;</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Evaluating best parameters on training set...&quot;</span><span class="p">)</span>
+        <span class="n">tr_separation_list</span> <span class="o">=</span> <span class="n">separation_obj</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="n">best_params</span><span class="p">[</span><span class="s2">&quot;alpha&quot;</span><span class="p">],</span>
+                                            <span class="n">beta</span><span class="o">=</span><span class="n">best_params</span><span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">],</span>
+                                            <span class="n">train_patients</span><span class="o">=</span><span class="n">tr_patients</span><span class="p">,</span>
+                                            <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_folder</span><span class="p">,</span> <span class="s2">&quot;tr_separation.npy&quot;</span><span class="p">),</span> <span class="n">tr_separation_list</span><span class="p">)</span>
+
+            
+
+    <span class="c1"># validation</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Validating best parameters on validation set...&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_folder</span><span class="p">,</span> <span class="s2">&quot;val_separation.npy&quot;</span><span class="p">)):</span>
+        <span class="n">val_separation_list</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_folder</span><span class="p">,</span> <span class="s2">&quot;val_separation.npy&quot;</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">val_data</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">load_subjects</span><span class="p">(</span><span class="n">data_folder</span><span class="p">,</span> <span class="n">patients</span><span class="o">=</span><span class="n">val_patients</span><span class="p">)</span>
+        <span class="n">val_separation_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">process_patient</span><span class="p">((</span><span class="n">val_data</span><span class="p">[</span><span class="n">patient</span><span class="p">],)</span> <span class="o">+</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">best_params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+                                                                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">pbounds</span><span class="o">.</span><span class="n">keys</span><span class="p">())))</span>
+                        <span class="k">for</span> <span class="n">patient</span> <span class="ow">in</span> <span class="n">val_patients</span><span class="p">]</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_folder</span><span class="p">,</span> <span class="s2">&quot;val_separation.npy&quot;</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">val_separation_list</span><span class="p">))</span>
+
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Best parameters: &quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">best_params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2"> = </span><span class="si">{</span><span class="n">v</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Average separation on training set: &quot;</span>\
+          <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">tr_separation_list</span><span class="p">)</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2"> ± </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">tr_separation_list</span><span class="p">)</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Average separation on validation set: &quot;</span>\
+          <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">val_separation_list</span><span class="p">)</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2"> ± </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">val_separation_list</span><span class="p">)</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># save alpha and beta</span>
+    <span class="n">params_yaml</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;alpha&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">best_params</span><span class="p">[</span><span class="s2">&quot;alpha&quot;</span><span class="p">]),</span>
+        <span class="s2">&quot;beta&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">best_params</span><span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">]),</span>
+        <span class="s2">&quot;gamma&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;extend_dilation_radius&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;n_std&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;min_diameter&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;surround_dilation_radius&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;min_points&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+    
+    <span class="n">yaml_path</span> <span class="o">=</span> <span class="s2">&quot;params_alpha_beta.yaml&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">yaml_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">params_yaml</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    
+    <span class="n">script</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;SilentInfarctionSegmentationFLAIR&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;tuning_gamma_rs.py&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Saved parameters to </span><span class="si">{</span><span class="n">yaml_path</span><span class="si">}</span><span class="s2"> (still not ready for use, &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;please tune the other parameters by running </span><span class="si">{</span><span class="n">script</span><span class="si">}</span><span class="s2">)&quot;</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="c1"># load constants</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;config.yaml&quot;</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+    <span class="n">gm_labels</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">][</span><span class="s2">&quot;gm&quot;</span><span class="p">]</span>
+    <span class="n">wm_labels</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">][</span><span class="s2">&quot;wm&quot;</span><span class="p">]</span>
+    <span class="n">flair_file</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;files&quot;</span><span class="p">][</span><span class="s2">&quot;flair&quot;</span><span class="p">]</span>
+    <span class="n">t1_file</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;files&quot;</span><span class="p">][</span><span class="s2">&quot;t1&quot;</span><span class="p">]</span>
+    <span class="n">segm_file</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;files&quot;</span><span class="p">][</span><span class="s2">&quot;segmentation&quot;</span><span class="p">]</span>
+    <span class="n">gt_file</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;files&quot;</span><span class="p">][</span><span class="s2">&quot;gt&quot;</span><span class="p">]</span>
+
+    <span class="n">main</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">data_folder</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">results_folder</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">init_points</span><span class="p">,</span>
+         <span class="n">args</span><span class="o">.</span><span class="n">n_iter</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">n_cores</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Elapsed time: </span><span class="si">{</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span><span class="o">-</span><span class="n">start_time</span><span class="p">)</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2"> s&quot;</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Davide Bracali.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
