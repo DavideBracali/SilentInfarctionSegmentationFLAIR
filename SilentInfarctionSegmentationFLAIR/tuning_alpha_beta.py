@@ -263,28 +263,21 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
     -------
     None
     """
-    iteration = 0
 
     def separation_obj(alpha, beta, data=None, train_patients=[]):
-
-        nonlocal n_cores
-        nonlocal iteration
-        iteration += 1
 
         start = time.time()
         gc.collect()
         separation_list = []
 
         # chunk structure to avoid RAM overload
-        if n_cores > len(train_patients):
-            n_cores = len(train_patients)
-            
-        n_chunks = (len(train_patients) + n_cores - 1) // n_cores
+        cores = min(n_cores, len(train_patients))    
+        n_chunks = (len(train_patients) + cores - 1) // cores
 
         for chunk in range(n_chunks):
             gc.collect()
 
-            chunk_patients = train_patients[chunk*n_cores:(chunk+1)*n_cores]
+            chunk_patients = train_patients[chunk*cores:(chunk+1)*cores]
 
             if data is None:
                 chunk_data, _ = load_subjects(data_folder, patients=chunk_patients)
@@ -294,8 +287,8 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
             args_list = [
                 (chunk_data[patient], alpha, beta) for patient in chunk_patients]
 
-            if n_cores > 1:
-                with mp.Pool(n_cores) as pool:
+            if cores > 1:
+                with mp.Pool(cores) as pool:
                     results = pool.map(process_patient, args_list)
             else:
                 results = [process_patient(a) for a in args_list]
@@ -400,13 +393,13 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
     yaml_path = "params_alpha_beta.yaml"
     with open(yaml_path, "w") as f:
         yaml.safe_dump(params_yaml, f, sort_keys=False)
-
-    print(f"Saved parameters to {yaml_path} (still not ready for use, "\
-          "please tune the other parameters by running "\
-          f"{os.path.join(
-              'SilentInfarctionSegmentationFLAIR',
-              'tuning_gamma_rs.py'
-              )}")
+    
+    script = os.path.join("SilentInfarctionSegmentationFLAIR",
+        "tuning_gamma_rs.py")
+    print(
+        f"Saved parameters to {yaml_path} (still not ready for use, "
+        f"please tune the other parameters by running {script})"
+    )
 
 
 if __name__ == '__main__':

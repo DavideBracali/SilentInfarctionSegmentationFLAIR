@@ -546,8 +546,7 @@ def main(data_folder, alpha, beta, gammas, results_folder,
         None
             Saves images to disk.
         """
-        nonlocal n_cores
-
+        
         start = time.time()
         gc.collect()
 
@@ -604,7 +603,6 @@ def main(data_folder, alpha, beta, gammas, results_folder,
         None
             Saves threshold masks to disk.
         """
-        nonlocal n_cores
 
         start = time.time()
         gc.collect()
@@ -644,7 +642,6 @@ def main(data_folder, alpha, beta, gammas, results_folder,
         print(f"Elapsed time: {(time.time()-start):.3g} s")
 
     def evaluate_thr_dice(gamma, data=None, val_patients=[]):
-        nonlocal n_cores
 
         gc.collect()
         dice_list = []
@@ -712,7 +709,6 @@ def main(data_folder, alpha, beta, gammas, results_folder,
         list of float
             DICE scores per patient.
         """
-        nonlocal n_cores
 
         start = time.time()
         gc.collect()
