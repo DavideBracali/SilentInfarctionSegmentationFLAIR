@@ -34,6 +34,15 @@ from SilentInfarctionSegmentationFLAIR import flair_t1_sum
 
 
 def parse_args():
+    """
+    Parse command-line arguments for optimizing alpha and beta parameters.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed arguments with attributes: `data_folder`, `results_folder`,
+        `init_points`, `n_iter`, `n_cores`.
+    """
     description="Optimizes alpha and beta parameters on a training set, "\
         "maximizing separation between histograms of different tissues."
 

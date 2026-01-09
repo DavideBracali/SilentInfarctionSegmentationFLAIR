@@ -35,6 +35,17 @@ MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(os.path.dirname(MODULE_DIR), "config.yaml")
 
 def parse_args():
+    """
+    Parse command-line arguments for post-processing a threshold-based lesion mask.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed arguments with attributes: `thr_mask`, `image`, `pve_wm`, `pve_gm`,
+        `pve_csf`, `segm`, `min_diameter`, `surround_dilation_radius`, `n_std`,
+        `extend_dilation_radius`, `min_points`, `labels_to_remove`, `keywords_to_remove`,
+        `label_name_file`, `save_dir`, `verbose`.
+    """
     description = (
         "Post-processes a threshold-based lesion mask applying connected "
         "components, geometric, PVE-based and anatomical filters."

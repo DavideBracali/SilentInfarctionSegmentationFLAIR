@@ -29,6 +29,15 @@ MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(os.path.dirname(MODULE_DIR), "config.yaml")
 
 def parse_args():
+    """
+    Parse command-line arguments.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed arguments with attributes: `flair`, `t1`, `segm`, `gt`,
+        `alpha`, `beta`, `save_dir`, `show`, `verbose`.
+    """
     description = (
         "Combines FLAIR and T1 images using a gaussian-transformed T1 weighted "
         "sum. Optionally plots tissue histograms for WM, GM and lesions."

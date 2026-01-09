@@ -33,6 +33,15 @@ MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(os.path.dirname(MODULE_DIR), "config.yaml")
 
 def parse_args():
+    """
+    Parse command-line arguments for GM-based thresholding using RHWHM.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed arguments with attributes: `image`, `segm`, `gamma`, `show`,
+        `verbose`, `save_dir`.
+    """
     description = (
         "Computes a GM-based threshold using histogram mode and RHWHM. "
         "Applies the threshold to the input image."
