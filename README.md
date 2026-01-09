@@ -8,21 +8,20 @@
 The **SilentInfarctionSegmentationFLAIR** package is organized into two main components:
 
 - **Scripts** — provide a structured and modular interface to run the complete segmentation workflow, handle I/O operations, and expose the command-line interface (CLI):
-  - [flair_t1_sum](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/flair_t1_sum.py): Combines FLAIR and T1 images using a gaussian-transformed T1 weighted sum.
-  - [threshold](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/threshold.py): Applies an adaptive threshold using histogram mode and rHWHM.
-  - [refinement_step](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/refinement_step.py): Post-processes a threshold-based lesion mask applying connected components, geometric, PVE-based and anatomical filters.
-  - [tuning_alpha_beta](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/tuning_alpha_beta.py): Optimizes the two parameters necessary to integrate FLAIR and T1 information.
-  - [tuning_gamma_rs](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/tuning_gamma_rs.py): Optimizes gamma, the main segmentation parameter, and the five parameters necessary to run the refinement step.
+  - [flair_t1_sum](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-flair-t1-sum): Combines FLAIR and T1 images using a gaussian-transformed T1 weighted sum.
+  - [threshold](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-threshold): Applies an adaptive threshold using histogram mode and rHWHM.
+  - [refinement_step](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-refinement-step): Post-processes a threshold-based lesion mask applying connected components, geometric, PVE-based and anatomical filters.
+  - [tuning_alpha_beta](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-tuning-alpha-beta): Optimizes the two parameters necessary to integrate FLAIR and T1 information.
+  - [tuning_gamma_rs](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-tuning-gamma-rs): Optimizes gamma, the main segmentation parameter, and the five parameters necessary to run the refinement step.
+  - [evaluate_test_set](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-evaluate-test-set): Computes evaluation metrics comparing a test set of images with its ground truth masks.
 
 - **Modules** — contain the core functionality of the pipeline:
-  - [histograms](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/histograms.py): Methods to compute and extract information from gray level histograms.
-  - [segmentation](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/segmentation.py): Methods to apply and evaluate segmentation algorithms.
-  - [refinement](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/refinement.py): Methods to refine the initial threshold segmentation.
-  - [utils](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/utils.py): Methods to perform general operations such as image plotting, gray level transformations and train-validation-test splits.
+  - [histograms](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_modules.html#module-SilentInfarctionSegmentationFLAIR.histograms): Methods to compute and extract information from gray level histograms.
+  - [segmentation](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_modules.html#module-SilentInfarctionSegmentationFLAIR.segmentation): Methods to apply and evaluate segmentation algorithms.
+  - [refinement](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_modules.html#module-SilentInfarctionSegmentationFLAIR.refinement): Methods to refine the initial threshold segmentation.
+  - [utils](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_modules.html#module-SilentInfarctionSegmentationFLAIR.utils): Methods to perform general operations such as image plotting, gray level transformations and train-validation-test splits.
 
 This structure keeps the computational logic clean making the package easier to maintain and modify.
-
-!! Qui descrivi nel dettaglio la pipeline
 
 ## Prerequisites
 
@@ -203,7 +202,7 @@ All parameters were optimized using [bayesian-optimization](https://github.com/b
 - *extend_dilation_radius*, *n_std*, *min_diameter*, *surround_dilation_radius* and *min_points* were tuned by maximizing the average DICE coefficient (after the refinement step) over the training set. The initial thresholded mask depends on *gamma*, so this optimization was performed separately for each candidate value of *gamma*.
 - *gamma*, being the most influential parameter of the algorithm, was chosen as the value that produced the maximum average DICE coefficient over the validation set. The proposed parameters in [params.yaml](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/params.yaml) returned a validation average DICE of 0.131 ± 0.184.
 
-If you prefer to tune your own parameters, it is possible to do so using the [tuning_alpha_beta](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/tuning_alpha_beta.py) and [tuning_gamma_rs](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/SilentInfarctionSegmentationFLAIR/tuning_gamma_rs.py) scripts. Be aware that both scripts will require several hours or even days depending on the performances your computer. 
+If you prefer to tune your own parameters, it is possible to do so using the [tuning_alpha_beta](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-tuning-alpha-beta) and [tuning_gamma_rs](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-tuning-gamma-rs) scripts. Be aware that both scripts will require several hours or even days depending on the performances your computer. 
 
 To optimize *alpha* and *beta* run:
 
@@ -217,7 +216,7 @@ Then you can optimize all the other parameters by running:
 python -m SilentInfarctionSegmentationFLAIR.tuning_gamma_rs --data_folder='path_to_data_directory'
 ```
 
-The last script can be run for specific values of *alpha* and *beta* by specifying the ```--alpha``` and ```--beta``` arguments. If not provided, the script will automatically use the previously optimized *params_alpha_beta.yaml* file created by the first script.
+The last script can be run for specific values of *alpha* and *beta* by specifying the ```--alpha``` and ```--beta``` arguments. If not provided, the script will automatically use the previously optimized *params_alpha_beta.yaml* file created by the first script. Once the optimization is compleated, a *params_<year>_<month>_<day>_<hour>_<min>_<sec>.yaml* file will be saved. To use those parameters, rename the file as *params.yaml* or specify the parameters that you want to use with the ```--params_path``` arguement as described [here](#process-one-or-more-imaging-sessions).
 
 Both scripts will search for an existing train-validation-test split. If not found, a 60% - 30% - 10% split will be created, stratified according to the positives / total voxel ratios in the ground truth file.
 
@@ -233,7 +232,7 @@ To evaluate the algorithm over a test set, run:
 python -m SilentInfarctionSegmentationFLAIR.evaluate_test_set --data_folder='path_to_data_directory'
 ```
 
-This script will search for an existing train-validatoin-test split. If not found, every imaging session in the data folder will be evaluated. 
+This script will search for an existing train-validation-test split. If not found, every imaging session in the data folder will be evaluated. 
 A ```--help``` argument can be used to describe the optional parameters.
 
 ## License
