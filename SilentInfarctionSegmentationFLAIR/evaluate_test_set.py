@@ -382,21 +382,21 @@ def main(data_folder, params_path, results_folder, verbose, show):
     )
 
     print(
-        "\nAverage SPECIFICITY on test set after threshold: "
-        f"{np.mean(1 - thr_metrics['vw-FPF']):.4f} ± "
-        f"{np.std(1 - thr_metrics['vw-FPF']):.3g}\n"
-        f"MEDIAN = {np.median(1 - thr_metrics['vw-FPF']):.3g}\n"
-        f"IQR = [{np.quantile(1 - thr_metrics['vw-FPF'], 0.25):.3g}, "
-        f"{np.quantile(1 - thr_metrics['vw-FPF'], 0.75):.3g}]"
+        "\nAverage PRECISION on test set after threshold: "
+        f"{np.mean(thr_metrics['vw-PPV']):.4f} ± "
+        f"{np.std(thr_metrics['vw-PPV']):.3g}\n"
+        f"MEDIAN = {np.median(thr_metrics['vw-PPV']):.3g}\n"
+        f"IQR = [{np.quantile(thr_metrics['vw-PPV'], 0.25):.3g}, "
+        f"{np.quantile(thr_metrics['vw-PPV'], 0.75):.3g}]"
     )
 
     print(
-        "\nAverage SPECIFICITY on test set after refinement step: "
-        f"{np.mean(1 - ref_metrics['vw-FPF']):.4f} ± "
-        f"{np.std(1 - ref_metrics['vw-FPF']):.3g}\n"
-        f"MEDIAN = {np.median(1 - ref_metrics['vw-FPF']):.3g}\n"
-        f"IQR = [{np.quantile(1 - ref_metrics['vw-FPF'], 0.25):.3g}, "
-        f"{np.quantile(1 - ref_metrics['vw-FPF'], 0.75):.3g}]"
+        "\nAverage PRECISION on test set after refinement step: "
+        f"{np.mean(ref_metrics['vw-PPV']):.4f} ± "
+        f"{np.std(ref_metrics['vw-PPV']):.3g}\n"
+        f"MEDIAN = {np.median(ref_metrics['vw-PPV']):.3g}\n"
+        f"IQR = [{np.quantile(ref_metrics['vw-PPV'], 0.25):.3g}, "
+        f"{np.quantile(ref_metrics['vw-PPV'], 0.75):.3g}]"
     )
 
     print(

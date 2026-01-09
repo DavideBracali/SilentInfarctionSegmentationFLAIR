@@ -254,8 +254,8 @@ def cli():
             thr_results = evaluate_voxel_wise(thr_mask, gt)
             print(f"  - Sensitivity: "
                 f"{thr_results['vw-TPF']:.3g}")
-            print(f"  - Specificity: "
-                f"{(1 - thr_results['vw-FPF']):.3g}")
+            print(f"  - Precision: "
+                f"{thr_results['vw-PPV']:.3g}")
             print(f"  - DICE coefficient: "
                 f"{thr_results['vw-DSC']:.3g}")
 
@@ -264,7 +264,7 @@ def cli():
             print(f"  - Sensitivity: "
                 f"{ref_results['vw-TPF']:.3g}")
             print(f"  - Specificity: "
-                f"{(1 - ref_results['vw-FPF']):.3g}")
+                f"{ref_results['vw-PVV']:.3g}")
             print(f"  - DICE coefficient: "
                 f"{ref_results['vw-DSC']:.3g}")
 
