@@ -212,7 +212,7 @@ This segmentation algorithm requires 8 parameters to be specified:
 - *min_points* (int): the minimum score that a candidate lesion must have collected during the refinement step to be present in the final segmentation.
 
 ### Parameter optimization
-An initial set of optimized parameters is available in the [params.yaml](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/params.yaml) file. This set of parameters was optimized over a training set of 33 sets of images, a validation set of 16 sets of images and evaluated on a test set of 6 images, obtaining a mean DICE coefficient of 0.08 ± 0.09, a mean sensitivity of 0.14 ± 0.16 and a mean specificity of 0.9997 ± 0.0002.
+An initial set of optimized parameters is available in the [params.yaml](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/params.yaml) file. This set of parameters was optimized over a training set of 33 sets of images, a validation set of 16 sets of images and evaluated on a test set of 6 images, obtaining a mean DICE coefficient of 0.08 ± 0.09, a mean sensitivity of 0.14 ± 0.16 and a mean precision of 0.06 ± 0.07.
 
 All parameters were optimized using [bayesian-optimization](https://github.com/bayesian-optimization/BayesianOptimization):
 -*alpha* and *beta* were tuned by maximizing an objective function over the training set that rewards separation between gray matter and lesions histograms (increasing true positives), while punishing overlap between gray matter and white matter (potentially increasing false negatives).
