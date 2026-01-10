@@ -1,7 +1,24 @@
 # Silent Infarction FLAIR Segmentation
 
 ## Overview
-!! Fare
+This repository contains an implementation and adaptation of an automated lesion segmentation pipeline for silent cerebral infarctions in Sickle Cell Disease (SCD), based on a method originally developed for Multiple Sclerosis (MS) lesions.
+
+Silent cerebral infarctions are among the most frequent neurological complications in SCD patients and are associated with long-term cognitive impairment. They appear as hyperintense regions in FLAIR MRI, similarly to MS lesions. However, large and annotated SCD datasets are rare while MS datasets and segmentation algorithms are abundant and well studied. Hence the decision to adapt a MS algorithm to SCD ischemic lesions.
+
+The pipeline follows the structure of the algorithm proposed by Cabezas et al. (2014) and consists of two main stages:
+
+**Initial Candidate Detection (Thresholding)**:
+ - FLAIR images are intensity-normalized
+ - Gray matter statistics are used to define an adaptive threshold
+ - Hyperintense outliers are extracted as lesion candidates
+
+**Refinement Step**
+The initial thresholded mask is refined using:
+ - Anatomical constraints
+ - Morphological operations
+ - Geometric filters
+
+The goal is to suppress normal hyperintense tissue and retain only plausible ischemic lesions.
 
 ## Contents
 
@@ -87,7 +104,7 @@ To process your own data, images need to satisfy the following requisites:
 - Multiple imaging sessions must be stored as subfolders of the same folder (e.g. *data/patient1* and *data/patient2*). Images of the same type must have the same file name (e.g. FLAIR images must be named ```FLAIR.nii``` for all patients).
 - Optionally, the algorithm will remove voxels where it is anatomically impossible to find lesions. It does so by eliminating segmentation voxels containing certain keywords. However segmentation labels are integer. To use this feature, you need to specify a relationship between integer labels and tissue name. By default, this information is contained in *data/FreeSurferColorLUT.txt* and is valid for both FastSurfer and FreeSurfer segmentations. Feel free to specify a different file by changing the ```files/label_name``` entry in the *config.yaml* file.
 
-If don't want to modify the *config.yaml* file, then your data directory should look like:
+If you don't want to modify the *config.yaml* file, then your data directory should look like:
 ```
 data/
 │
@@ -179,16 +196,16 @@ The **SilentInfarctionSegmentationFLAIR** package will save the following output
 - *image.nii*: NIfTI image of FLAIR and gaussian-transformed T1 weighted sum.
 - *image.png*: 2-dimensional sections of the FLAIR and gaussian-transformed T1 weighted sum.
 - *thr.png*: gray matter histogram where mode, rHWHM and gray level threshold are highlighted.
-- *thr_mask.nii*: NIFTI image of the thresholded input image.
-- *thr_mask.png*: 2-dimensional sections of the thresholded input image.
+- *thr_mask.nii*: NIFTI image of the thresholded initial segmentation.
+- *thr_mask.png*: 2-dimensional sections of the thresholded initial segmentation.
 - *segmentation.nii*: NIfTI image of the final refined segmentation.
-- *segmentation.png*: 2-dimensional sections of the thresholded input image.
+- *segmentation.png*: 2-dimensional sections of the final refined segmentation.
 
 ## Parameters
 ### Parameters description
-This segmentation algorithm requires 8 parameters to specify:
+This segmentation algorithm requires 8 parameters to be specified:
 - *alpha* and *beta* (floats): to regulate the weighted sum between FLAIR and gaussian-transformed T1 images. *alpha* controls the width of the Gaussian applied to the T1 intensities, while *beta* controls how strongly the transformed T1 contributes to the final image.
-- *gamma* (float): this is the most important segmentation parameter, as it defines the value of the initial threshold (!!! come descritto nella parte dove spiego l'algoritmo).
+- *gamma* (float): this is the most important segmentation parameter, as it defines the value of the initial threshold.
 - *extend_dilation_radius* and *n_std* (floats): to control the lesion extension in the refinement step. After the initial segmentation each connected component is dilated with a box kernel with radius equal to *extend_dilation_radius* millimeters. Gray levels that are *n_std* standard deviations within the mean of each component are included in the initial thresholded mask.
 - *min_diameter* (float): specifies, in millimeters, the minimum diameter of the connected components to be considered as lesions in the refined step.
 - *surround_dilation_radius* (float): in the refinement step each connected components receives a certain score based on the prevalent tissue in the neighborhood of each component. This parameter specifies, in millimeters, the radius of the box kernel of the dilation applied to each candidate lesion.
@@ -202,7 +219,7 @@ All parameters were optimized using [bayesian-optimization](https://github.com/b
 - *extend_dilation_radius*, *n_std*, *min_diameter*, *surround_dilation_radius* and *min_points* were tuned by maximizing the average DICE coefficient (after the refinement step) over the training set. The initial thresholded mask depends on *gamma*, so this optimization was performed separately for each candidate value of *gamma*.
 - *gamma*, being the most influential parameter of the algorithm, was chosen as the value that produced the maximum average DICE coefficient over the validation set. The proposed parameters in [params.yaml](https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR/tree/main/params.yaml) returned a validation average DICE of 0.131 ± 0.184.
 
-If you prefer to tune your own parameters, it is possible to do so using the [tuning_alpha_beta](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-tuning-alpha-beta) and [tuning_gamma_rs](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-tuning-gamma-rs) scripts. Be aware that both scripts will require several hours or even days depending on the performances your computer. 
+If you prefer to tune your own parameters, it is possible to do so using the [tuning_alpha_beta](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-tuning-alpha-beta) and [tuning_gamma_rs](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-tuning-gamma-rs) scripts. Be aware that both scripts will require several hours or even days depending on the performances of your computer. 
 
 To optimize *alpha* and *beta* run:
 
@@ -216,11 +233,11 @@ Then you can optimize all the other parameters by running:
 python -m SilentInfarctionSegmentationFLAIR.tuning_gamma_rs --data_folder='path_to_data_directory'
 ```
 
-The last script can be run for specific values of *alpha* and *beta* by specifying the ```--alpha``` and ```--beta``` arguments. If not provided, the script will automatically use the previously optimized *params_alpha_beta.yaml* file created by the first script. Once the optimization is compleated, a *params_<year>_<month>_<day>_<hour>_<min>_<sec>.yaml* file will be saved. To use those parameters, rename the file as *params.yaml* or specify the parameters that you want to use with the ```--params_path``` arguement as described [here](#process-one-or-more-imaging-sessions).
+The last script can be run for specific values of *alpha* and *beta* by specifying the ```--alpha``` and ```--beta``` arguments. If not provided, the script will automatically use the previously optimized *params_alpha_beta.yaml* file created by the first script. Once the optimization is completed, a *params_<year>_<month>_<day>_<hour>_<min>_<sec>.yaml* file will be saved. To use those parameters, rename the file as *params.yaml* or specify the parameters that you want to use with the ```--params_path``` argument as described [here](#process-one-or-more-imaging-sessions).
 
 Both scripts will search for an existing train-validation-test split. If not found, a 60% - 30% - 10% split will be created, stratified according to the positives / total voxel ratios in the ground truth file.
 
-Both scripts can exploit parallel processing by specifying the ```n_cores``` argument. Specifying an high value will decrease computation time, however the required RAM space will linearly increase as multiple images will be loaded at the same time.
+Both scripts can exploit parallel processing by specifying the ```n_cores``` argument. Specifying a high value will decrease computation time, however the required RAM space will linearly increase as multiple images will be loaded at the same time.
 
 A ```--help``` argument can be used in both scripts to describe the optional parameters.
 
