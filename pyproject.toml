@@ -6,7 +6,7 @@ authors = [
 ]
 description = '3D segmentation of silent infarctions in FLAIR MRI images.'
 readme = 'README.md'
-requires-python = '>=3.9'
+requires-python = '>=3.8'
 license = {text = "MIT"}
 keywords = [
   'python',
