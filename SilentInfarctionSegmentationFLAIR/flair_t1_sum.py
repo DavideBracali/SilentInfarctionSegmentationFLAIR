@@ -201,6 +201,18 @@ def main(flair, t1, alpha, beta, gm_mask, wm_mask, gt=None,
             save_path=os.path.join(save_dir, "histogram_image.png") if save_dir else None
         )
         _ = plot_image(
+            flair,
+            title="FLAIR image",
+            show=show,
+            save_path=os.path.join(save_dir, "flair.png") if save_dir else None
+        )
+        _ = plot_image(
+            t1,
+            title="T1 weighted image",
+            show=show,
+            save_path=os.path.join(save_dir, "t1.png") if save_dir else None
+        )
+        _ = plot_image(
             image,
             title="Weighted sum of FLAIR and gaussian-transformed T1\n"\
                 f"(α = {alpha:.2f}, β = {beta:.2f})",
