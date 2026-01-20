@@ -7,13 +7,12 @@ Silent cerebral infarctions are among the most frequent neurological complicatio
 
 The pipeline follows the structure of the algorithm proposed by Cabezas et al. (2014) and consists of two main stages:
 
-**Initial Candidate Detection (Thresholding)**:
+**Initial Candidate Detection** - Thresholding:
  - FLAIR images are intensity-normalized
  - Gray matter statistics are used to define an adaptive threshold
  - Hyperintense outliers are extracted as lesion candidates
 
-**Refinement Step**
-The initial thresholded mask is refined using:
+**Refinement Step** - The initial thresholded mask is refined using:
  - Anatomical constraints
  - Morphological operations
  - Geometric filters
@@ -91,13 +90,17 @@ pip install pytest hypothesis
 
 For privacy reasons, data from patients with Sickle Cell Disease (SCD) cannot be shared. To provide example data, this release provides data for a single patient with Multiple Sclerosis (MS).
 
-If you have cloned the repository from github as described in the [installation](#installation) section, example data is provided in the ```data/example_MS.zip``` file. To unzip data, run on bash: 
+If you have cloned the repository from github as described in the [installation](#installation) section, example data is provided in the ```data/example_MS.zip``` file. To unzip data, move to the package installation folder: 
+```bash
+cd SilentInfarctionSegmentationFLAIR
+```
+and run on bash: 
 
 ```bash
 unzip data/example_MS.zip -d data
 ```
 
-On powershell:
+or on powershell:
 
 ```powershell
 Expand-Archive -LiteralPath .\data\example_MS.zip -DestinationPath data
