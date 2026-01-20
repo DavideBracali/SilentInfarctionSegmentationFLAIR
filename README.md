@@ -22,9 +22,9 @@ The goal is to suppress normal hyperintense tissue and retain only plausible isc
 
 ## Contents
 
-The **SilentInfarctionSegmentationFLAIR** package is organized into two main components:
+The **SilentInfarctionSegmentationFLAIR** package is organized into two main components. The links below point to the documentation for each script and module:
 
-- **Scripts** — provide a structured and modular interface to run the complete segmentation workflow, handle I/O operations, and expose the command-line interface (CLI):
+- **[Scripts](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html)** — provide a structured and modular interface to run the complete segmentation workflow, handle I/O operations, and expose the command-line interface (CLI):
   - [flair_t1_sum](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-flair-t1-sum): Combines FLAIR and T1 images using a gaussian-transformed T1 weighted sum.
   - [threshold](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-threshold): Applies an adaptive threshold using histogram mode and rHWHM.
   - [refinement_step](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-refinement-step): Post-processes a threshold-based lesion mask applying connected components, geometric, PVE-based and anatomical filters.
@@ -32,7 +32,7 @@ The **SilentInfarctionSegmentationFLAIR** package is organized into two main com
   - [tuning_gamma_rs](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-tuning-gamma-rs): Optimizes gamma, the main segmentation parameter, and the five parameters necessary to run the refinement step.
   - [evaluate_test_set](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_scripts.html#silentinfarctionsegmentationflair-evaluate-test-set): Computes evaluation metrics comparing a test set of images with its ground truth masks.
 
-- **Modules** — contain the core functionality of the pipeline:
+- **[Modules](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_modules.html)** — contain the core functionality of the pipeline:
   - [histograms](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_modules.html#module-SilentInfarctionSegmentationFLAIR.histograms): Methods to compute and extract information from gray level histograms.
   - [segmentation](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_modules.html#module-SilentInfarctionSegmentationFLAIR.segmentation): Methods to apply and evaluate segmentation algorithms.
   - [refinement](https://davidebracali.github.io/SilentInfarctionSegmentationFLAIR/my_modules.html#module-SilentInfarctionSegmentationFLAIR.refinement): Methods to refine the initial threshold segmentation.
@@ -42,8 +42,9 @@ This structure keeps the computational logic clean making the package easier to 
 
 ## Prerequisites
 
-Supported python versions:   ![Python version](https://img.shields.io/badge/python-3.10|3.11|3.12|3.13-blue.svg)
+Supported python versions:   ![Python version](https://img.shields.io/badge/python-3.8|3.9|3.10|3.11|3.12|3.13-blue.svg).
 
+This package has been tested with Python 3.10 or higher, earlier Python versions have not been tested.
 This package requires:
 - ```numpy```
 - ```pandas```
@@ -60,7 +61,7 @@ Installation instructions are available at: [PyTest](https://docs.pytest.org/en/
 
 
 ## Installation
-Using bash, change directory to the folder where you want to store the package. Then clone the repository from GitHub:
+Using bash or powershell, change directory to the folder where you want to store the package. Then clone the repository from GitHub:
 
 ```bash
 git clone https://github.com/DavideBracali/SilentInfarctionSegmentationFLAIR.git
@@ -88,7 +89,27 @@ pip install pytest hypothesis
 
 ### Download example data
 
-!!! Fare
+For privacy reasons, data from patients with Sickle Cell Disease (SCD) cannot be shared. To provide example data, this release provides data for a single patient with Multiple Sclerosis (MS).
+
+If you have cloned the repository from github as described in the [installation](#installation) section, example data is provided in the ```data/example_MS.zip``` file. To unzip data, run on bash: 
+
+```bash
+unzip data/example_MS.zip -d data
+```
+
+On powershell:
+
+```powershell
+Expand-Archive -LiteralPath .\data\example_MS.zip -DestinationPath data
+```
+
+This will create the folder ```data/example_MS```. To run the algorithm on the example data:
+```bash
+SilentInfarctionSegmentationFLAIR --data_folder='data/example_MS'
+``` 
+
+**Important note:** This dataset is provided for testing and demonstration purposes only. The segmentation results should not be considered reliable, as this algorithm is not originally designed for MS lesions.
+
 
 ### Prepare your own data
 To process your own data, images need to satisfy the following requisites:
