@@ -264,7 +264,7 @@ def cli():
             print(f"  - Sensitivity: "
                 f"{ref_results['vw-TPF']:.3g}")
             print(f"  - Specificity: "
-                f"{ref_results['vw-PVV']:.3g}")
+                f"{ref_results['vw-PPV']:.3g}")
             print(f"  - DICE coefficient: "
                 f"{ref_results['vw-DSC']:.3g}")
 
