@@ -28,13 +28,15 @@ from SilentInfarctionSegmentationFLAIR.utils import (orient_image,
                                                      label_names,
                                                      train_val_test_split,
                                                      cliffs_delta)
-from SilentInfarctionSegmentationFLAIR.segmentation import (get_mask_from_segmentation,
-                                                            evaluate_voxel_wise)
-from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histograms
+from SilentInfarctionSegmentationFLAIR.segmentation import (
+    get_mask_from_segmentation
+)
+from SilentInfarctionSegmentationFLAIR.utils import (
+    get_settings_path
+)
 from SilentInfarctionSegmentationFLAIR import flair_t1_sum
 
-PROJECT_ROOT = pathlib.Path(__file__).parent.parent.resolve()
-CONFIG_PATH = PROJECT_ROOT / "config.yaml"
+CONFIG_PATH = get_settings_path("config.yaml")
 
 def parse_args():
     """
@@ -96,8 +98,9 @@ def parse_args():
                             type=int,
                             required=False,
                             default=1,
-                            help='Number of CPU cores to use during optimization \
-                                (improves computational time but increases RAM and CPU usage)')
+                            help='Number of CPU cores to use during ' \
+                                'optimization (improves computational ' \
+                                'time but increases RAM and CPU usage)')
     
     args = parser.parse_args()
 
@@ -292,12 +295,14 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
             chunk_patients = train_patients[chunk*cores:(chunk+1)*cores]
 
             if data is None:
-                chunk_data, _ = load_subjects(data_folder, patients=chunk_patients)
+                chunk_data, _ = load_subjects(data_folder,
+                                              patients=chunk_patients)
             else:
                 chunk_data = data
             
             args_list = [
-                (chunk_data[patient], alpha, beta) for patient in chunk_patients]
+                (chunk_data[patient], alpha, beta)
+                    for patient in chunk_patients]
 
             if cores > 1:
                 with mp.Pool(cores) as pool:
@@ -321,17 +326,33 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
     os.makedirs(results_folder, exist_ok=True)
     
     # train-val-test split
-    if os.path.isfile(os.path.join(data_folder, "train_patients.pkl")
-        ) and os.path.isfile(os.path.join(data_folder, "validation_patients.pkl")):
-        tr_patients = list(pd.read_pickle(os.path.join(data_folder, "train_patients.pkl")))
-        val_patients = list(pd.read_pickle(os.path.join(data_folder, "validation_patients.pkl")))
-        print(f"Found train-validation split in '{data_folder}'. " \
-            f"{len(tr_patients)} patients will be used for training, {len(val_patients)} for validation.")
+    all_patients = list(load_subjects(data_folder, paths_only=True)[1].index)
+    single_patient_mode = len(all_patients) == 1
+    if single_patient_mode:
+        print(f"WARNING!! Single patient detected: {all_patients[0]}. The " \
+              "same patient will be used BOTH for TRAINING and VALIDATION.")
+        tr_patients = all_patients
+        val_patients = all_patients
     else:
-        tr_patients, val_patients, _ = train_val_test_split(data_folder,
-                                                validation_fraction=0.3, test_fraction=0.1,
-                                                show=False,
-            title="Stratification of train–validation–test split according to positive-to-total ratio")
+        if os.path.isfile(os.path.join(data_folder,
+                                    "train_patients.pkl")
+            ) and os.path.isfile(os.path.join(
+                data_folder, "validation_patients.pkl")):
+            tr_patients = list(pd.read_pickle(os.path.join(
+                data_folder, "train_patients.pkl")))
+            val_patients = list(pd.read_pickle(os.path.join(
+                data_folder, "validation_patients.pkl")))
+            print(f"Found train-validation split in '{data_folder}'. " \
+                f"{len(tr_patients)} patients will be used for training, \
+                {len(val_patients)} for validation.")
+        else:
+            tr_patients, val_patients, _ = train_val_test_split(
+                data_folder,
+                validation_fraction=0.3,
+                test_fraction=0.1,
+                show=False,
+                title="Stratification of train–validation–test split" \
+                    "according to positive-to-total ratio")
 
     # optimization
     if not os.path.isfile(os.path.join(results_folder, "best_params.pkl")):
@@ -381,6 +402,7 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
         np.save(os.path.join(results_folder, "val_separation.npy"), np.array(val_separation_list))
 
 
+
     print("\nBest parameters: ")
     for k, v in best_params.items():
         print(f"{k} = {v:.3g}")
@@ -388,8 +410,9 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
     print("Average separation on training set: "\
           f"{np.mean(tr_separation_list):.3g} ± {np.std(tr_separation_list):.3g}")
     
-    print("Average separation on validation set: "\
-          f"{np.mean(val_separation_list):.3g} ± {np.std(val_separation_list):.3g}")
+    if not single_patient_mode:
+        print("Average separation on validation set: "\
+              f"{np.mean(val_separation_list):.3g} ± {np.std(val_separation_list):.3g}")
     
     # save alpha and beta
     params_yaml = {
@@ -402,7 +425,7 @@ def main(data_folder, results_folder, init_points, n_iter, n_cores):
         "surround_dilation_radius": None,
         "min_points": None}
     
-    yaml_path = "params_alpha_beta.yaml"
+    yaml_path = get_settings_path("params_alpha_beta.yaml")
     with open(yaml_path, "w") as f:
         yaml.safe_dump(params_yaml, f, sort_keys=False)
     

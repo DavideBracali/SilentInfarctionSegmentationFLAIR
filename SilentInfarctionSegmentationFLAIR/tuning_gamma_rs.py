@@ -16,7 +16,6 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib
-import pathlib
 matplotlib.use("Agg")
 sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
 
@@ -24,6 +23,7 @@ from SilentInfarctionSegmentationFLAIR.utils import (
     orient_image,
     resample_to_reference,
     train_val_test_split,
+    get_settings_path
 )
 from SilentInfarctionSegmentationFLAIR.segmentation import (
     get_mask_from_segmentation,
@@ -35,8 +35,7 @@ from SilentInfarctionSegmentationFLAIR import (
     refinement_step,
 )
 
-PROJECT_ROOT = pathlib.Path(__file__).parent.parent.resolve()
-CONFIG_PATH = PROJECT_ROOT / "config.yaml"
+CONFIG_PATH = get_settings_path("config.yaml")
 
 def parse_args():
     """
@@ -167,8 +166,7 @@ pbounds = {
     "min_points": (1, 5)
 }
 
-def load_alpha_beta_from_yaml():
-    yaml_path = "params_alpha_beta.yaml"
+def load_alpha_beta_from_yaml(yaml_path):
     if not os.path.isfile(yaml_path):
         raise FileNotFoundError(
             f"{yaml_path} not found but alpha/beta were not provided via CLI"
@@ -795,8 +793,9 @@ def main(data_folder, alpha, beta, gammas, results_folder,
 
     # resolve alpha / beta
     if alpha is None or beta is None:
-        yaml_alpha, yaml_beta = load_alpha_beta_from_yaml()
-
+        yaml_alpha, yaml_beta = load_alpha_beta_from_yaml(
+            get_settings_path("params_alpha_beta.yaml")
+        )
         if alpha is None:
             alpha = yaml_alpha
         if beta is None:
@@ -806,43 +805,51 @@ def main(data_folder, alpha, beta, gammas, results_folder,
     os.makedirs(results_folder, exist_ok=True)
     
     # train-val-test split
-    if (
-        os.path.isfile(os.path.join(data_folder,
-                                    "train_patients.pkl"))
-        and os.path.isfile(os.path.join(data_folder,
-                                        "validation_patients.pkl"))
-    ):
-        tr_patients = list(
-            pd.read_pickle(os.path.join(data_folder,
-                                        "train_patients.pkl"))
-        )
-        val_patients = list(
-            pd.read_pickle(os.path.join(data_folder,
-                                        "validation_patients.pkl"))
-        )
-        print(
-            f"Found train-validation split in '{data_folder}'. "
-            f"{len(tr_patients)} patients will be used for training, "
-            f"{len(val_patients)} for validation."
-        )
+    all_patients = list(load_subjects(data_folder, paths_only=True)[1].index)
+    single_patient_mode = len(all_patients) == 1
+    if single_patient_mode:
+        print(f"WARNING!! Single patient detected: {all_patients[0]}. The " \
+              "same patient will be used BOTH for TRAINING and VALIDATION.")
+        tr_patients = all_patients
+        val_patients = all_patients
     else:
-        tr_patients, val_patients, _ = train_val_test_split(
-            data_folder,
-            validation_fraction=0.3,
-            test_fraction=0.1,
-            show=False,
-            title=(
-                "Stratification of train–validation–test split according to "
-                "positive-to-total ratio"
-            ),
-        )
+        if (
+            os.path.isfile(os.path.join(data_folder,
+                                        "train_patients.pkl"))
+            and os.path.isfile(os.path.join(data_folder,
+                                            "validation_patients.pkl"))
+        ):
+            tr_patients = list(
+                pd.read_pickle(os.path.join(data_folder,
+                                            "train_patients.pkl"))
+            )
+            val_patients = list(
+                pd.read_pickle(os.path.join(data_folder,
+                                            "validation_patients.pkl"))
+            )
+            print(
+                f"Found train-validation split in '{data_folder}'. "
+                f"{len(tr_patients)} patients will be used for training, "
+                f"{len(val_patients)} for validation."
+            )
+        else:
+            tr_patients, val_patients, _ = train_val_test_split(
+                data_folder,
+                validation_fraction=0.3,
+                test_fraction=0.1,
+                show=False,
+                title=(
+                    "Stratification of train–validation–test split according to "
+                    "positive-to-total ratio"
+                ),
+            )
 
     # optimization
     if not os.path.isfile(os.path.join(results_folder, "best_params.pkl")):
 
         # compute images for ALL patients        
         patients_to_do = []
-        for patient in tr_patients + val_patients:
+        for patient in list(set(tr_patients) | set(val_patients)):
             if not os.path.isfile(os.path.join(results_folder,
                                                "images",
                                                f"{patient}.nii")):
@@ -863,7 +870,7 @@ def main(data_folder, alpha, beta, gammas, results_folder,
         # compute threshold masks for ALL patients
         for gamma in gammas:
             patients_to_do = []
-            for patient in tr_patients + val_patients:
+            for patient in list(set(tr_patients) | set(val_patients)):
                 thr_path = os.path.join(
                     results_folder, f"thr_mask_g{gamma}", f"{patient}.nii"
                 )
@@ -1100,18 +1107,19 @@ def main(data_folder, alpha, beta, gammas, results_folder,
         f"{tr_dices.loc[best_gamma, 'q3']:.3g}]"
     )
 
-    val_dices = pd.read_pickle(os.path.join(results_folder, "val_dices.pkl"))
-    print(
-        f"Average DICE on validation set for gamma = {best_gamma}: "
-        f"{val_dices.loc[best_gamma, 'mean']:.3g} ± "
-        f"{val_dices.loc[best_gamma, 'std']:.3g}\n"
-        f"IQR = [{val_dices.loc[best_gamma, 'q1']:.3g}, "
-        f"{val_dices.loc[best_gamma, 'q3']:.3g}]"
-    )
+    if not single_patient_mode:
+        val_dices = pd.read_pickle(os.path.join(results_folder, "val_dices.pkl"))
+        print(
+            f"Average DICE on validation set for gamma = {best_gamma}: "
+            f"{val_dices.loc[best_gamma, 'mean']:.3g} ± "
+            f"{val_dices.loc[best_gamma, 'std']:.3g}\n"
+            f"IQR = [{val_dices.loc[best_gamma, 'q1']:.3g}, "
+            f"{val_dices.loc[best_gamma, 'q3']:.3g}]"
+        )
     
     # save parameters
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M")
-    yaml_path = f"params_{timestamp}.yaml"
+    yaml_path = get_settings_path(f"params_{timestamp}.yaml")
 
     params_yaml = {
         "alpha": alpha,
