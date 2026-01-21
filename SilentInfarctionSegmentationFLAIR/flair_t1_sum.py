@@ -245,8 +245,9 @@ if __name__ == "__main__":
     segm = resample_to_reference(segm, flair, sitk.sitkNearestNeighbor)
     gm_mask = get_mask_from_segmentation(segm, gm_labels)
     wm_mask = get_mask_from_segmentation(segm, wm_labels)
-    gt = sitk.ReadImage(args.gt)
-    gt = resample_to_reference(gt, flair)
+    if args.gt is not None:
+        gt = sitk.ReadImage(args.gt)
+        gt = resample_to_reference(gt, flair)
 
     image = main(
         flair=flair,
