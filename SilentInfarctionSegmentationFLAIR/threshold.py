@@ -32,6 +32,7 @@ from SilentInfarctionSegmentationFLAIR.utils import (
 
 PROJECT_ROOT = pathlib.Path(__file__).parent.parent.resolve()
 CONFIG_PATH = PROJECT_ROOT / "config.yaml"
+
 def parse_args():
     """
     Parse command-line arguments for GM-based thresholding using RHWHM.
