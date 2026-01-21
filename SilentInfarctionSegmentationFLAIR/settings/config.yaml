@@ -14,4 +14,4 @@ files:
   wm_pve: "pve_wm.nii"
   csf_pve: "pve_csf.nii"
   gt: "GT.nii"
-  label_name: "data/FreeSurferColorLUT.txt"
+  label_name: "FreeSurferColorLUT.txt"

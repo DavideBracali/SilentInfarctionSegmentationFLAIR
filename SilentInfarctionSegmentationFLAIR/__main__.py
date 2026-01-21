@@ -17,7 +17,7 @@ from SilentInfarctionSegmentationFLAIR.utils import (
     resample_to_reference,
     get_paths_df,
     normalize,
-    get_package_path
+    get_settings_path
 )
 from SilentInfarctionSegmentationFLAIR import (
     flair_t1_sum,
@@ -30,7 +30,7 @@ sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
 __author__ = ['Davide Bracali']
 __email__ = ['davide.bracali@studio.unibo.it']
 
-CONFIG_PATH = get_package_path("config.yaml")
+CONFIG_PATH = get_settings_path("config.yaml")
 
 def parse_args():
     description = (
@@ -68,7 +68,7 @@ def parse_args():
     parser.add_argument(
         '--params_path',
         type=str,
-        default=get_package_path("params.yaml"),
+        default=get_settings_path("params.yaml"),
         help='Path to the .yaml file containing segmentation parameters'
     )
     parser.add_argument(

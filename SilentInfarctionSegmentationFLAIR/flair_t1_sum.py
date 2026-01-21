@@ -30,10 +30,10 @@ from SilentInfarctionSegmentationFLAIR.histograms import (
     plot_multiple_histograms
 )
 from SilentInfarctionSegmentationFLAIR.utils import (
-    get_package_path
+    get_settings_path
 )
 
-CONFIG_PATH = get_package_path("config.yaml")
+CONFIG_PATH = get_settings_path("config.yaml")
 
 def parse_args():
     """
