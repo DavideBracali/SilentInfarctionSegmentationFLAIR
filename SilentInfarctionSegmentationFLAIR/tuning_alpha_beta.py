@@ -32,6 +32,8 @@ from SilentInfarctionSegmentationFLAIR.segmentation import (get_mask_from_segmen
 from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histograms
 from SilentInfarctionSegmentationFLAIR import flair_t1_sum
 
+PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
+CONFIG_PATH = os.path.join(os.path.dirname(PROJECT_DIR), "config.yaml")
 
 def parse_args():
     """
@@ -418,7 +420,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     # load constants
-    with open("config.yaml", "r") as f:
+    with open(CONFIG_PATH, "r") as f:
         config = yaml.safe_load(f)
 
     gm_labels = config["labels"]["gm"]

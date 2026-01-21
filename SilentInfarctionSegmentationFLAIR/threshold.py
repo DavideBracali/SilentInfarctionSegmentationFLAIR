@@ -29,8 +29,8 @@ from SilentInfarctionSegmentationFLAIR.utils import (
     plot_image
 )
 
-MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(os.path.dirname(MODULE_DIR), "config.yaml")
+PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
+CONFIG_PATH = os.path.join(os.path.dirname(PROJECT_DIR), "config.yaml")
 
 def parse_args():
     """
@@ -77,17 +77,17 @@ def parse_args():
     )
 
     _ = parser.add_argument(
-        '--no_show',
+        '--show',
         dest='show',
-        action='store_false',
-        help='Disable plot visualization'
+        action='store_true',
+        help='Enable plot visualization'
     )
 
     _ = parser.add_argument(
-        '--no_verbose',
+        '--verbose',
         dest='verbose',
-        action='store_false',
-        help='Disable verbose output'
+        action='store_true',
+        help='Enable verbose output'
     )
 
     _ = parser.add_argument(

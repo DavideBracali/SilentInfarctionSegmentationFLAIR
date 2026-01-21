@@ -31,8 +31,8 @@ from SilentInfarctionSegmentationFLAIR.utils import (
     plot_image
 )
 
-MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(os.path.dirname(MODULE_DIR), "config.yaml")
+PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
+CONFIG_PATH = os.path.join(os.path.dirname(PROJECT_DIR), "config.yaml")
 
 def parse_args():
     """

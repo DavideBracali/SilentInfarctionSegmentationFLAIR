@@ -30,6 +30,8 @@ sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
 __author__ = ['Davide Bracali']
 __email__ = ['davide.bracali@studio.unibo.it']
 
+PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
+CONFIG_PATH = os.path.join(os.path.dirname(PROJECT_DIR), "config.yaml")
 
 def parse_args():
     description = (
@@ -128,7 +130,7 @@ def main(patient_folder, params_path, results_folder, verbose, show):
     print(f"\n\nProcessing {patient}...\n")
 
     # load constants
-    with open("config.yaml", "r") as f:
+    with open(CONFIG_PATH, "r") as f:
         config = yaml.safe_load(f)
 
     gm_labels = config['labels']['gm']

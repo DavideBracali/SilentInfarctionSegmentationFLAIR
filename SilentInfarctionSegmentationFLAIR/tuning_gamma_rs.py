@@ -1,13 +1,5 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-"""
-Tune gamma and refinement-step parameters.
-
-This script optimizes refinement-step parameters for thresholded
-FLAIR+T1 images. It supports image precomputation, threshold mask
-generation for several `gamma` values, Bayesian optimization of the
-refinement step, and validation on a held-out set.
-"""
 
 import SimpleITK as sitk
 import os
@@ -42,6 +34,8 @@ from SilentInfarctionSegmentationFLAIR import (
     refinement_step,
 )
 
+PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
+CONFIG_PATH = os.path.join(os.path.dirname(PROJECT_DIR), "config.yaml")
 
 def parse_args():
     """
@@ -148,22 +142,21 @@ def parse_args():
     return args
 
 # load constants
-if os.path.isfile("config.yaml"):
-    with open("config.yaml", "r") as f:
-        config = yaml.safe_load(f)
+with open(CONFIG_PATH, "r") as f:
+    config = yaml.safe_load(f)
 
-    gm_labels = config["labels"]["gm"]
-    wm_labels = config["labels"]["wm"]
-    keywords_to_remove = config["labels"]["keywords_to_remove"]
+gm_labels = config["labels"]["gm"]
+wm_labels = config["labels"]["wm"]
+keywords_to_remove = config["labels"]["keywords_to_remove"]
 
-    flair_file = config["files"]["flair"]
-    t1_file = config["files"]["t1"]
-    segm_file = config["files"]["segmentation"]
-    gm_pve_file = config["files"]["gm_pve"]
-    wm_pve_file = config["files"]["wm_pve"]
-    csf_pve_file = config["files"]["csf_pve"]
-    gt_file = config["files"]["gt"]
-    label_name_file = config["files"]["label_name"]
+flair_file = config["files"]["flair"]
+t1_file = config["files"]["t1"]
+segm_file = config["files"]["segmentation"]
+gm_pve_file = config["files"]["gm_pve"]
+wm_pve_file = config["files"]["wm_pve"]
+csf_pve_file = config["files"]["csf_pve"]
+gt_file = config["files"]["gt"]
+label_name_file = config["files"]["label_name"]
 
 pbounds = {
     "extend_dilation_radius": (1, 10),
