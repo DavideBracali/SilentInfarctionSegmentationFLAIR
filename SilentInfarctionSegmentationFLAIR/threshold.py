@@ -27,11 +27,11 @@ from SilentInfarctionSegmentationFLAIR.segmentation import (
 from SilentInfarctionSegmentationFLAIR.utils import (
     orient_image,
     resample_to_reference,
-    plot_image
+    plot_image,
+    get_package_path
 )
 
-PROJECT_ROOT = pathlib.Path(__file__).parent.parent.resolve()
-CONFIG_PATH = PROJECT_ROOT / "config.yaml"
+CONFIG_PATH = get_package_path("config.yaml")
 
 def parse_args():
     """

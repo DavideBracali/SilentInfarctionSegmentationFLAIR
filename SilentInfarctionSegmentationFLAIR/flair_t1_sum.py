@@ -23,11 +23,17 @@ from SilentInfarctionSegmentationFLAIR.utils import (
     gaussian_transform,
     plot_image
 )
-from SilentInfarctionSegmentationFLAIR.segmentation import get_mask_from_segmentation
-from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histograms
+from SilentInfarctionSegmentationFLAIR.segmentation import (
+    get_mask_from_segmentation
+)
+from SilentInfarctionSegmentationFLAIR.histograms import (
+    plot_multiple_histograms
+)
+from SilentInfarctionSegmentationFLAIR.utils import (
+    get_package_path
+)
 
-PROJECT_ROOT = pathlib.Path(__file__).parent.parent.resolve()
-CONFIG_PATH = PROJECT_ROOT / "config.yaml"
+CONFIG_PATH = get_package_path("config.yaml")
 
 def parse_args():
     """
@@ -87,7 +93,7 @@ def parse_args():
     )
 
     _ = parser.add_argument(
-        '--no_verbose', dest='verbose', action='store_false',
+        '--verbose', dest='verbose', action='store_true',
         help='Disable verbose output'
     )
 
@@ -168,7 +174,7 @@ def main(flair, t1, alpha, beta, gm_mask, wm_mask, gt=None,
     image = normalize(image, 8)
 
     # save and plot
-    if (save_dir is not None or show) and gt is not None:
+    if save_dir is not None or show:
         if save_dir is not None:
             os.makedirs(save_dir, exist_ok=True)
             sitk.WriteImage(image, os.path.join(save_dir, "image.nii"))
@@ -176,31 +182,6 @@ def main(flair, t1, alpha, beta, gm_mask, wm_mask, gt=None,
         flair = normalize(flair, 8)
         t1 = normalize(t1, 8)
 
-        plot_multiple_histograms(
-            [sitk.Mask(flair, wm_mask), sitk.Mask(flair, gm_mask), sitk.Mask(flair, gt)],
-            normalize=True, no_bkg=True, bins=['fd', 'fd', 'fd'],
-            labels=["WM (white matter)", "GM (gray matter)", "lesions"],
-            title="Tissue histograms in FLAIR image",
-            show=show,
-            save_path=os.path.join(save_dir, "histogram_FLAIR.png") if save_dir else None
-        )
-        plot_multiple_histograms(
-            [sitk.Mask(t1, wm_mask), sitk.Mask(t1, gm_mask), sitk.Mask(t1, gt)],
-            normalize=True, no_bkg=True, bins=['fd', 'fd', 'fd'],
-            labels=["WM (white matter)", "GM (gray matter)", "lesions"],
-            title="Tissue histograms in T1 image",
-            show=show,
-            save_path=os.path.join(save_dir, "histogram_T1.png") if save_dir else None
-        )
-        plot_multiple_histograms(
-            [sitk.Mask(image, wm_mask), sitk.Mask(image, gm_mask), sitk.Mask(image, gt)],
-            normalize=True, no_bkg=True, bins=['fd', 'fd', 'fd'],
-            labels=["WM (white matter)", "GM (gray matter)", "lesions"],
-            title="Tissue histograms in FLAIR and T1 integrated image\n"\
-                f"(α={alpha:.2f}, β={beta:.2f})",
-            show=show,
-            save_path=os.path.join(save_dir, "histogram_image.png") if save_dir else None
-        )
         _ = plot_image(
             flair,
             title="FLAIR image",
@@ -220,6 +201,33 @@ def main(flair, t1, alpha, beta, gm_mask, wm_mask, gt=None,
             show=show,
             save_path=os.path.join(save_dir, "image.png") if save_dir else None
         )
+        if gt is not None:
+            plot_multiple_histograms(
+                [sitk.Mask(flair, wm_mask), sitk.Mask(flair, gm_mask), sitk.Mask(flair, gt)],
+                normalize=True, no_bkg=True, bins=['fd', 'fd', 'fd'],
+                labels=["WM (white matter)", "GM (gray matter)", "lesions"],
+                title="Tissue histograms in FLAIR image",
+                show=show,
+                save_path=os.path.join(save_dir, "histogram_FLAIR.png") if save_dir else None
+            )
+            plot_multiple_histograms(
+                [sitk.Mask(t1, wm_mask), sitk.Mask(t1, gm_mask), sitk.Mask(t1, gt)],
+                normalize=True, no_bkg=True, bins=['fd', 'fd', 'fd'],
+                labels=["WM (white matter)", "GM (gray matter)", "lesions"],
+                title="Tissue histograms in T1 image",
+                show=show,
+                save_path=os.path.join(save_dir, "histogram_T1.png") if save_dir else None
+            )
+            plot_multiple_histograms(
+                [sitk.Mask(image, wm_mask), sitk.Mask(image, gm_mask), sitk.Mask(image, gt)],
+                normalize=True, no_bkg=True, bins=['fd', 'fd', 'fd'],
+                labels=["WM (white matter)", "GM (gray matter)", "lesions"],
+                title="Tissue histograms in FLAIR and T1 integrated image\n"\
+                    f"(α={alpha:.2f}, β={beta:.2f})",
+                show=show,
+                save_path=os.path.join(save_dir, "histogram_image.png") if save_dir else None
+            )
+
 
     return image
 
@@ -250,6 +258,8 @@ if __name__ == "__main__":
         gt = sitk.ReadImage(args.gt)
         gt = resample_to_reference(gt, flair)
         gt = sitk.Cast(gt, sitk.sitkUInt8)
+    else:
+        gt = None
 
     image = main(
         flair=flair,

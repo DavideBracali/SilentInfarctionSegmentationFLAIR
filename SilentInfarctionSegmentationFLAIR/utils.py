@@ -14,12 +14,33 @@ import matplotlib.pyplot as plt
 import time
 import os
 import pandas as pd
+from importlib.resources import files
+from pathlib import Path
 
 
 class DimensionError(Exception):
     """Custom exception for non‑3D images."""
     pass
 
+def get_package_path(relative_path: str) -> Path:
+    """
+    Return an absolute Path to a file shipped inside the package.
+
+    Parameters
+    ----------
+    relative_path : str
+        Path relative to the package root, e.g. "data/FreeSurferColorLUT.txt"
+
+    Returns
+    -------
+    Path
+        Absolute path to the resource on disk.
+    """
+    parts = relative_path.strip("/").split("/")
+    p = files("SilentInfarctionSegmentationFLAIR").parent
+    for part in parts:
+        p = p / part
+    return Path(p)
 
 def check_3d(image):
     """
@@ -371,7 +392,7 @@ def label_names(label_name_file_path):
         Mapping from integer labels to string names.
     """
     label_dict = {}
-    with open(label_name_file_path) as f:
+    with open(get_package_path(label_name_file_path)) as f:
         for line in f:
             line = line.strip()
             if not line or not line[0].isdigit():

@@ -7,8 +7,6 @@ import os
 import yaml
 import SimpleITK as sitk
 import time
-import matplotlib
-import pathlib
 
 from SilentInfarctionSegmentationFLAIR.segmentation import (
     get_mask_from_segmentation,
@@ -18,7 +16,8 @@ from SilentInfarctionSegmentationFLAIR.utils import (
     orient_image,
     resample_to_reference,
     get_paths_df,
-    normalize
+    normalize,
+    get_package_path
 )
 from SilentInfarctionSegmentationFLAIR import (
     flair_t1_sum,
@@ -31,8 +30,7 @@ sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
 __author__ = ['Davide Bracali']
 __email__ = ['davide.bracali@studio.unibo.it']
 
-PROJECT_ROOT = pathlib.Path(__file__).parent.parent.resolve()
-CONFIG_PATH = PROJECT_ROOT / "config.yaml"
+CONFIG_PATH = get_package_path("config.yaml")
 
 def parse_args():
     description = (
@@ -70,7 +68,7 @@ def parse_args():
     parser.add_argument(
         '--params_path',
         type=str,
-        default="params.yaml",
+        default=get_package_path("params.yaml"),
         help='Path to the .yaml file containing segmentation parameters'
     )
     parser.add_argument(
@@ -271,7 +269,8 @@ def cli():
             print(f"  - DICE coefficient: "
                 f"{ref_results['vw-DSC']:.3g}")
 
-        print("Saved results in", os.path.join("results", patient_folder))
+        print("Saved results in", os.path.join(
+            "results", os.path.basename(patient_folder)))
 
     elapsed_time = time.time() - start_time
     print(f"Elapsed time: {elapsed_time:.1f} s")
