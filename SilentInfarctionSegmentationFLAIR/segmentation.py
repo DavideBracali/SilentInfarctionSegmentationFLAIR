@@ -8,7 +8,6 @@ Created on Tue May 27 19:49:24 2025
 
 import numpy as np
 import SimpleITK as sitk
-import matplotlib.pyplot as plt
 import warnings
 
 from SilentInfarctionSegmentationFLAIR.utils import get_array_from_image

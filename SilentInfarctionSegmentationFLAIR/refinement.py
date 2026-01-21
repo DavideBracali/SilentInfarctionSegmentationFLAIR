@@ -11,13 +11,11 @@ import SimpleITK as sitk
 import scipy.ndimage as ndi
 from scipy.spatial import cKDTree
 import pandas as pd
-import time
 
 from SilentInfarctionSegmentationFLAIR.utils import (
     get_info,
     get_array_from_image,
-    get_image_from_array,
-    progress_bar
+    get_image_from_array
 )
 
 

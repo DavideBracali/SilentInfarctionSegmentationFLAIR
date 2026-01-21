@@ -13,7 +13,6 @@ import argparse
 import yaml
 import matplotlib
 import time
-import pathlib
 
 from SilentInfarctionSegmentationFLAIR.histograms import (
     plot_histogram,
