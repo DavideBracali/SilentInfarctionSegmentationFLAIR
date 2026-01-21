@@ -34,6 +34,7 @@ from SilentInfarctionSegmentationFLAIR.utils import (
 
 PROJECT_ROOT = pathlib.Path(__file__).parent.parent.resolve()
 CONFIG_PATH = PROJECT_ROOT / "config.yaml"
+print("CONFIG_PATH: ", CONFIG_PATH)
 
 def parse_args():
     """

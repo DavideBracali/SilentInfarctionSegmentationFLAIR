@@ -26,7 +26,7 @@ from SilentInfarctionSegmentationFLAIR.utils import (
 from SilentInfarctionSegmentationFLAIR.segmentation import get_mask_from_segmentation
 from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histograms
 
-PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent.resolve()
+PROJECT_ROOT = pathlib.Path(__file__).parent.parent.resolve()
 CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 
 def parse_args():
