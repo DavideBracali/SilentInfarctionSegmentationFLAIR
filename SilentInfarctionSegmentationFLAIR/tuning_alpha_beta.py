@@ -16,6 +16,7 @@ import yaml
 from bayes_opt import BayesianOptimization
 import time
 import multiprocessing as mp
+import pathlib
 import matplotlib
 matplotlib.use("Agg")
 sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
@@ -32,8 +33,8 @@ from SilentInfarctionSegmentationFLAIR.segmentation import (get_mask_from_segmen
 from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histograms
 from SilentInfarctionSegmentationFLAIR import flair_t1_sum
 
-PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
-CONFIG_PATH = os.path.join(os.path.dirname(PROJECT_DIR), "config.yaml")
+PROJECT_ROOT = pathlib.Path(__file__).parent.parent.resolve()
+CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 
 def parse_args():
     """

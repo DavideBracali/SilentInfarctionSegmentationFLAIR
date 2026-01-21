@@ -12,6 +12,7 @@ import argparse
 import yaml
 import time
 import matplotlib
+import pathlib
 
 from SilentInfarctionSegmentationFLAIR.utils import (
     get_array_from_image,
@@ -25,8 +26,8 @@ from SilentInfarctionSegmentationFLAIR.utils import (
 from SilentInfarctionSegmentationFLAIR.segmentation import get_mask_from_segmentation
 from SilentInfarctionSegmentationFLAIR.histograms import plot_multiple_histograms
 
-PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
-CONFIG_PATH = os.path.join(os.path.dirname(PROJECT_DIR), "config.yaml")
+PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent.resolve()
+CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 
 def parse_args():
     """

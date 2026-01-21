@@ -13,6 +13,7 @@ import argparse
 import yaml
 import matplotlib
 import time
+import pathlib
 
 from SilentInfarctionSegmentationFLAIR.histograms import (
     plot_histogram,
@@ -29,9 +30,8 @@ from SilentInfarctionSegmentationFLAIR.utils import (
     plot_image
 )
 
-PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
-CONFIG_PATH = os.path.join(os.path.dirname(PROJECT_DIR), "config.yaml")
-
+PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent.resolve()
+CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 def parse_args():
     """
     Parse command-line arguments for GM-based thresholding using RHWHM.

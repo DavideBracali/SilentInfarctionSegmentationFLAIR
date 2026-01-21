@@ -8,6 +8,7 @@ import yaml
 import SimpleITK as sitk
 import time
 import matplotlib
+import pathlib
 
 from SilentInfarctionSegmentationFLAIR.segmentation import (
     get_mask_from_segmentation,
@@ -30,8 +31,8 @@ sitk.ProcessObject.SetGlobalDefaultNumberOfThreads(1)
 __author__ = ['Davide Bracali']
 __email__ = ['davide.bracali@studio.unibo.it']
 
-PROJECT_DIR = os.path.join(os.path.dirname(__file__), "..", "..")
-CONFIG_PATH = os.path.join(os.path.dirname(PROJECT_DIR), "config.yaml")
+PROJECT_ROOT = pathlib.Path(__file__).parent.parent.resolve()
+CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 
 def parse_args():
     description = (
