@@ -248,6 +248,7 @@ if __name__ == "__main__":
     if args.gt is not None:
         gt = sitk.ReadImage(args.gt)
         gt = resample_to_reference(gt, flair)
+        gt = sitk.Cast(gt, sitk.sitkUInt8)
 
     image = main(
         flair=flair,
