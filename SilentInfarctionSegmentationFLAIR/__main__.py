@@ -268,6 +268,7 @@ def cli():
             print(f"  - DICE coefficient: "
                 f"{ref_results['vw-DSC']:.3g}")
 
+    print("Saved results in", os.path.join("results", patient_folder))
 
     elapsed_time = time.time() - start_time
     print(f"Elapsed time: {elapsed_time:.1f} s")
